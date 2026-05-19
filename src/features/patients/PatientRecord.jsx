@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { clinicalApi } from '../../services/clinicalApi.js';
 import { buildClinicalRecordText, downloadTextFile, printClinicalRecord } from '../../shared/exportClinicalRecord.js';
+import { AppointmentForm } from '../appointments/AppointmentForm.jsx';
+import { AppointmentsList } from '../appointments/AppointmentsList.jsx';
 import { EvaluationForm } from '../evaluations/EvaluationForm.jsx';
 import { SessionNoteEditor } from '../session-notes/SessionNoteEditor.jsx';
 import { SessionNotesList } from '../session-notes/SessionNotesList.jsx';
@@ -14,12 +16,14 @@ export function PatientRecord({ patient, onPatientUpdated }) {
   const [refreshKey, setRefreshKey] = useState(0);
   const [showEdit, setShowEdit] = useState(false);
   const [showEvaluation, setShowEvaluation] = useState(false);
+  const [showAppointment, setShowAppointment] = useState(false);
 
   useEffect(() => {
     if (!patient?.id) {
       setRecord(null);
       setShowEdit(false);
       setShowEvaluation(false);
+      setShowAppointment(false);
       return;
     }
 
@@ -56,13 +60,18 @@ export function PatientRecord({ patient, onPatientUpdated }) {
     return [...rows].sort((a, b) => new Date(b.evaluation_date) - new Date(a.evaluation_date));
   }, [record]);
 
+  const appointments = useMemo(() => {
+    const rows = record?.appointments || [];
+    return [...rows].sort((a, b) => new Date(b.starts_at) - new Date(a.starts_at));
+  }, [record]);
+
   const timeline = useMemo(() => clinicalApi.buildTimeline(record), [record]);
 
   if (!patient) {
     return (
       <section className="card empty-record">
         <h2>Selecciona un paciente</h2>
-        <p className="muted">El expediente, notas, IA y seguimiento apareceran aqui.</p>
+        <p className="muted">El expediente, notas, citas, IA y seguimiento apareceran aqui.</p>
       </section>
     );
   }
@@ -85,6 +94,7 @@ export function PatientRecord({ patient, onPatientUpdated }) {
           <button type="button" className="secondary" onClick={exportRecord}>Exportar TXT</button>
           <button type="button" className="secondary" onClick={() => printClinicalRecord(current)}>Imprimir/PDF</button>
           <button type="button" className="secondary" onClick={() => setShowEdit((value) => !value)}>{showEdit ? 'Cerrar edicion' : 'Editar'}</button>
+          <button type="button" className="secondary" onClick={() => setShowAppointment((value) => !value)}>{showAppointment ? 'Cerrar cita' : 'Nueva cita'}</button>
           <button type="button" onClick={() => setShowEvaluation((value) => !value)}>{showEvaluation ? 'Cerrar valoracion' : 'Nueva valoracion'}</button>
         </div>
       </article>
@@ -97,6 +107,17 @@ export function PatientRecord({ patient, onPatientUpdated }) {
             setShowEdit(false);
             setRecord((existing) => ({ ...(existing || {}), ...updated }));
             onPatientUpdated?.(updated);
+            refreshRecord();
+          }}
+        />
+      )}
+
+      {showAppointment && (
+        <AppointmentForm
+          patient={current}
+          onCancel={() => setShowAppointment(false)}
+          onCreated={() => {
+            setShowAppointment(false);
             refreshRecord();
           }}
         />
@@ -130,6 +151,7 @@ export function PatientRecord({ patient, onPatientUpdated }) {
       {error && <p className="error" role="alert">{error}</p>}
 
       <ClinicalTimeline items={timeline} />
+      <AppointmentsList appointments={appointments} />
 
       <section className="card">
         <div className="form-header">
@@ -155,7 +177,6 @@ export function PatientRecord({ patient, onPatientUpdated }) {
       </section>
 
       <SessionNoteEditor patientId={current.id} sessionNumber={nextSession} onSaved={refreshRecord} />
-
       <SessionNotesList notes={notes} />
 
       <section className="card">
