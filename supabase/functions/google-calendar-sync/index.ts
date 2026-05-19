@@ -9,6 +9,12 @@ const requireEnv = (name: string) => {
   return value;
 };
 
+const getBearerToken = (req: Request) => {
+  const authHeader = req.headers.get('authorization') || '';
+  const match = authHeader.match(/^Bearer\s+(.+)$/i);
+  return match?.[1] || null;
+};
+
 const refreshGoogleToken = async ({
   refreshToken,
   clientId,
@@ -44,15 +50,13 @@ Deno.serve(async (req) => {
     const serviceRoleKey = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
     const googleClientId = requireEnv('GOOGLE_CLIENT_ID');
     const googleClientSecret = requireEnv('GOOGLE_CLIENT_SECRET');
-    const authHeader = req.headers.get('authorization');
+    const token = getBearerToken(req);
 
-    if (!authHeader) return json(req, 401, { error: 'Falta autorizacion' });
+    if (!token) return json(req, 401, { error: 'Falta autorizacion' });
 
-    const supabase = createClient(supabaseUrl, serviceRoleKey, {
-      global: { headers: { Authorization: authHeader } }
-    });
+    const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    const { data: userData, error: userError } = await supabase.auth.getUser();
+    const { data: userData, error: userError } = await supabase.auth.getUser(token);
     if (userError || !userData.user) return json(req, 401, { error: 'Sesion invalida' });
 
     const body = await req.json().catch(() => ({}));
@@ -61,13 +65,32 @@ Deno.serve(async (req) => {
 
     const { data: appointment, error: appointmentError } = await supabase
       .from('appointments')
-      .select('*, patients(full_name, phone, email, medical_diagnosis, functional_diagnosis)')
+      .select(
+        '*, patients(full_name, phone, email, medical_diagnosis, functional_diagnosis, clinic_id)'
+      )
       .eq('id', appointmentId)
       .single();
 
     if (appointmentError || !appointment) return json(req, 404, { error: 'Cita no encontrada' });
     if (appointment.sync_status === 'disabled')
       return json(req, 400, { error: 'La cita no esta habilitada para Google Calendar' });
+
+    const clinicId = appointment.patients?.clinic_id;
+    if (!clinicId) return json(req, 403, { error: 'Cita sin clinica autorizada' });
+
+    const { data: membership, error: membershipError } = await supabase
+      .from('clinic_memberships')
+      .select('role, active')
+      .eq('user_id', userData.user.id)
+      .eq('clinic_id', clinicId)
+      .single();
+    if (
+      membershipError ||
+      !membership?.active ||
+      !['admin', 'therapist'].includes(membership.role)
+    ) {
+      return json(req, 403, { error: 'No tienes permiso para sincronizar esta cita' });
+    }
 
     const { data: connection, error: connectionError } = await supabase
       .from('calendar_connections')

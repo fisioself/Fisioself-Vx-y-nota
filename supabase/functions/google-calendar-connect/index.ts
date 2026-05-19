@@ -9,6 +9,12 @@ const requireEnv = (name: string) => {
   return value;
 };
 
+const getBearerToken = (req: Request) => {
+  const authHeader = req.headers.get('authorization') || '';
+  const match = authHeader.match(/^Bearer\s+(.+)$/i);
+  return match?.[1] || null;
+};
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: buildCorsHeaders(req) });
   if (req.method !== 'POST') return json(req, 405, { error: 'Metodo no permitido' });
@@ -18,16 +24,27 @@ Deno.serve(async (req) => {
     const serviceRoleKey = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
     const googleClientId = requireEnv('GOOGLE_CLIENT_ID');
     const redirectUri = requireEnv('GOOGLE_REDIRECT_URI');
-    const authHeader = req.headers.get('authorization');
+    const token = getBearerToken(req);
 
-    if (!authHeader) return json(req, 401, { error: 'Falta autorizacion' });
+    if (!token) return json(req, 401, { error: 'Falta autorizacion' });
 
-    const supabase = createClient(supabaseUrl, serviceRoleKey, {
-      global: { headers: { Authorization: authHeader } }
-    });
+    const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    const { data: userData, error: userError } = await supabase.auth.getUser();
+    const { data: userData, error: userError } = await supabase.auth.getUser(token);
     if (userError || !userData.user) return json(req, 401, { error: 'Sesion invalida' });
+
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('role, active')
+      .eq('id', userData.user.id)
+      .single();
+    if (
+      profileError ||
+      !profile?.active ||
+      !['admin', 'therapist', 'assistant'].includes(profile.role)
+    ) {
+      return json(req, 403, { error: 'Usuario clinico no autorizado' });
+    }
 
     const state = crypto.randomUUID();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();

@@ -42,6 +42,12 @@ const json = (
   extraHeaders: Record<string, string> = {}
 ) => jsonResponse(req, status, body, extraHeaders);
 
+const getBearerToken = (req: Request) => {
+  const authHeader = req.headers.get('authorization') || '';
+  const match = authHeader.match(/^Bearer\s+(.+)$/i);
+  return match?.[1] || null;
+};
+
 const getClientKey = (req: Request) => {
   const auth = req.headers.get('authorization') || 'anonymous';
   const forwardedFor =
@@ -75,16 +81,14 @@ Deno.serve(async (req) => {
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  const authHeader = req.headers.get('authorization');
+  const token = getBearerToken(req);
 
   if (!supabaseUrl || !serviceRoleKey) return json(req, 503, { error: 'Supabase no configurado' });
-  if (!authHeader) return json(req, 401, { error: 'Falta autorizacion' });
+  if (!token) return json(req, 401, { error: 'Falta autorizacion' });
 
-  const supabase = createClient(supabaseUrl, serviceRoleKey, {
-    global: { headers: { Authorization: authHeader } }
-  });
+  const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-  const { data: userData, error: userError } = await supabase.auth.getUser();
+  const { data: userData, error: userError } = await supabase.auth.getUser(token);
   if (userError || !userData.user) return json(req, 401, { error: 'Sesion invalida' });
 
   const { data: profile, error: profileError } = await supabase
