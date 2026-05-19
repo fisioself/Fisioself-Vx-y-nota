@@ -1,3 +1,5 @@
+import './ClinicalTimeline.css';
+
 const typeLabels = {
   evaluation: 'Valoracion',
   session_note: 'Nota',
