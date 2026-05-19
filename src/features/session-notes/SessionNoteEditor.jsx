@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { useToast } from '../../app/ToastProvider.jsx';
 import { clinicalApi } from '../../services/clinicalApi.js';
 import { aiService, AI_TYPES } from '../../services/aiService.js';
 import { hasErrors, validateSessionNote } from '../../shared/clinicalValidation.js';
+import { AiConsultModal } from './AiConsultModal.jsx';
 import { useDictation } from './useDictation.js';
 
 export function SessionNoteEditor({ patientId, therapistId, sessionNumber = 1, onSaved }) {
@@ -13,6 +15,8 @@ export function SessionNoteEditor({ patientId, therapistId, sessionNumber = 1, o
   const [aiBusy, setAiBusy] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [pendingConsult, setPendingConsult] = useState(null);
+  const { notify } = useToast();
 
   const dictation = useDictation((chunk) => {
     setRawText((current) => current ? `${current} ${chunk}` : chunk);
@@ -23,25 +27,48 @@ export function SessionNoteEditor({ patientId, therapistId, sessionNumber = 1, o
     setError('');
     try {
       const output = await aiService.transform({ text: rawText, type: type.id });
+
+      if (type.traceable) {
+        setPendingConsult({
+          type: type.id,
+          label: type.label,
+          input: rawText,
+          output
+        });
+        return;
+      }
+
       setRawText((current) => type.id === 'soap'
         ? output
         : `${current}\n\n---\n## ${type.label}\n${output}`);
-
-      if (type.traceable && patientId) {
-        await clinicalApi.addAiConsult({
-          patient_id: patientId,
-          therapist_id: therapistId || null,
-          type: type.id,
-          input_text: rawText,
-          output_text: output,
-          validated: false
-        });
-      }
+      notify({ tone: 'success', message: `${type.label} aplicado.` });
     } catch (err) {
       setError(err.message || 'No se pudo usar IA.');
+      notify({ tone: 'error', message: err.message || 'No se pudo usar IA.' });
     } finally {
       setAiBusy(false);
     }
+  };
+
+  const savePendingConsult = async ({ type, input, output, validated, validationNotes, alsoInsert, label }) => {
+    if (!patientId) throw new Error('Selecciona un paciente antes de guardar IA.');
+
+    await clinicalApi.addAiConsult({
+      patient_id: patientId,
+      therapist_id: therapistId || null,
+      type,
+      input_text: input,
+      output_text: output,
+      validated,
+      validation_notes: validationNotes
+    });
+
+    if (alsoInsert) {
+      setRawText((current) => `${current}\n\n---\n## ${label || type}\n${output}`);
+    }
+
+    notify({ tone: 'success', message: 'Consulta IA guardada en expediente.' });
+    onSaved?.();
   };
 
   const save = async () => {
@@ -56,7 +83,9 @@ export function SessionNoteEditor({ patientId, therapistId, sessionNumber = 1, o
 
     const validation = validateSessionNote(payload);
     if (hasErrors(validation)) {
-      setError(Object.values(validation)[0]);
+      const message = Object.values(validation)[0];
+      setError(message);
+      notify({ tone: 'warning', message });
       return;
     }
 
@@ -66,9 +95,11 @@ export function SessionNoteEditor({ patientId, therapistId, sessionNumber = 1, o
       const saved = await clinicalApi.addSessionNote(payload);
       setRawText('');
       setEva('');
+      notify({ tone: 'success', message: 'Nota guardada en expediente.' });
       onSaved?.(saved);
     } catch (err) {
       setError(err.message || 'No se pudo guardar la nota.');
+      notify({ tone: 'error', message: err.message || 'No se pudo guardar la nota.' });
     } finally {
       setSaving(false);
     }
@@ -126,6 +157,12 @@ export function SessionNoteEditor({ patientId, therapistId, sessionNumber = 1, o
           {saving ? 'Guardando...' : 'Guardar nota'}
         </button>
       </div>
+
+      <AiConsultModal
+        consult={pendingConsult}
+        onClose={() => setPendingConsult(null)}
+        onSave={savePendingConsult}
+      />
     </section>
   );
 }
