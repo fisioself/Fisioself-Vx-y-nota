@@ -1,6 +1,7 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { ErrorBoundary } from './app/ErrorBoundary.jsx';
+import { registerServiceWorker } from './app/registerServiceWorker.js';
 import { ToastProvider } from './app/ToastProvider.jsx';
 import { App } from './App.jsx';
 import './styles.css';
@@ -15,3 +16,5 @@ createRoot(document.getElementById('root')).render(
     </ErrorBoundary>
   </React.StrictMode>
 );
+
+registerServiceWorker();
