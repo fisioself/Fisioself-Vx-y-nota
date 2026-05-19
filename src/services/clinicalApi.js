@@ -9,48 +9,56 @@ const unwrap = ({ data, error }) => {
   return data;
 };
 
+const audit = async ({ action, entityType, entityId, after }) => {
+  try {
+    await supabase.from('audit_log').insert({
+      action,
+      entity_type: entityType,
+      entity_id: entityId,
+      after_json: after || null
+    });
+  } catch (error) {
+    if (import.meta.env.DEV) console.warn('Audit log failed', error);
+  }
+};
+
 export const clinicalApi = {
   async listPatients() {
     assertReady();
-    return unwrap(await supabase
-      .from('patients')
-      .select('*')
-      .order('updated_at', { ascending: false }));
+    return unwrap(
+      await supabase.from('patients').select('*').order('updated_at', { ascending: false })
+    );
   },
 
   async createPatient(payload) {
     assertReady();
-    return unwrap(await supabase
-      .from('patients')
-      .insert(payload)
-      .select('*')
-      .single());
+    const patient = unwrap(await supabase.from('patients').insert(payload).select('*').single());
+    await audit({ action: 'patient.created', entityType: 'patients', entityId: patient.id, after: patient });
+    return patient;
   },
 
   async getPatient(id) {
     assertReady();
-    return unwrap(await supabase
-      .from('patients')
-      .select('*, session_notes(*), evaluations(*), ai_consults(*)')
-      .eq('id', id)
-      .single());
+    return unwrap(
+      await supabase
+        .from('patients')
+        .select('*, session_notes(*), evaluations(*), ai_consults(*)')
+        .eq('id', id)
+        .single()
+    );
   },
 
   async addSessionNote(payload) {
     assertReady();
-    return unwrap(await supabase
-      .from('session_notes')
-      .insert(payload)
-      .select('*')
-      .single());
+    const note = unwrap(await supabase.from('session_notes').insert(payload).select('*').single());
+    await audit({ action: 'session_note.created', entityType: 'session_notes', entityId: note.id, after: note });
+    return note;
   },
 
   async addAiConsult(payload) {
     assertReady();
-    return unwrap(await supabase
-      .from('ai_consults')
-      .insert(payload)
-      .select('*')
-      .single());
+    const consult = unwrap(await supabase.from('ai_consults').insert(payload).select('*').single());
+    await audit({ action: 'ai_consult.created', entityType: 'ai_consults', entityId: consult.id, after: consult });
+    return consult;
   }
 };
