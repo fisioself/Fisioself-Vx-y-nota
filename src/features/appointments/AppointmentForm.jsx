@@ -35,7 +35,11 @@ export function AppointmentForm({ patient, therapistId, onCreated, onCancel }) {
 
     const startsAt = new Date(values.starts_at);
     const endsAt = new Date(values.ends_at);
-    if (!Number.isFinite(startsAt.getTime()) || !Number.isFinite(endsAt.getTime()) || endsAt <= startsAt) {
+    if (
+      !Number.isFinite(startsAt.getTime()) ||
+      !Number.isFinite(endsAt.getTime()) ||
+      endsAt <= startsAt
+    ) {
       setError('La hora de fin debe ser posterior al inicio.');
       return;
     }
@@ -68,7 +72,11 @@ export function AppointmentForm({ patient, therapistId, onCreated, onCancel }) {
           <p className="eyebrow">Agenda clinica</p>
           <h2>Nueva cita</h2>
         </div>
-        {onCancel && <button type="button" className="secondary" onClick={onCancel}>Cancelar</button>}
+        {onCancel && (
+          <button type="button" className="secondary" onClick={onCancel}>
+            Cancelar
+          </button>
+        )}
       </div>
 
       <label className="span-2">
@@ -78,33 +86,62 @@ export function AppointmentForm({ patient, therapistId, onCreated, onCancel }) {
 
       <label>
         Inicio
-        <input type="datetime-local" value={values.starts_at} onChange={(e) => setField('starts_at', e.target.value)} required />
+        <input
+          type="datetime-local"
+          value={values.starts_at}
+          onChange={(e) => setField('starts_at', e.target.value)}
+          required
+        />
       </label>
 
       <label>
         Fin
-        <input type="datetime-local" value={values.ends_at} onChange={(e) => setField('ends_at', e.target.value)} required />
+        <input
+          type="datetime-local"
+          value={values.ends_at}
+          onChange={(e) => setField('ends_at', e.target.value)}
+          required
+        />
       </label>
 
       <label className="span-2">
         Ubicacion
-        <input value={values.location} onChange={(e) => setField('location', e.target.value)} placeholder="Clinica, consultorio, videollamada..." />
+        <input
+          value={values.location}
+          onChange={(e) => setField('location', e.target.value)}
+          placeholder="Clinica, consultorio, videollamada..."
+        />
       </label>
 
       <label className="span-2">
         Informacion para la cita
-        <textarea rows="3" value={values.description} onChange={(e) => setField('description', e.target.value)} placeholder="Objetivo, preparacion, indicaciones para el paciente..." />
+        <textarea
+          rows="3"
+          value={values.description}
+          onChange={(e) => setField('description', e.target.value)}
+          placeholder="Objetivo, preparacion, indicaciones para el paciente..."
+        />
       </label>
 
       <label className="checkbox-label span-2">
-        <input type="checkbox" checked={values.sync_to_google} onChange={(e) => setField('sync_to_google', e.target.checked)} />
+        <input
+          type="checkbox"
+          checked={values.sync_to_google}
+          onChange={(e) => setField('sync_to_google', e.target.checked)}
+        />
         Sincronizar con Google Calendar cuando la conexion este configurada.
       </label>
 
-      {error && <p className="error span-2" role="alert">{error}</p>}
+      {error && (
+        <p className="error span-2" role="alert">
+          {error}
+        </p>
+      )}
 
       <div className="actions span-2">
-        <button type="submit" disabled={saving}>{saving ? 'Creando...' : 'Crear cita'}</button>
+        <button type="submit" disabled={saving}>
+          {saving ? 'Creando...' : 'Crear cita'}
+        </button>
       </div>
     </form>
   );

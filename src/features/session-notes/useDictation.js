@@ -34,7 +34,11 @@ export const useDictation = (onText) => {
     recognitionRef.current = recognition;
 
     return () => {
-      try { recognition.stop(); } catch { /* noop */ }
+      try {
+        recognition.stop();
+      } catch {
+        /* noop */
+      }
     };
   }, []);
 
@@ -43,7 +47,11 @@ export const useDictation = (onText) => {
     if (!recognition) return;
 
     if (listening) {
-      try { recognition.stop(); } catch { /* noop */ }
+      try {
+        recognition.stop();
+      } catch {
+        /* noop */
+      }
       setListening(false);
       return;
     }

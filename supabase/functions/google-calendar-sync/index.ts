@@ -1,16 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { jsonResponse, buildCorsHeaders } from '../_shared/cors.ts';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS'
-};
-
-const json = (status: number, body: unknown) =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-  });
+const json = (req: Request, status: number, body: unknown) => jsonResponse(req, status, body);
 
 const requireEnv = (name: string) => {
   const value = Deno.env.get(name);
@@ -18,7 +9,11 @@ const requireEnv = (name: string) => {
   return value;
 };
 
-const refreshGoogleToken = async ({ refreshToken, clientId, clientSecret }: {
+const refreshGoogleToken = async ({
+  refreshToken,
+  clientId,
+  clientSecret
+}: {
   refreshToken: string;
   clientId: string;
   clientSecret: string;
@@ -35,13 +30,14 @@ const refreshGoogleToken = async ({ refreshToken, clientId, clientSecret }: {
   });
 
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.error_description || data.error || 'No se pudo refrescar token Google');
+  if (!response.ok)
+    throw new Error(data.error_description || data.error || 'No se pudo refrescar token Google');
   return data;
 };
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
-  if (req.method !== 'POST') return json(405, { error: 'Metodo no permitido' });
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: buildCorsHeaders(req) });
+  if (req.method !== 'POST') return json(req, 405, { error: 'Metodo no permitido' });
 
   try {
     const supabaseUrl = requireEnv('SUPABASE_URL');
@@ -50,18 +46,18 @@ Deno.serve(async (req) => {
     const googleClientSecret = requireEnv('GOOGLE_CLIENT_SECRET');
     const authHeader = req.headers.get('authorization');
 
-    if (!authHeader) return json(401, { error: 'Falta autorizacion' });
+    if (!authHeader) return json(req, 401, { error: 'Falta autorizacion' });
 
     const supabase = createClient(supabaseUrl, serviceRoleKey, {
       global: { headers: { Authorization: authHeader } }
     });
 
     const { data: userData, error: userError } = await supabase.auth.getUser();
-    if (userError || !userData.user) return json(401, { error: 'Sesion invalida' });
+    if (userError || !userData.user) return json(req, 401, { error: 'Sesion invalida' });
 
     const body = await req.json().catch(() => ({}));
     const appointmentId = typeof body.appointment_id === 'string' ? body.appointment_id : null;
-    if (!appointmentId) return json(400, { error: 'Falta appointment_id' });
+    if (!appointmentId) return json(req, 400, { error: 'Falta appointment_id' });
 
     const { data: appointment, error: appointmentError } = await supabase
       .from('appointments')
@@ -69,8 +65,9 @@ Deno.serve(async (req) => {
       .eq('id', appointmentId)
       .single();
 
-    if (appointmentError || !appointment) return json(404, { error: 'Cita no encontrada' });
-    if (appointment.sync_status === 'disabled') return json(400, { error: 'La cita no esta habilitada para Google Calendar' });
+    if (appointmentError || !appointment) return json(req, 404, { error: 'Cita no encontrada' });
+    if (appointment.sync_status === 'disabled')
+      return json(req, 400, { error: 'La cita no esta habilitada para Google Calendar' });
 
     const { data: connection, error: connectionError } = await supabase
       .from('calendar_connections')
@@ -81,12 +78,18 @@ Deno.serve(async (req) => {
       .single();
 
     if (connectionError || !connection) {
-      await supabase.from('appointments').update({ sync_status: 'failed', sync_error: 'Google Calendar no conectado' }).eq('id', appointmentId);
-      return json(400, { error: 'Google Calendar no conectado' });
+      await supabase
+        .from('appointments')
+        .update({ sync_status: 'failed', sync_error: 'Google Calendar no conectado' })
+        .eq('id', appointmentId);
+      return json(req, 400, { error: 'Google Calendar no conectado' });
     }
 
     let accessToken = connection.access_token;
-    if (!accessToken || new Date(connection.token_expires_at || 0) <= new Date(Date.now() + 60_000)) {
+    if (
+      !accessToken ||
+      new Date(connection.token_expires_at || 0) <= new Date(Date.now() + 60_000)
+    ) {
       if (!connection.refresh_token) throw new Error('Falta refresh token de Google');
       const refreshed = await refreshGoogleToken({
         refreshToken: connection.refresh_token,
@@ -94,11 +97,16 @@ Deno.serve(async (req) => {
         clientSecret: googleClientSecret
       });
       accessToken = refreshed.access_token;
-      await supabase.from('calendar_connections').update({
-        access_token: accessToken,
-        token_expires_at: new Date(Date.now() + Number(refreshed.expires_in || 3600) * 1000).toISOString(),
-        updated_at: new Date().toISOString()
-      }).eq('id', connection.id);
+      await supabase
+        .from('calendar_connections')
+        .update({
+          access_token: accessToken,
+          token_expires_at: new Date(
+            Date.now() + Number(refreshed.expires_in || 3600) * 1000
+          ).toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', connection.id);
     }
 
     const patient = appointment.patients || {};
@@ -112,7 +120,9 @@ Deno.serve(async (req) => {
         patient.phone ? `Telefono: ${patient.phone}` : null,
         patient.email ? `Correo: ${patient.email}` : null,
         patient.functional_diagnosis ? `Dx funcional: ${patient.functional_diagnosis}` : null
-      ].filter(Boolean).join('\n'),
+      ]
+        .filter(Boolean)
+        .join('\n'),
       start: { dateTime: appointment.starts_at },
       end: { dateTime: appointment.ends_at }
     };
@@ -135,8 +145,11 @@ Deno.serve(async (req) => {
     const googleData = await googleResponse.json().catch(() => ({}));
     if (!googleResponse.ok) {
       const message = googleData.error?.message || 'Google Calendar rechazo la sincronizacion';
-      await supabase.from('appointments').update({ sync_status: 'failed', sync_error: message }).eq('id', appointmentId);
-      return json(googleResponse.status, { error: message });
+      await supabase
+        .from('appointments')
+        .update({ sync_status: 'failed', sync_error: message })
+        .eq('id', appointmentId);
+      return json(req, googleResponse.status, { error: message });
     }
 
     const { data: updated, error: updateError } = await supabase
@@ -163,8 +176,10 @@ Deno.serve(async (req) => {
       after_json: updated
     });
 
-    return json(200, { appointment: updated });
+    return json(req, 200, { appointment: updated });
   } catch (error) {
-    return json(500, { error: error instanceof Error ? error.message : 'Error al sincronizar Google Calendar' });
+    return json(req, 500, {
+      error: error instanceof Error ? error.message : 'Error al sincronizar Google Calendar'
+    });
   }
 });

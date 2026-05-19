@@ -5,8 +5,20 @@ import { SessionNotesList } from './SessionNotesList.jsx';
 
 describe('SessionNotesList', () => {
   const notes = [
-    { id: '1', session_number: 1, session_date: '2026-05-01', eva: 6, raw_text: 'Dolor lumbar y movilidad limitada' },
-    { id: '2', session_number: 2, session_date: '2026-05-03', eva: 3, raw_text: 'Mejora tolerancia a ejercicio' }
+    {
+      id: '1',
+      session_number: 1,
+      session_date: '2026-05-01',
+      eva: 6,
+      raw_text: 'Dolor lumbar y movilidad limitada'
+    },
+    {
+      id: '2',
+      session_number: 2,
+      session_date: '2026-05-03',
+      eva: 3,
+      raw_text: 'Mejora tolerancia a ejercicio'
+    }
   ];
 
   it('filters notes by clinical text', async () => {

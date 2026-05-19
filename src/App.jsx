@@ -58,7 +58,11 @@ export function App() {
   }
 
   if (checkingAuth) {
-    return <main className="shell"><section className="card">Verificando sesion...</section></main>;
+    return (
+      <main className="shell">
+        <section className="card">Verificando sesion...</section>
+      </main>
+    );
   }
 
   if (!session) {
@@ -75,7 +79,9 @@ export function App() {
         </div>
         <div className="hero-actions">
           <span className="pill">{session.user?.email}</span>
-          <button type="button" className="secondary" onClick={logout}>Salir</button>
+          <button type="button" className="secondary" onClick={logout}>
+            Salir
+          </button>
         </div>
       </header>
 

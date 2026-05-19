@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react';
 import { clinicalApi } from '../../services/clinicalApi.js';
-import { PATIENT_STATUSES, SEX_OPTIONS, validatePatient, hasErrors } from '../../shared/clinicalValidation.js';
+import {
+  PATIENT_STATUSES,
+  SEX_OPTIONS,
+  validatePatient,
+  hasErrors
+} from '../../shared/clinicalValidation.js';
 
 const toEditablePatient = (patient) => ({
   full_name: patient?.full_name || '',
@@ -63,36 +68,60 @@ export function PatientEditForm({ patient, onUpdated, onCancel }) {
           <p className="eyebrow">Editar expediente</p>
           <h2>Datos del paciente</h2>
         </div>
-        {onCancel && <button type="button" className="secondary" onClick={onCancel}>Cancelar</button>}
+        {onCancel && (
+          <button type="button" className="secondary" onClick={onCancel}>
+            Cancelar
+          </button>
+        )}
       </div>
 
       <label>
         Nombre completo *
-        <input value={values.full_name} onChange={(e) => setField('full_name', e.target.value)} required />
+        <input
+          value={values.full_name}
+          onChange={(e) => setField('full_name', e.target.value)}
+          required
+        />
         {errors.full_name && <small className="field-error">{errors.full_name}</small>}
       </label>
 
       <label>
         Telefono
-        <input value={values.phone} onChange={(e) => setField('phone', e.target.value)} inputMode="tel" />
+        <input
+          value={values.phone}
+          onChange={(e) => setField('phone', e.target.value)}
+          inputMode="tel"
+        />
       </label>
 
       <label>
         Correo
-        <input type="email" value={values.email} onChange={(e) => setField('email', e.target.value)} />
+        <input
+          type="email"
+          value={values.email}
+          onChange={(e) => setField('email', e.target.value)}
+        />
         {errors.email && <small className="field-error">{errors.email}</small>}
       </label>
 
       <label>
         Sexo
         <select value={values.sex} onChange={(e) => setField('sex', e.target.value)}>
-          {SEX_OPTIONS.map((option) => <option key={option} value={option}>{option || 'Sin especificar'}</option>)}
+          {SEX_OPTIONS.map((option) => (
+            <option key={option} value={option}>
+              {option || 'Sin especificar'}
+            </option>
+          ))}
         </select>
       </label>
 
       <label>
         Fecha de nacimiento
-        <input type="date" value={values.birth_date} onChange={(e) => setField('birth_date', e.target.value)} />
+        <input
+          type="date"
+          value={values.birth_date}
+          onChange={(e) => setField('birth_date', e.target.value)}
+        />
       </label>
 
       <label>
@@ -102,25 +131,43 @@ export function PatientEditForm({ patient, onUpdated, onCancel }) {
 
       <label className="span-2">
         Diagnostico medico
-        <textarea rows="2" value={values.medical_diagnosis} onChange={(e) => setField('medical_diagnosis', e.target.value)} />
+        <textarea
+          rows="2"
+          value={values.medical_diagnosis}
+          onChange={(e) => setField('medical_diagnosis', e.target.value)}
+        />
       </label>
 
       <label className="span-2">
         Diagnostico funcional
-        <textarea rows="2" value={values.functional_diagnosis} onChange={(e) => setField('functional_diagnosis', e.target.value)} />
+        <textarea
+          rows="2"
+          value={values.functional_diagnosis}
+          onChange={(e) => setField('functional_diagnosis', e.target.value)}
+        />
       </label>
 
       <label>
         Estado
         <select value={values.status} onChange={(e) => setField('status', e.target.value)}>
-          {PATIENT_STATUSES.map((status) => <option key={status} value={status}>{status}</option>)}
+          {PATIENT_STATUSES.map((status) => (
+            <option key={status} value={status}>
+              {status}
+            </option>
+          ))}
         </select>
       </label>
 
-      {submitError && <p className="error span-2" role="alert">{submitError}</p>}
+      {submitError && (
+        <p className="error span-2" role="alert">
+          {submitError}
+        </p>
+      )}
 
       <div className="actions span-2">
-        <button type="submit" disabled={saving}>{saving ? 'Guardando...' : 'Guardar cambios'}</button>
+        <button type="submit" disabled={saving}>
+          {saving ? 'Guardando...' : 'Guardar cambios'}
+        </button>
       </div>
     </form>
   );

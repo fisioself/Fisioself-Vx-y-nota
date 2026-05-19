@@ -9,13 +9,16 @@ export function ToastProvider({ children }) {
     setToasts((current) => current.filter((toast) => toast.id !== id));
   }, []);
 
-  const notify = useCallback((toast) => {
-    const id = crypto.randomUUID?.() || String(Date.now());
-    const next = { id, tone: 'info', ...toast };
-    setToasts((current) => [...current, next]);
-    window.setTimeout(() => dismiss(id), toast.duration || 4200);
-    return id;
-  }, [dismiss]);
+  const notify = useCallback(
+    (toast) => {
+      const id = crypto.randomUUID?.() || String(Date.now());
+      const next = { id, tone: 'info', ...toast };
+      setToasts((current) => [...current, next]);
+      window.setTimeout(() => dismiss(id), toast.duration || 4200);
+      return id;
+    },
+    [dismiss]
+  );
 
   const value = useMemo(() => ({ notify, dismiss }), [notify, dismiss]);
 
@@ -26,7 +29,12 @@ export function ToastProvider({ children }) {
         {toasts.map((toast) => (
           <div key={toast.id} className={`toast toast-${toast.tone}`} role="status">
             <span>{toast.message}</span>
-            <button type="button" className="toast-close" onClick={() => dismiss(toast.id)} aria-label="Cerrar notificacion">
+            <button
+              type="button"
+              className="toast-close"
+              onClick={() => dismiss(toast.id)}
+              aria-label="Cerrar notificacion"
+            >
               x
             </button>
           </div>

@@ -1,6 +1,7 @@
 const PREFIX = 'fisioself.notas-vx.draft';
 
-export const getDraftKey = ({ patientId, sessionNumber }) => `${PREFIX}.${patientId || 'no-patient'}.${sessionNumber || 'new'}`;
+export const getDraftKey = ({ patientId, sessionNumber }) =>
+  `${PREFIX}.${patientId || 'no-patient'}.${sessionNumber || 'new'}`;
 
 export const draftStorage = {
   get(key) {

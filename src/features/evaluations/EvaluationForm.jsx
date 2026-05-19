@@ -66,48 +66,90 @@ export function EvaluationForm({ patientId, therapistId, onCreated, onCancel }) 
           <p className="eyebrow">Valoracion inicial</p>
           <h2>Nueva valoracion</h2>
         </div>
-        {onCancel && <button type="button" className="secondary" onClick={onCancel}>Cancelar</button>}
+        {onCancel && (
+          <button type="button" className="secondary" onClick={onCancel}>
+            Cancelar
+          </button>
+        )}
       </div>
 
       <label>
         Fecha
-        <input type="date" value={values.evaluation_date} onChange={(e) => setField('evaluation_date', e.target.value)} />
+        <input
+          type="date"
+          value={values.evaluation_date}
+          onChange={(e) => setField('evaluation_date', e.target.value)}
+        />
       </label>
 
       <label>
         EVA inicial
-        <input type="number" min="0" max="10" value={values.eva_initial} onChange={(e) => setField('eva_initial', e.target.value)} placeholder="0-10" />
+        <input
+          type="number"
+          min="0"
+          max="10"
+          value={values.eva_initial}
+          onChange={(e) => setField('eva_initial', e.target.value)}
+          placeholder="0-10"
+        />
       </label>
 
       <label className="span-2">
         Motivo de consulta
-        <textarea rows="3" value={values.reason} onChange={(e) => setField('reason', e.target.value)} />
+        <textarea
+          rows="3"
+          value={values.reason}
+          onChange={(e) => setField('reason', e.target.value)}
+        />
       </label>
 
       <label className="span-2">
         Hallazgos objetivos
-        <textarea rows="3" value={values.objective_findings} onChange={(e) => setField('objective_findings', e.target.value)} />
+        <textarea
+          rows="3"
+          value={values.objective_findings}
+          onChange={(e) => setField('objective_findings', e.target.value)}
+        />
       </label>
 
       <label className="span-2">
         Banderas rojas
-        <textarea rows="2" value={values.red_flags} onChange={(e) => setField('red_flags', e.target.value)} placeholder="Negadas / presentes / por derivar..." />
+        <textarea
+          rows="2"
+          value={values.red_flags}
+          onChange={(e) => setField('red_flags', e.target.value)}
+          placeholder="Negadas / presentes / por derivar..."
+        />
       </label>
 
       <label className="span-2">
         Pronostico y objetivos
-        <textarea rows="3" value={values.prognosis} onChange={(e) => setField('prognosis', e.target.value)} />
+        <textarea
+          rows="3"
+          value={values.prognosis}
+          onChange={(e) => setField('prognosis', e.target.value)}
+        />
       </label>
 
       <label className="span-2">
         Metas funcionales
-        <textarea rows="3" value={values.goals} onChange={(e) => setField('goals', e.target.value)} />
+        <textarea
+          rows="3"
+          value={values.goals}
+          onChange={(e) => setField('goals', e.target.value)}
+        />
       </label>
 
-      {error && <p className="error span-2" role="alert">{error}</p>}
+      {error && (
+        <p className="error span-2" role="alert">
+          {error}
+        </p>
+      )}
 
       <div className="actions span-2">
-        <button type="submit" disabled={saving}>{saving ? 'Guardando...' : 'Guardar valoracion'}</button>
+        <button type="submit" disabled={saving}>
+          {saving ? 'Guardando...' : 'Guardar valoracion'}
+        </button>
       </div>
     </form>
   );

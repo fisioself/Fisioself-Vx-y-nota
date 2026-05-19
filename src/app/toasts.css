@@ -15,16 +15,25 @@
   gap: 12px;
   padding: 12px 14px;
   border-radius: 16px;
-  border: 1px solid rgba(18, 55, 42, .14);
-  box-shadow: 0 18px 50px rgba(18, 55, 42, .18);
+  border: 1px solid rgba(18, 55, 42, 0.14);
+  box-shadow: 0 18px 50px rgba(18, 55, 42, 0.18);
   background: #fffaf0;
   color: #12372a;
   font-weight: 750;
 }
 
-.toast-success { border-color: rgba(31, 93, 69, .35); background: #ecfff3; }
-.toast-warning { border-color: rgba(217, 155, 48, .45); background: #fff7df; }
-.toast-error { border-color: rgba(180, 35, 24, .35); background: #fff0ee; }
+.toast-success {
+  border-color: rgba(31, 93, 69, 0.35);
+  background: #ecfff3;
+}
+.toast-warning {
+  border-color: rgba(217, 155, 48, 0.45);
+  background: #fff7df;
+}
+.toast-error {
+  border-color: rgba(180, 35, 24, 0.35);
+  background: #fff0ee;
+}
 
 .toast-close {
   padding: 4px 8px;

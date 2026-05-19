@@ -27,7 +27,9 @@ export function ClinicalTimeline({ items = [] }) {
                 <strong>{item.label}</strong>
                 <span className="timeline-type">{typeLabels[item.type] || item.type}</span>
               </div>
-              <p className="muted">{item.date ? new Date(item.date).toLocaleDateString('es-MX') : 'Sin fecha'}</p>
+              <p className="muted">
+                {item.date ? new Date(item.date).toLocaleDateString('es-MX') : 'Sin fecha'}
+              </p>
               <p>{item.description}</p>
             </div>
           </article>

@@ -18,7 +18,10 @@ export function SessionNoteEditor({ patientId, therapistId, sessionNumber = 1, o
   const [error, setError] = useState('');
   const [pendingConsult, setPendingConsult] = useState(null);
   const { notify } = useToast();
-  const draftKey = useMemo(() => getDraftKey({ patientId, sessionNumber }), [patientId, sessionNumber]);
+  const draftKey = useMemo(
+    () => getDraftKey({ patientId, sessionNumber }),
+    [patientId, sessionNumber]
+  );
 
   useEffect(() => {
     const savedDraft = draftStorage.get(draftKey);
@@ -30,7 +33,7 @@ export function SessionNoteEditor({ patientId, therapistId, sessionNumber = 1, o
   }, [draftKey, rawText]);
 
   const dictation = useDictation((chunk) => {
-    setRawText((current) => current ? `${current} ${chunk}` : chunk);
+    setRawText((current) => (current ? `${current} ${chunk}` : chunk));
   });
 
   const runAi = async (type) => {
@@ -49,9 +52,9 @@ export function SessionNoteEditor({ patientId, therapistId, sessionNumber = 1, o
         return;
       }
 
-      setRawText((current) => type.id === 'soap'
-        ? output
-        : `${current}\n\n---\n## ${type.label}\n${output}`);
+      setRawText((current) =>
+        type.id === 'soap' ? output : `${current}\n\n---\n## ${type.label}\n${output}`
+      );
       notify({ tone: 'success', message: `${type.label} aplicado.` });
     } catch (err) {
       setError(err.message || 'No se pudo usar IA.');
@@ -61,7 +64,15 @@ export function SessionNoteEditor({ patientId, therapistId, sessionNumber = 1, o
     }
   };
 
-  const savePendingConsult = async ({ type, input, output, validated, validationNotes, alsoInsert, label }) => {
+  const savePendingConsult = async ({
+    type,
+    input,
+    output,
+    validated,
+    validationNotes,
+    alsoInsert,
+    label
+  }) => {
     if (!patientId) throw new Error('Selecciona un paciente antes de guardar IA.');
 
     await clinicalApi.addAiConsult({
@@ -133,12 +144,23 @@ export function SessionNoteEditor({ patientId, therapistId, sessionNumber = 1, o
         </label>
         <label>
           EVA hoy
-          <input type="number" min="0" max="10" value={eva} onChange={(e) => setEva(e.target.value)} placeholder="0-10" />
+          <input
+            type="number"
+            min="0"
+            max="10"
+            value={eva}
+            onChange={(e) => setEva(e.target.value)}
+            placeholder="0-10"
+          />
         </label>
         <span className="pill">Sesion #{sessionNumber}</span>
         {rawText.trim() && <span className="pill">Borrador local activo</span>}
         {dictation.supported && (
-          <button type="button" className={dictation.listening ? 'danger' : 'secondary'} onClick={dictation.toggle}>
+          <button
+            type="button"
+            className={dictation.listening ? 'danger' : 'secondary'}
+            onClick={dictation.toggle}
+          >
             {dictation.listening ? 'Detener dictado' : 'Dictar por voz'}
           </button>
         )}
@@ -146,14 +168,25 @@ export function SessionNoteEditor({ patientId, therapistId, sessionNumber = 1, o
 
       <label>
         Nota clinica
-        <textarea rows="10" value={rawText} onChange={(e) => setRawText(e.target.value)} placeholder="Escribe o dicta la nota de sesion..." />
+        <textarea
+          rows="10"
+          value={rawText}
+          onChange={(e) => setRawText(e.target.value)}
+          placeholder="Escribe o dicta la nota de sesion..."
+        />
       </label>
 
       <div className="ai-box">
         <p>Asistente IA</p>
         <div className="row wrap">
           {AI_TYPES.map((type) => (
-            <button key={type.id} type="button" className="secondary" disabled={aiBusy} onClick={() => runAi(type)}>
+            <button
+              key={type.id}
+              type="button"
+              className="secondary"
+              disabled={aiBusy}
+              onClick={() => runAi(type)}
+            >
               {aiBusy ? '...' : type.label}
             </button>
           ))}
@@ -170,10 +203,18 @@ export function SessionNoteEditor({ patientId, therapistId, sessionNumber = 1, o
         </details>
       )}
 
-      {error && <p className="error" role="alert">{error}</p>}
+      {error && (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      )}
 
       <div className="actions">
-        {rawText.trim() && <button type="button" className="secondary" onClick={discardDraft}>Descartar borrador</button>}
+        {rawText.trim() && (
+          <button type="button" className="secondary" onClick={discardDraft}>
+            Descartar borrador
+          </button>
+        )}
         <button type="button" onClick={save} disabled={saving}>
           {saving ? 'Guardando...' : 'Guardar nota'}
         </button>

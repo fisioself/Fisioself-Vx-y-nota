@@ -41,7 +41,7 @@ Prioridad: alta.
 
 Estado actual:
 
-Algunas Edge Functions usan `Access-Control-Allow-Origin: *`.
+Las Edge Functions deben usar allowlist por `APP_ORIGIN`. Revisar que todas las funciones nuevas importen `_shared/cors.ts`.
 
 Riesgo:
 
@@ -55,23 +55,24 @@ Recomendacion:
 
 Prioridad: alta.
 
-### 3. Multi-tenant / separacion por clinica no implementada
+### 3. Multi-tenant / separacion por clinica
 
 Estado actual:
 
-RLS permite que usuarios clinicos activos lean datos clinicos en general.
+La migracion `007_clinic_tenancy_hardening.sql` agrega `clinics`, `clinic_memberships`,
+`clinic_id` en pacientes/terapeutas y politicas RLS por membresia.
 
 Riesgo:
 
-Si en el futuro hay mas terapeutas, sedes o cuentas separadas, todos los usuarios activos podrian leer toda la clinica.
+Si se agregan usuarios manualmente sin membresia activa, no podran operar datos clinicos.
+Si se crean nuevas sedes, cada usuario debe quedar asociado explicitamente a su clinica.
 
 Recomendacion:
 
-- Crear `clinics` y `clinic_memberships`.
-- Asociar pacientes/citas/notas a `clinic_id`.
-- RLS por membresia.
+- Mantener `clinic_memberships` actualizado junto con `profiles`.
+- Probar RLS con usuarios de distintas clinicas antes de usar datos reales multi-sede.
 
-Prioridad: alta antes de crecer a mas usuarios.
+Prioridad: operativa.
 
 ## Hallazgos medios
 
@@ -140,9 +141,9 @@ Prioridad: media.
 
 Antes de usar datos reales de pacientes:
 
-1. Cerrar CORS con allowlist.
+1. Mantener CORS cerrado con allowlist.
 2. Proteger tokens OAuth de Google.
-3. Crear modelo `clinics`/`clinic_memberships` si habra mas de un usuario/sede.
+3. Verificar `clinic_memberships` para cada usuario activo.
 4. Ejecutar CI y corregir fallos.
 5. Probar RLS con usuarios reales: admin, therapist, assistant, usuario inactivo.
 6. Auditar exportaciones e impresiones.

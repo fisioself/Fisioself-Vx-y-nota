@@ -17,7 +17,7 @@
   border-radius: 999px;
   margin-top: 5px;
   background: #12372a;
-  box-shadow: 0 0 0 5px rgba(18, 55, 42, .10);
+  box-shadow: 0 0 0 5px rgba(18, 55, 42, 0.1);
 }
 
 .timeline-type {

@@ -17,6 +17,8 @@ Frontend publico:
 VITE_SUPABASE_URL
 VITE_SUPABASE_ANON_KEY
 VITE_CLAUDE_PROXY_URL
+VITE_GOOGLE_CALENDAR_CONNECT_URL
+VITE_GOOGLE_CALENDAR_SYNC_URL
 ```
 
 Servidor / Supabase Edge Functions:
@@ -24,6 +26,12 @@ Servidor / Supabase Edge Functions:
 ```text
 ANTHROPIC_API_KEY
 CLAUDE_MODEL
+SUPABASE_SERVICE_ROLE_KEY
+GOOGLE_CLIENT_ID
+GOOGLE_CLIENT_SECRET
+GOOGLE_REDIRECT_URI
+APP_ORIGIN
+ENVIRONMENT
 ```
 
 ## RLS
@@ -38,14 +46,15 @@ La migracion inicial habilita RLS en:
 - `follow_ups`
 - `ai_consults`
 - `audit_log`
+- `clinics`
+- `clinic_memberships`
 
-Politica inicial: solo usuarios autenticados pueden operar datos clinicos.
+Las migraciones de endurecimiento limitan los datos clinicos por rol y por membresia activa en `clinic_memberships`.
 
 ## Endurecimiento pendiente
 
-- Separar roles reales: admin, therapist, assistant.
-- Restringir actualizaciones criticas a admin.
 - Bloquear delete fisico; usar estados logicos.
-- Crear policies por clinica/sede si hay multi-tenant.
-- Agregar rate limit a la funcion IA.
+- Mantener `clinic_memberships` sincronizado con `profiles`.
+- Probar RLS con usuarios de distintas clinicas antes de abrir multi-sede.
+- Agregar rate limit persistente a la funcion IA.
 - Registrar uso de IA con paciente, tipo y usuario.

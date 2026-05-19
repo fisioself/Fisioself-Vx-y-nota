@@ -12,12 +12,20 @@ const requireEnv = (name: string) => {
   return value;
 };
 
+const escapeHtml = (value: unknown) =>
+  String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+
 const page = (title: string, message: string) => `<!doctype html>
 <html lang="es">
-  <head><meta charset="utf-8"><title>${title}</title></head>
+  <head><meta charset="utf-8"><title>${escapeHtml(title)}</title></head>
   <body style="font-family:system-ui;padding:32px;line-height:1.5;color:#12372a;background:#f7f3ea">
-    <h1>${title}</h1>
-    <p>${message}</p>
+    <h1>${escapeHtml(title)}</h1>
+    <p>${escapeHtml(message)}</p>
     <p>Ya puedes cerrar esta ventana y volver a FISIOSELF App Notas VX.</p>
   </body>
 </html>`;
@@ -46,9 +54,15 @@ Deno.serve(async (req) => {
       .eq('state', state)
       .single();
 
-    if (stateError || !stateRow) return html(400, page('State invalido', 'La solicitud no coincide con una conexion iniciada.'));
-    if (stateRow.consumed_at) return html(400, page('State usado', 'Esta autorizacion ya fue utilizada.'));
-    if (new Date(stateRow.expires_at) <= new Date()) return html(400, page('State expirado', 'Vuelve a iniciar la conexion.'));
+    if (stateError || !stateRow)
+      return html(
+        400,
+        page('State invalido', 'La solicitud no coincide con una conexion iniciada.')
+      );
+    if (stateRow.consumed_at)
+      return html(400, page('State usado', 'Esta autorizacion ya fue utilizada.'));
+    if (new Date(stateRow.expires_at) <= new Date())
+      return html(400, page('State expirado', 'Vuelve a iniciar la conexion.'));
 
     const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
@@ -64,7 +78,13 @@ Deno.serve(async (req) => {
 
     const tokenData = await tokenResponse.json().catch(() => ({}));
     if (!tokenResponse.ok) {
-      return html(400, page('Error OAuth', tokenData.error_description || tokenData.error || 'No se pudo obtener token.'));
+      return html(
+        400,
+        page(
+          'Error OAuth',
+          tokenData.error_description || tokenData.error || 'No se pudo obtener token.'
+        )
+      );
     }
 
     const accessToken = tokenData.access_token;
@@ -77,16 +97,19 @@ Deno.serve(async (req) => {
     });
     const profile = await profileResponse.json().catch(() => ({}));
 
-    const { error: upsertError } = await supabase.from('calendar_connections').upsert({
-      user_id: stateRow.user_id,
-      provider: 'google',
-      provider_account_email: profile.email || null,
-      calendar_id: 'primary',
-      access_token: accessToken,
-      refresh_token: refreshToken || null,
-      token_expires_at: tokenExpiresAt,
-      updated_at: new Date().toISOString()
-    }, { onConflict: 'user_id,provider,calendar_id' });
+    const { error: upsertError } = await supabase.from('calendar_connections').upsert(
+      {
+        user_id: stateRow.user_id,
+        provider: 'google',
+        provider_account_email: profile.email || null,
+        calendar_id: 'primary',
+        access_token: accessToken,
+        refresh_token: refreshToken || null,
+        token_expires_at: tokenExpiresAt,
+        updated_at: new Date().toISOString()
+      },
+      { onConflict: 'user_id,provider,calendar_id' }
+    );
 
     if (upsertError) throw upsertError;
 
@@ -95,8 +118,14 @@ Deno.serve(async (req) => {
       .update({ consumed_at: new Date().toISOString() })
       .eq('state', state);
 
-    return html(200, page('Google Calendar conectado', `Cuenta conectada: ${profile.email || 'Google Calendar'}.`));
+    return html(
+      200,
+      page('Google Calendar conectado', `Cuenta conectada: ${profile.email || 'Google Calendar'}.`)
+    );
   } catch (error) {
-    return html(500, page('Error interno', error instanceof Error ? error.message : 'Error desconocido.'));
+    return html(
+      500,
+      page('Error interno', error instanceof Error ? error.message : 'Error desconocido.')
+    );
   }
 });

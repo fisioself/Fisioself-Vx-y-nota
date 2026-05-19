@@ -4,7 +4,7 @@
   display: grid;
   place-items: center;
   padding: 20px;
-  background: rgba(18, 55, 42, .42);
+  background: rgba(18, 55, 42, 0.42);
   z-index: 900;
 }
 
@@ -17,14 +17,14 @@
   padding: 22px;
   border-radius: 24px;
   background: #fffaf0;
-  border: 1px solid rgba(18, 55, 42, .18);
-  box-shadow: 0 24px 80px rgba(18, 55, 42, .30);
+  border: 1px solid rgba(18, 55, 42, 0.18);
+  box-shadow: 0 24px 80px rgba(18, 55, 42, 0.3);
 }
 
 .warning-box {
   padding: 14px;
   border-radius: 18px;
-  border: 1px solid rgba(217, 155, 48, .45);
+  border: 1px solid rgba(217, 155, 48, 0.45);
   background: #fff7df;
 }
 

@@ -13,11 +13,15 @@ Probar usuarios:
 - assistant activo
 - usuario sin profile
 - usuario inactive
+- usuario activo sin `clinic_memberships`
+- usuarios activos en dos clinicas distintas
 
 Casos esperados:
 
 - Usuario sin profile no debe leer datos clinicos.
 - Usuario inactive no debe leer datos clinicos.
+- Usuario sin membresia activa no debe leer datos clinicos.
+- Usuario de clinica A no debe leer pacientes/notas/citas de clinica B.
 - Assistant puede leer pero no debe crear/editar datos clinicos sensibles.
 - Therapist puede crear pacientes, notas, valoraciones y citas.
 - Admin puede gestionar terapeutas.
@@ -42,6 +46,8 @@ Verificaciones:
 - `audit_log` solo es legible por admin.
 - `calendar_connections` no expone tokens al frontend.
 - `calendar_connection_status` solo expone metadata sin tokens.
+- `patients.clinic_id` se asigna por default y filtra expedientes por membresia.
+- Notas, valoraciones, citas, seguimientos e IA heredan acceso desde el paciente.
 
 ## 3. Google Calendar OAuth
 

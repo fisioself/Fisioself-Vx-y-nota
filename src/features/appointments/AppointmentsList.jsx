@@ -60,14 +60,21 @@ export function AppointmentsList({ appointments = [], onSynced }) {
         </div>
         <div className="hero-actions">
           <span className="pill">{sorted.length}</span>
-          <button type="button" className="secondary" onClick={connectGoogle} disabled={!isGoogleCalendarConfigured}>
+          <button
+            type="button"
+            className="secondary"
+            onClick={connectGoogle}
+            disabled={!isGoogleCalendarConfigured}
+          >
             Conectar Google
           </button>
         </div>
       </div>
 
       {!isGoogleCalendarConfigured && (
-        <p className="muted">Configura las URLs de funciones Google Calendar para activar sincronizacion.</p>
+        <p className="muted">
+          Configura las URLs de funciones Google Calendar para activar sincronizacion.
+        </p>
       )}
 
       <div className="list-stack">
@@ -76,19 +83,32 @@ export function AppointmentsList({ appointments = [], onSynced }) {
             <div className="form-header">
               <div>
                 <strong>{appointment.title}</strong>
-                <p className="muted">{formatDateTime(appointment.starts_at)} - {formatDateTime(appointment.ends_at)}</p>
+                <p className="muted">
+                  {formatDateTime(appointment.starts_at)} - {formatDateTime(appointment.ends_at)}
+                </p>
               </div>
-              <span className="timeline-type">{statusLabel[appointment.status] || appointment.status}</span>
+              <span className="timeline-type">
+                {statusLabel[appointment.status] || appointment.status}
+              </span>
             </div>
             {appointment.location && <p>{appointment.location}</p>}
             {appointment.description && <p className="muted">{appointment.description}</p>}
-            <p className="muted">Google Calendar: {syncLabel[appointment.sync_status] || appointment.sync_status}</p>
+            <p className="muted">
+              Google Calendar: {syncLabel[appointment.sync_status] || appointment.sync_status}
+            </p>
             <div className="actions">
               {appointment.google_html_link && (
-                <a href={appointment.google_html_link} target="_blank" rel="noreferrer">Abrir en Google Calendar</a>
+                <a href={appointment.google_html_link} target="_blank" rel="noreferrer">
+                  Abrir en Google Calendar
+                </a>
               )}
               {appointment.sync_status !== 'disabled' && appointment.sync_status !== 'synced' && (
-                <button type="button" className="secondary" onClick={() => syncAppointment(appointment)} disabled={!isGoogleCalendarConfigured || busyId === appointment.id}>
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={() => syncAppointment(appointment)}
+                  disabled={!isGoogleCalendarConfigured || busyId === appointment.id}
+                >
                   {busyId === appointment.id ? 'Sincronizando...' : 'Sincronizar Google'}
                 </button>
               )}
@@ -96,7 +116,9 @@ export function AppointmentsList({ appointments = [], onSynced }) {
             {appointment.sync_error && <p className="error">{appointment.sync_error}</p>}
           </article>
         ))}
-        {!sorted.length && <p className="muted">Aun no hay citas registradas para este paciente.</p>}
+        {!sorted.length && (
+          <p className="muted">Aun no hay citas registradas para este paciente.</p>
+        )}
       </div>
     </section>
   );

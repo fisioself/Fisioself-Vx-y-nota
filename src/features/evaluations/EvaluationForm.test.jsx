@@ -30,11 +30,13 @@ describe('EvaluationForm', () => {
     await userEvent.type(screen.getByLabelText(/motivo de consulta/i), 'Dolor lumbar');
     await userEvent.click(screen.getByRole('button', { name: /guardar valoracion/i }));
 
-    expect(clinicalApi.addEvaluation).toHaveBeenCalledWith(expect.objectContaining({
-      patient_id: 'patient-1',
-      eva_initial: 5,
-      sections: expect.objectContaining({ reason: 'Dolor lumbar' })
-    }));
+    expect(clinicalApi.addEvaluation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        patient_id: 'patient-1',
+        eva_initial: 5,
+        sections: expect.objectContaining({ reason: 'Dolor lumbar' })
+      })
+    );
     expect(onCreated).toHaveBeenCalledWith(expect.objectContaining({ id: 'eval-1' }));
   });
 });

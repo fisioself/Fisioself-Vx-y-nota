@@ -1,4 +1,10 @@
-export const PATIENT_STATUSES = ['En valoracion', 'En tratamiento', 'Alta', 'Seguimiento', 'Inactivo'];
+export const PATIENT_STATUSES = [
+  'En valoracion',
+  'En tratamiento',
+  'Alta',
+  'Seguimiento',
+  'Inactivo'
+];
 export const SEX_OPTIONS = ['', 'M', 'F', 'Otro'];
 
 export const validatePatient = (values) => {
@@ -10,7 +16,8 @@ export const validatePatient = (values) => {
 
   if (values.email && !/^\S+@\S+\.\S+$/.test(values.email)) errors.email = 'Correo invalido.';
   if (values.sex && !SEX_OPTIONS.includes(values.sex)) errors.sex = 'Sexo invalido.';
-  if (values.status && !PATIENT_STATUSES.includes(values.status)) errors.status = 'Estado invalido.';
+  if (values.status && !PATIENT_STATUSES.includes(values.status))
+    errors.status = 'Estado invalido.';
 
   return errors;
 };
@@ -25,7 +32,8 @@ export const validateSessionNote = ({ raw_text, eva, patient_id }) => {
 
   if (eva !== '' && eva !== null && eva !== undefined) {
     const value = Number(eva);
-    if (!Number.isFinite(value) || value < 0 || value > 10) errors.eva = 'EVA debe estar entre 0 y 10.';
+    if (!Number.isFinite(value) || value < 0 || value > 10)
+      errors.eva = 'EVA debe estar entre 0 y 10.';
   }
 
   return errors;

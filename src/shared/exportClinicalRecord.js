@@ -59,7 +59,9 @@ export const printClinicalRecord = (record) => {
   const text = buildClinicalRecordText(record);
   const win = window.open('', '_blank', 'noopener,noreferrer');
   if (!win) throw new Error('No se pudo abrir ventana de impresion.');
-  win.document.write(`<!doctype html><html><head><title>Expediente clinico</title><style>body{font-family:Arial,sans-serif;line-height:1.5;padding:32px;white-space:pre-wrap;color:#12372a}</style></head><body>${text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')}</body></html>`);
+  win.document.write(
+    `<!doctype html><html><head><title>Expediente clinico</title><style>body{font-family:Arial,sans-serif;line-height:1.5;padding:32px;white-space:pre-wrap;color:#12372a}</style></head><body>${text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')}</body></html>`
+  );
   win.document.close();
   win.focus();
   win.print();

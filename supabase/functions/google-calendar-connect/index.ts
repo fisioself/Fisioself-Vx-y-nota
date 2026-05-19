@@ -1,16 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { jsonResponse, buildCorsHeaders } from '../_shared/cors.ts';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS'
-};
-
-const json = (status: number, body: unknown) =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-  });
+const json = (req: Request, status: number, body: unknown) => jsonResponse(req, status, body);
 
 const requireEnv = (name: string) => {
   const value = Deno.env.get(name);
@@ -19,8 +10,8 @@ const requireEnv = (name: string) => {
 };
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
-  if (req.method !== 'POST') return json(405, { error: 'Metodo no permitido' });
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: buildCorsHeaders(req) });
+  if (req.method !== 'POST') return json(req, 405, { error: 'Metodo no permitido' });
 
   try {
     const supabaseUrl = requireEnv('SUPABASE_URL');
@@ -29,14 +20,14 @@ Deno.serve(async (req) => {
     const redirectUri = requireEnv('GOOGLE_REDIRECT_URI');
     const authHeader = req.headers.get('authorization');
 
-    if (!authHeader) return json(401, { error: 'Falta autorizacion' });
+    if (!authHeader) return json(req, 401, { error: 'Falta autorizacion' });
 
     const supabase = createClient(supabaseUrl, serviceRoleKey, {
       global: { headers: { Authorization: authHeader } }
     });
 
     const { data: userData, error: userError } = await supabase.auth.getUser();
-    if (userError || !userData.user) return json(401, { error: 'Sesion invalida' });
+    if (userError || !userData.user) return json(req, 401, { error: 'Sesion invalida' });
 
     const state = crypto.randomUUID();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
@@ -59,8 +50,12 @@ Deno.serve(async (req) => {
       state
     });
 
-    return json(200, { url: `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}` });
+    return json(req, 200, {
+      url: `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`
+    });
   } catch (error) {
-    return json(500, { error: error instanceof Error ? error.message : 'Error al iniciar Google Calendar' });
+    return json(req, 500, {
+      error: error instanceof Error ? error.message : 'Error al iniciar Google Calendar'
+    });
   }
 });

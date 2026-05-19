@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { clinicalApi } from '../../services/clinicalApi.js';
-import { buildClinicalRecordText, downloadTextFile, printClinicalRecord } from '../../shared/exportClinicalRecord.js';
+import {
+  buildClinicalRecordText,
+  downloadTextFile,
+  printClinicalRecord
+} from '../../shared/exportClinicalRecord.js';
 import { AppointmentForm } from '../appointments/AppointmentForm.jsx';
 import { AppointmentsList } from '../appointments/AppointmentsList.jsx';
 import { EvaluationForm } from '../evaluations/EvaluationForm.jsx';
@@ -8,6 +12,14 @@ import { SessionNoteEditor } from '../session-notes/SessionNoteEditor.jsx';
 import { SessionNotesList } from '../session-notes/SessionNotesList.jsx';
 import { ClinicalTimeline } from './ClinicalTimeline.jsx';
 import { PatientEditForm } from './PatientEditForm.jsx';
+
+export const getNextSessionNumber = (notes = []) => {
+  const maxSession = notes.reduce((max, note) => {
+    const value = Number(note.session_number);
+    return Number.isFinite(value) && value > max ? value : max;
+  }, 0);
+  return maxSession + 1;
+};
 
 export function PatientRecord({ patient, onPatientUpdated }) {
   const [record, setRecord] = useState(null);
@@ -42,7 +54,9 @@ export function PatientRecord({ patient, onPatientUpdated }) {
     }
 
     load();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [patient?.id, refreshKey]);
 
   const notes = useMemo(() => {
@@ -77,9 +91,13 @@ export function PatientRecord({ patient, onPatientUpdated }) {
   }
 
   const current = record || patient;
-  const nextSession = notes.length + 1;
+  const nextSession = getNextSessionNumber(notes);
   const refreshRecord = () => setRefreshKey((value) => value + 1);
-  const exportRecord = () => downloadTextFile({ filename: `expediente-${current.full_name || current.id}.txt`, text: buildClinicalRecordText(current) });
+  const exportRecord = () =>
+    downloadTextFile({
+      filename: `expediente-${current.full_name || current.id}.txt`,
+      text: buildClinicalRecordText(current)
+    });
 
   return (
     <section className="record-stack">
@@ -87,15 +105,37 @@ export function PatientRecord({ patient, onPatientUpdated }) {
         <div>
           <p className="eyebrow">Expediente clinico</p>
           <h2>{current.full_name}</h2>
-          <p className="muted">{current.functional_diagnosis || current.medical_diagnosis || 'Sin diagnostico registrado'}</p>
+          <p className="muted">
+            {current.functional_diagnosis ||
+              current.medical_diagnosis ||
+              'Sin diagnostico registrado'}
+          </p>
         </div>
         <div className="hero-actions">
           <span className="pill">{current.status || 'Sin estado'}</span>
-          <button type="button" className="secondary" onClick={exportRecord}>Exportar TXT</button>
-          <button type="button" className="secondary" onClick={() => printClinicalRecord(current)}>Imprimir/PDF</button>
-          <button type="button" className="secondary" onClick={() => setShowEdit((value) => !value)}>{showEdit ? 'Cerrar edicion' : 'Editar'}</button>
-          <button type="button" className="secondary" onClick={() => setShowAppointment((value) => !value)}>{showAppointment ? 'Cerrar cita' : 'Nueva cita'}</button>
-          <button type="button" onClick={() => setShowEvaluation((value) => !value)}>{showEvaluation ? 'Cerrar valoracion' : 'Nueva valoracion'}</button>
+          <button type="button" className="secondary" onClick={exportRecord}>
+            Exportar TXT
+          </button>
+          <button type="button" className="secondary" onClick={() => printClinicalRecord(current)}>
+            Imprimir/PDF
+          </button>
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => setShowEdit((value) => !value)}
+          >
+            {showEdit ? 'Cerrar edicion' : 'Editar'}
+          </button>
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => setShowAppointment((value) => !value)}
+          >
+            {showAppointment ? 'Cerrar cita' : 'Nueva cita'}
+          </button>
+          <button type="button" onClick={() => setShowEvaluation((value) => !value)}>
+            {showEvaluation ? 'Cerrar valoracion' : 'Nueva valoracion'}
+          </button>
         </div>
       </article>
 
@@ -148,10 +188,14 @@ export function PatientRecord({ patient, onPatientUpdated }) {
       </div>
 
       {loading && <p className="muted">Cargando expediente...</p>}
-      {error && <p className="error" role="alert">{error}</p>}
+      {error && (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      )}
 
       <ClinicalTimeline items={timeline} />
-      <AppointmentsList appointments={appointments} />
+      <AppointmentsList appointments={appointments} onSynced={refreshRecord} />
 
       <section className="card">
         <div className="form-header">
@@ -166,17 +210,25 @@ export function PatientRecord({ patient, onPatientUpdated }) {
             <article key={evaluation.id} className="note-row">
               <div className="form-header">
                 <strong>{evaluation.evaluation_date}</strong>
-                {evaluation.eva_initial !== null && evaluation.eva_initial !== undefined && <span>EVA inicial {evaluation.eva_initial}/10</span>}
+                {evaluation.eva_initial !== null && evaluation.eva_initial !== undefined && (
+                  <span>EVA inicial {evaluation.eva_initial}/10</span>
+                )}
               </div>
               <p>{evaluation.prognosis || 'Sin pronostico registrado'}</p>
-              {evaluation.red_flags && <p className="error">Banderas rojas: {evaluation.red_flags}</p>}
+              {evaluation.red_flags && (
+                <p className="error">Banderas rojas: {evaluation.red_flags}</p>
+              )}
             </article>
           ))}
           {!evaluations.length && <p className="muted">Aun no hay valoraciones registradas.</p>}
         </div>
       </section>
 
-      <SessionNoteEditor patientId={current.id} sessionNumber={nextSession} onSaved={refreshRecord} />
+      <SessionNoteEditor
+        patientId={current.id}
+        sessionNumber={nextSession}
+        onSaved={refreshRecord}
+      />
       <SessionNotesList notes={notes} />
 
       <section className="card">

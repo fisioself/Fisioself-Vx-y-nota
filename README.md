@@ -10,6 +10,7 @@ Este repositorio es independiente de la web publica.
 - Supabase Auth
 - Supabase Postgres
 - Row Level Security
+- Aislamiento por clinica mediante `clinic_memberships`
 - Dictado por voz con Web Speech API
 - IA clinica mediante proxy seguro configurable
 
@@ -43,6 +44,8 @@ Configurar en local y en deploy:
 VITE_SUPABASE_URL=
 VITE_SUPABASE_ANON_KEY=
 VITE_CLAUDE_PROXY_URL=
+VITE_GOOGLE_CALENDAR_CONNECT_URL=
+VITE_GOOGLE_CALENDAR_SYNC_URL=
 ```
 
 `VITE_CLAUDE_PROXY_URL` es opcional hasta conectar el proxy seguro de IA.
@@ -57,7 +60,7 @@ npm run dev
 ## Supabase
 
 1. Crear proyecto en Supabase.
-2. Ejecutar `supabase/migrations/001_initial_schema.sql`.
+2. Ejecutar las migraciones de `supabase/migrations` en orden.
 3. Crear usuarios en Supabase Auth.
 4. Configurar `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`.
 
@@ -65,8 +68,11 @@ npm run dev
 
 - RLS habilitado en tablas clinicas.
 - Solo usuarios autenticados pueden leer y escribir datos clinicos.
+- Los expedientes quedan separados por clinica/sede con `clinics` y `clinic_memberships`.
 - Validacion de paciente y nota en cliente.
-- La IA no debe usar API keys en frontend; debe conectarse por proxy seguro.
+- La IA no usa API keys en frontend y la Edge Function debe validar JWT Supabase.
+- Configurar `APP_ORIGIN` en Edge Functions para cerrar CORS en produccion.
+- Las notas de sesion tienen integridad por paciente y numero de sesion.
 - Este repo no usa Notion.
 
 ## Deploy

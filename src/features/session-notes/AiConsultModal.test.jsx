@@ -28,10 +28,12 @@ describe('AiConsultModal', () => {
     await userEvent.click(screen.getByLabelText(/confirmo que revise/i));
     await userEvent.click(screen.getByRole('button', { name: /guardar ia trazable/i }));
 
-    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({
-      type: 'clinical_analysis',
-      validated: true,
-      output: 'resultado IA'
-    }));
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'clinical_analysis',
+        validated: true,
+        output: 'resultado IA'
+      })
+    );
   });
 });

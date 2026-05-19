@@ -20,7 +20,10 @@ describe('PatientForm', () => {
   });
 
   it('creates a patient with valid data', async () => {
-    clinicalApi.createPatient.mockResolvedValueOnce({ id: 'patient-1', full_name: 'Paciente Demo' });
+    clinicalApi.createPatient.mockResolvedValueOnce({
+      id: 'patient-1',
+      full_name: 'Paciente Demo'
+    });
     const onCreated = vi.fn();
     render(<PatientForm onCreated={onCreated} />);
 
@@ -28,10 +31,12 @@ describe('PatientForm', () => {
     await userEvent.type(screen.getByLabelText(/correo/i), 'demo@example.com');
     await userEvent.click(screen.getByRole('button', { name: /crear paciente/i }));
 
-    expect(clinicalApi.createPatient).toHaveBeenCalledWith(expect.objectContaining({
-      full_name: 'Paciente Demo',
-      email: 'demo@example.com'
-    }));
+    expect(clinicalApi.createPatient).toHaveBeenCalledWith(
+      expect.objectContaining({
+        full_name: 'Paciente Demo',
+        email: 'demo@example.com'
+      })
+    );
     expect(onCreated).toHaveBeenCalledWith(expect.objectContaining({ id: 'patient-1' }));
   });
 });

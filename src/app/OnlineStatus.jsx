@@ -17,7 +17,8 @@ export function OnlineStatus() {
 
   return (
     <div className="offline-banner" role="status">
-      Sin conexion. Puedes seguir redactando borradores locales; guarda en expediente cuando vuelva internet.
+      Sin conexion. Puedes seguir redactando borradores locales; guarda en expediente cuando vuelva
+      internet.
     </div>
   );
 }

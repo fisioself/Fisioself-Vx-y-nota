@@ -1,5 +1,6 @@
 import js from '@eslint/js';
 import globals from 'globals';
+import react from 'eslint-plugin-react';
 
 export default [
   {
@@ -19,9 +20,13 @@ export default [
         ...globals.es2024
       }
     },
+    plugins: {
+      react
+    },
     rules: {
       'no-console': ['warn', { allow: ['warn', 'error'] }],
-      'no-unused-vars': ['warn', { argsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' }]
+      'no-unused-vars': ['warn', { argsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' }],
+      'react/jsx-uses-vars': 'error'
     }
   },
   {

@@ -30,16 +30,34 @@ export function LoginScreen({ onLogin }) {
 
         <label>
           Correo
-          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required />
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            autoComplete="email"
+            required
+          />
         </label>
 
         <label>
           Contrasena
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required />
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="current-password"
+            required
+          />
         </label>
 
-        {error && <p className="error" role="alert">{error}</p>}
-        <button type="submit" disabled={busy}>{busy ? 'Entrando...' : 'Entrar'}</button>
+        {error && (
+          <p className="error" role="alert">
+            {error}
+          </p>
+        )}
+        <button type="submit" disabled={busy}>
+          {busy ? 'Entrando...' : 'Entrar'}
+        </button>
       </form>
     </main>
   );

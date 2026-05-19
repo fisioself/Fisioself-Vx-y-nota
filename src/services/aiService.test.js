@@ -3,6 +3,7 @@ import { AI_TYPES, aiService } from './aiService.js';
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.unstubAllEnvs();
 });
 
 describe('aiService', () => {
@@ -25,7 +26,23 @@ describe('aiService', () => {
 
   it('rejects unsupported AI type before calling fetch', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch');
-    await expect(aiService.transform({ text: 'nota valida', type: 'bad_type' })).rejects.toThrow(/tipo/i);
+    await expect(aiService.transform({ text: 'nota valida', type: 'bad_type' })).rejects.toThrow(
+      /tipo/i
+    );
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('requires an authenticated Supabase session before calling the proxy', async () => {
+    vi.resetModules();
+    vi.stubEnv('VITE_SUPABASE_URL', 'https://demo.supabase.co');
+    vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'anon-key');
+    vi.stubEnv('VITE_CLAUDE_PROXY_URL', 'https://example.com/clinical-ai');
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+    const { aiService: configuredAiService } = await import('./aiService.js');
+
+    await expect(
+      configuredAiService.transform({ text: 'nota clinica valida', type: 'soap' })
+    ).rejects.toThrow(/inicia sesion/i);
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 });

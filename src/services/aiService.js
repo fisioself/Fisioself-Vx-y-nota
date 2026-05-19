@@ -1,3 +1,5 @@
+import { supabase, isSupabaseConfigured } from '../lib/supabaseClient.js';
+
 const proxyUrl = import.meta.env.VITE_CLAUDE_PROXY_URL;
 
 export const AI_TYPES = [
@@ -13,7 +15,9 @@ export const AI_TYPES = [
 export const isAiConfigured = Boolean(proxyUrl);
 
 const buildAiConfigError = () => {
-  const error = new Error('IA no configurada. Define VITE_CLAUDE_PROXY_URL apuntando a la funcion segura clinical-ai.');
+  const error = new Error(
+    'IA no configurada. Define VITE_CLAUDE_PROXY_URL apuntando a la funcion segura clinical-ai.'
+  );
   error.code = 'AI_NOT_CONFIGURED';
   return error;
 };
@@ -23,10 +27,19 @@ export const aiService = {
     if (!text?.trim()) throw new Error('Escribe una nota primero.');
     if (!AI_TYPES.some((item) => item.id === type)) throw new Error('Tipo de IA invalido.');
     if (!proxyUrl) throw buildAiConfigError();
+    if (!isSupabaseConfigured || !supabase) throw new Error('Supabase no esta configurado.');
+
+    const { data: sessionData, error } = await supabase.auth.getSession();
+    if (error) throw error;
+    const token = sessionData.session?.access_token;
+    if (!token) throw new Error('Inicia sesion antes de usar IA.');
 
     const response = await fetch(proxyUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
       body: JSON.stringify({ text, type })
     });
 

@@ -36,7 +36,12 @@ export const clinicalApi = {
   async createPatient(payload) {
     assertReady();
     const patient = unwrap(await supabase.from('patients').insert(payload).select('*').single());
-    await audit({ action: 'patient.created', entityType: 'patients', entityId: patient.id, after: patient });
+    await audit({
+      action: 'patient.created',
+      entityType: 'patients',
+      entityId: patient.id,
+      after: patient
+    });
     return patient;
   },
 
@@ -60,7 +65,9 @@ export const clinicalApi = {
     return unwrap(
       await supabase
         .from('patients')
-        .select('*, session_notes(*), evaluations(*), ai_consults(*), follow_ups(*), appointments(*)')
+        .select(
+          '*, session_notes(*), evaluations(*), ai_consults(*), follow_ups(*), appointments(*)'
+        )
         .eq('id', id)
         .single()
     );
@@ -68,29 +75,59 @@ export const clinicalApi = {
 
   async addEvaluation(payload) {
     assertReady();
-    const evaluation = unwrap(await supabase.from('evaluations').insert(payload).select('*').single());
-    await audit({ action: 'evaluation.created', entityType: 'evaluations', entityId: evaluation.id, after: evaluation });
+    const evaluation = unwrap(
+      await supabase.from('evaluations').insert(payload).select('*').single()
+    );
+    await audit({
+      action: 'evaluation.created',
+      entityType: 'evaluations',
+      entityId: evaluation.id,
+      after: evaluation
+    });
     return evaluation;
   },
 
   async addSessionNote(payload) {
     assertReady();
-    const note = unwrap(await supabase.from('session_notes').insert(payload).select('*').single());
-    await audit({ action: 'session_note.created', entityType: 'session_notes', entityId: note.id, after: note });
+    const response = await supabase.from('session_notes').insert(payload).select('*').single();
+    if (response.error?.code === '23505') {
+      throw new Error(
+        'Ya existe una nota con ese numero de sesion. Actualiza el expediente e intenta de nuevo.'
+      );
+    }
+    const note = unwrap(response);
+    await audit({
+      action: 'session_note.created',
+      entityType: 'session_notes',
+      entityId: note.id,
+      after: note
+    });
     return note;
   },
 
   async addAiConsult(payload) {
     assertReady();
     const consult = unwrap(await supabase.from('ai_consults').insert(payload).select('*').single());
-    await audit({ action: 'ai_consult.created', entityType: 'ai_consults', entityId: consult.id, after: consult });
+    await audit({
+      action: 'ai_consult.created',
+      entityType: 'ai_consults',
+      entityId: consult.id,
+      after: consult
+    });
     return consult;
   },
 
   async addAppointment(payload) {
     assertReady();
-    const appointment = unwrap(await supabase.from('appointments').insert(payload).select('*').single());
-    await audit({ action: 'appointment.created', entityType: 'appointments', entityId: appointment.id, after: appointment });
+    const appointment = unwrap(
+      await supabase.from('appointments').insert(payload).select('*').single()
+    );
+    await audit({
+      action: 'appointment.created',
+      entityType: 'appointments',
+      entityId: appointment.id,
+      after: appointment
+    });
     return appointment;
   },
 
@@ -105,7 +142,13 @@ export const clinicalApi = {
         .select('*')
         .single()
     );
-    await audit({ action: 'appointment.updated', entityType: 'appointments', entityId: id, before, after });
+    await audit({
+      action: 'appointment.updated',
+      entityType: 'appointments',
+      entityId: id,
+      before,
+      after
+    });
     return after;
   },
 
@@ -124,7 +167,8 @@ export const clinicalApi = {
       type: 'session_note',
       label: `Sesion #${item.session_number}`,
       date: item.session_date || item.created_at,
-      description: item.eva !== null && item.eva !== undefined ? `EVA ${item.eva}/10` : 'Nota de sesion',
+      description:
+        item.eva !== null && item.eva !== undefined ? `EVA ${item.eva}/10` : 'Nota de sesion',
       payload: item
     }));
 
@@ -155,6 +199,8 @@ export const clinicalApi = {
       payload: item
     }));
 
-    return [...evaluations, ...notes, ...consults, ...followUps, ...appointments].sort(sortByDateDesc);
+    return [...evaluations, ...notes, ...consults, ...followUps, ...appointments].sort(
+      sortByDateDesc
+    );
   }
 };
