@@ -9,13 +9,19 @@ export const AI_TYPES = [
   { id: 'discharge_letter', label: 'Carta de alta', traceable: true }
 ];
 
+export const isAiConfigured = Boolean(proxyUrl);
+
+const buildAiConfigError = () => {
+  const error = new Error('IA no configurada. Define VITE_CLAUDE_PROXY_URL apuntando a la funcion segura clinical-ai.');
+  error.code = 'AI_NOT_CONFIGURED';
+  return error;
+};
+
 export const aiService = {
   async transform({ text, type }) {
     if (!text?.trim()) throw new Error('Escribe una nota primero.');
-
-    if (!proxyUrl) {
-      return `## Borrador IA (${type})\n\nConfigura VITE_CLAUDE_PROXY_URL para conectar Claude.\n\nTexto base:\n${text}`;
-    }
+    if (!AI_TYPES.some((item) => item.id === type)) throw new Error('Tipo de IA invalido.');
+    if (!proxyUrl) throw buildAiConfigError();
 
     const response = await fetch(proxyUrl, {
       method: 'POST',
@@ -25,6 +31,9 @@ export const aiService = {
 
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || `IA respondio ${response.status}`);
-    return data.text || data.output || '';
+
+    const output = data.text || data.output || '';
+    if (!output.trim()) throw new Error('La IA no devolvio contenido.');
+    return output;
   }
 };
