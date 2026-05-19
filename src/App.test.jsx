@@ -1,6 +1,19 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { App } from './App.jsx';
+
+vi.mock('./lib/supabaseClient.js', () => ({
+  isSupabaseConfigured: false,
+  supabase: null
+}));
+
+vi.mock('./services/authService.js', () => ({
+  authService: {
+    getSession: vi.fn(),
+    onAuthStateChange: vi.fn(() => ({ unsubscribe: vi.fn() })),
+    signOut: vi.fn()
+  }
+}));
 
 describe('App', () => {
   it('shows a clear setup state when Supabase env vars are missing', () => {
