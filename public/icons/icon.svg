@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="FISIOSELF VX">
+  <rect width="512" height="512" rx="112" fill="#12372a"/>
+  <circle cx="256" cy="256" r="170" fill="#f7f3ea" opacity="0.96"/>
+  <path d="M160 260c42-86 150-86 192 0" fill="none" stroke="#1f5d45" stroke-width="34" stroke-linecap="round"/>
+  <path d="M176 310h160" stroke="#12372a" stroke-width="30" stroke-linecap="round"/>
+  <path d="M256 146v220" stroke="#12372a" stroke-width="34" stroke-linecap="round"/>
+  <circle cx="256" cy="256" r="34" fill="#d99b30"/>
+</svg>
