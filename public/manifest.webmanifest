@@ -1,0 +1,11 @@
+{
+  "name": "FISIOSELF App Notas VX",
+  "short_name": "Notas VX",
+  "description": "App clinica privada para notas, valoraciones y expediente del paciente.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7f3ea",
+  "theme_color": "#12372a",
+  "lang": "es-MX",
+  "icons": []
+}
