@@ -12,6 +12,8 @@ Desplegar FISIOSELF App Notas VX como aplicacion clinica privada independiente.
 ```text
 supabase/migrations/001_initial_schema.sql
 supabase/migrations/002_roles_rls_hardening.sql
+supabase/migrations/003_google_calendar.sql
+supabase/migrations/004_google_oauth_states.sql
 ```
 
 3. Crear usuarios en Supabase Auth.
@@ -41,7 +43,40 @@ CLAUDE_MODEL
 
 `CLAUDE_MODEL` puede quedar como opcional si se usa el valor default definido en la funcion.
 
-## 3. Vercel
+## 3. Google Calendar
+
+Funciones Supabase Edge:
+
+```text
+supabase/functions/google-calendar-connect/index.ts
+supabase/functions/google-calendar-callback/index.ts
+supabase/functions/google-calendar-sync/index.ts
+```
+
+Crear OAuth Client en Google Cloud Console tipo Web Application.
+
+Configurar Redirect URI con la URL publica de:
+
+```text
+google-calendar-callback
+```
+
+Configurar secretos en Supabase Edge Functions:
+
+```text
+GOOGLE_CLIENT_ID
+GOOGLE_CLIENT_SECRET
+GOOGLE_REDIRECT_URI
+SUPABASE_SERVICE_ROLE_KEY
+```
+
+La app usa el scope:
+
+```text
+https://www.googleapis.com/auth/calendar.events
+```
+
+## 4. Vercel
 
 1. Crear nuevo proyecto en Vercel.
 2. Conectar el repo `fisioself/APP---Notas-Fisioself-`.
@@ -58,7 +93,7 @@ npm run build
 dist
 ```
 
-## 4. Variables publicas en Vercel
+## 5. Variables publicas en Vercel
 
 Configurar en Vercel, no en el codigo:
 
@@ -66,11 +101,20 @@ Configurar en Vercel, no en el codigo:
 VITE_SUPABASE_URL
 VITE_SUPABASE_ANON_KEY
 VITE_CLAUDE_PROXY_URL
+VITE_GOOGLE_CALENDAR_CONNECT_URL
+VITE_GOOGLE_CALENDAR_SYNC_URL
 ```
 
 `VITE_CLAUDE_PROXY_URL` debe apuntar a la URL publica de la Supabase Edge Function `clinical-ai`.
 
-## 5. Verificacion
+Las variables de Google Calendar deben apuntar a las funciones:
+
+```text
+google-calendar-connect
+google-calendar-sync
+```
+
+## 6. Verificacion
 
 Antes de usar con pacientes reales:
 
@@ -87,10 +131,11 @@ test:coverage
 build
 ```
 
-## 6. Notas de seguridad
+## 7. Notas de seguridad
 
 - No guardar claves privadas en Vercel como variables expuestas al navegador.
 - La clave de Claude solo vive como secret de Supabase Edge Function.
+- Los secretos de Google OAuth solo viven en Supabase Edge Functions.
 - RLS debe permanecer habilitado.
 - La app requiere usuarios autenticados.
-- No usar datos reales hasta validar Auth, RLS, IA y auditoria.
+- No usar datos reales hasta validar Auth, RLS, IA, Calendar y auditoria.
