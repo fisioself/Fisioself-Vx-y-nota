@@ -60,7 +60,7 @@ export const clinicalApi = {
     return unwrap(
       await supabase
         .from('patients')
-        .select('*, session_notes(*), evaluations(*), ai_consults(*), follow_ups(*)')
+        .select('*, session_notes(*), evaluations(*), ai_consults(*), follow_ups(*), appointments(*)')
         .eq('id', id)
         .single()
     );
@@ -85,6 +85,28 @@ export const clinicalApi = {
     const consult = unwrap(await supabase.from('ai_consults').insert(payload).select('*').single());
     await audit({ action: 'ai_consult.created', entityType: 'ai_consults', entityId: consult.id, after: consult });
     return consult;
+  },
+
+  async addAppointment(payload) {
+    assertReady();
+    const appointment = unwrap(await supabase.from('appointments').insert(payload).select('*').single());
+    await audit({ action: 'appointment.created', entityType: 'appointments', entityId: appointment.id, after: appointment });
+    return appointment;
+  },
+
+  async updateAppointment(id, payload) {
+    assertReady();
+    const before = unwrap(await supabase.from('appointments').select('*').eq('id', id).single());
+    const after = unwrap(
+      await supabase
+        .from('appointments')
+        .update({ ...payload, updated_at: new Date().toISOString() })
+        .eq('id', id)
+        .select('*')
+        .single()
+    );
+    await audit({ action: 'appointment.updated', entityType: 'appointments', entityId: id, before, after });
+    return after;
   },
 
   buildTimeline(record) {
@@ -124,6 +146,15 @@ export const clinicalApi = {
       payload: item
     }));
 
-    return [...evaluations, ...notes, ...consults, ...followUps].sort(sortByDateDesc);
+    const appointments = (record?.appointments || []).map((item) => ({
+      id: item.id,
+      type: 'appointment',
+      label: item.title || 'Cita clinica',
+      date: item.starts_at,
+      description: `${item.status || 'scheduled'} · ${item.sync_status || 'pending'}`,
+      payload: item
+    }));
+
+    return [...evaluations, ...notes, ...consults, ...followUps, ...appointments].sort(sortByDateDesc);
   }
 };
