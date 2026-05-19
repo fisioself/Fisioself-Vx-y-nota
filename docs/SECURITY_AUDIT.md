@@ -76,22 +76,28 @@ Prioridad: operativa.
 
 ## Hallazgos medios
 
-### 4. Falta rate limit persistente
+### 4. Rate limit persistente de IA
 
-La funcion de IA tiene rate limit en memoria. Es util pero no persistente entre instancias.
+Estado actual:
+
+La migracion `009_ai_rate_limit_persistence.sql` crea `ai_rate_limits` y `check_ai_rate_limit()`.
+La Edge Function `clinical-ai` usa esa funcion antes de llamar al proveedor de IA.
 
 Recomendacion:
 
-- Rate limit en tabla Supabase o proveedor externo.
-- Registrar uso de IA por usuario.
+- Monitorear usuarios con rechazos 429 frecuentes.
+- Ajustar `max_requests` y ventana si la operacion clinica lo requiere.
+- Registrar uso de IA por paciente/tipo como siguiente mejora de auditoria.
 
-Prioridad: media.
+Prioridad: operativa.
 
 ### 4.1 Limpieza de OAuth states
 
 Estado actual:
 
 Existe `cleanup_google_oauth_states()` para borrar states expirados o consumidos antiguos.
+La migracion `008_google_oauth_state_cleanup.sql` intenta programar el job diario
+`cleanup-google-oauth-states-daily` con `pg_cron`.
 
 Recomendacion:
 

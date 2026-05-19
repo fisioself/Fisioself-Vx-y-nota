@@ -30,8 +30,6 @@ const prompts: Record<string, string> = {
     'Redacta un borrador de consentimiento informado para fisioterapia. Debe explicar objetivo, beneficios esperados, riesgos razonables, alternativas, derecho a retirar consentimiento y espacio para firma. No inventes datos personales.'
 };
 
-type Bucket = { count: number; resetAt: number };
-const buckets = new Map<string, Bucket>();
 const WINDOW_MS = 60_000;
 const MAX_REQUESTS_PER_WINDOW = 12;
 
@@ -46,33 +44,6 @@ const getBearerToken = (req: Request) => {
   const authHeader = req.headers.get('authorization') || '';
   const match = authHeader.match(/^Bearer\s+(.+)$/i);
   return match?.[1] || null;
-};
-
-const getClientKey = (req: Request) => {
-  const auth = req.headers.get('authorization') || 'anonymous';
-  const forwardedFor =
-    req.headers.get('x-forwarded-for') || req.headers.get('cf-connecting-ip') || 'unknown-ip';
-  return `${auth.slice(0, 48)}:${forwardedFor.split(',')[0].trim()}`;
-};
-
-const checkRateLimit = (key: string) => {
-  const now = Date.now();
-  const bucket = buckets.get(key);
-
-  if (!bucket || bucket.resetAt <= now) {
-    buckets.set(key, { count: 1, resetAt: now + WINDOW_MS });
-    return { allowed: true, retryAfterSeconds: 0 };
-  }
-
-  if (bucket.count >= MAX_REQUESTS_PER_WINDOW) {
-    return {
-      allowed: false,
-      retryAfterSeconds: Math.ceil((bucket.resetAt - now) / 1000)
-    };
-  }
-
-  bucket.count += 1;
-  return { allowed: true, retryAfterSeconds: 0 };
 };
 
 Deno.serve(async (req) => {
@@ -104,14 +75,21 @@ Deno.serve(async (req) => {
     return json(req, 403, { error: 'Usuario clinico no autorizado' });
   }
 
-  const rate = checkRateLimit(getClientKey(req));
-  if (!rate.allowed) {
+  const { data: rateRows, error: rateError } = await supabase.rpc('check_ai_rate_limit', {
+    target_user_id: userData.user.id,
+    window_seconds: Math.floor(WINDOW_MS / 1000),
+    max_requests: MAX_REQUESTS_PER_WINDOW
+  });
+  if (rateError) return json(req, 503, { error: 'Rate limit de IA no disponible' });
+
+  const rate = Array.isArray(rateRows) ? rateRows[0] : rateRows;
+  if (!rate?.allowed) {
     return json(
       req,
       429,
       { error: 'Demasiadas solicitudes de IA. Intenta de nuevo en un momento.' },
       {
-        'Retry-After': String(rate.retryAfterSeconds)
+        'Retry-After': String(rate?.retry_after_seconds || 60)
       }
     );
   }

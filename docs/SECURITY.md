@@ -48,14 +48,15 @@ La migracion inicial habilita RLS en:
 - `audit_log`
 - `clinics`
 - `clinic_memberships`
+- `ai_rate_limits`
 
 Las migraciones de endurecimiento limitan los datos clinicos por rol y por membresia activa en `clinic_memberships`.
+Las altas futuras de `profiles` sincronizan una membresia default mediante trigger.
 
 ## Endurecimiento pendiente
 
 - Bloquear delete fisico; usar estados logicos.
 - Mantener `clinic_memberships` sincronizado con `profiles`.
 - Probar RLS con usuarios de distintas clinicas antes de abrir multi-sede.
-- Agregar rate limit persistente a la funcion IA.
 - Registrar uso de IA con paciente, tipo y usuario.
-- Programar limpieza periodica de `google_oauth_states` usando `cleanup_google_oauth_states()`.
+- Revisar periodicamente que el job `cleanup-google-oauth-states-daily` este activo.

@@ -47,6 +47,7 @@ Verificaciones:
 - `calendar_connections` no expone tokens al frontend.
 - `calendar_connection_status` solo expone metadata sin tokens.
 - `patients.clinic_id` se asigna por default y filtra expedientes por membresia.
+- Al crear/actualizar `profiles`, el trigger sincroniza `clinic_memberships` para la clinica default.
 - Notas, valoraciones, citas, seguimientos e IA heredan acceso desde el paciente.
 
 ## 3. Google Calendar OAuth
@@ -62,6 +63,7 @@ Casos:
 - Error de Google deja `sync_status = failed` y `sync_error`.
 - Assistant no puede iniciar conexion ni sincronizar Google Calendar.
 - `cleanup_google_oauth_states()` elimina states consumidos o expirados antiguos.
+- El job `cleanup-google-oauth-states-daily` existe si `pg_cron` esta disponible.
 
 ## 4. IA clinica
 
@@ -72,6 +74,7 @@ Casos:
 - IA trazable exige validacion clinica en modal.
 - Uso de IA queda en `ai_consults`.
 - Rate limit responde 429 si se excede.
+- Rate limit persiste por usuario en `ai_rate_limits` aunque cambie la instancia Edge.
 - API key de Claude no existe en frontend.
 
 ## 5. Frontend / navegador

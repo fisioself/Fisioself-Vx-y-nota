@@ -73,6 +73,7 @@ npm run dev
 006_session_number_integrity.sql
 007_clinic_tenancy_hardening.sql
 008_google_oauth_state_cleanup.sql
+009_ai_rate_limit_persistence.sql
 ```
 
 3. Crear usuarios en Supabase Auth.
@@ -86,6 +87,7 @@ npm run dev
 - Los expedientes quedan separados por clinica/sede con `clinics` y `clinic_memberships`.
 - Validacion de paciente y nota en cliente.
 - La IA no usa API keys en frontend y la Edge Function valida JWT Supabase.
+- La IA tiene rate limit persistente por usuario en Supabase.
 - Google Calendar guarda tokens solo desde Edge Functions con service role.
 - Google Calendar solo puede conectarse/sincronizarse por usuarios `admin` o `therapist`.
 - Configurar `APP_ORIGIN` en Edge Functions para cerrar CORS en produccion.

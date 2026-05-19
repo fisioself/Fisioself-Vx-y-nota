@@ -18,6 +18,7 @@ supabase/migrations/005_google_oauth_token_hardening.sql
 supabase/migrations/006_session_number_integrity.sql
 supabase/migrations/007_clinic_tenancy_hardening.sql
 supabase/migrations/008_google_oauth_state_cleanup.sql
+supabase/migrations/009_ai_rate_limit_persistence.sql
 ```
 
 3. Crear usuarios en Supabase Auth.
@@ -32,7 +33,8 @@ values ('USER_ID_DE_SUPABASE_AUTH', 'Nombre del fisioterapeuta', 'admin', true);
 ```
 
 La migracion `007_clinic_tenancy_hardening.sql` crea una clinica `FISIOSELF` por default,
-asocia los perfiles existentes a esa clinica y endurece RLS por membresia.
+asocia los perfiles existentes a esa clinica, crea un trigger para sincronizar altas futuras
+desde `profiles` hacia `clinic_memberships` y endurece RLS por membresia.
 
 ## 2. Funcion segura de IA
 
@@ -92,7 +94,8 @@ https://www.googleapis.com/auth/calendar.events
 ```
 
 Solo usuarios con rol `admin` o `therapist` deben conectar y sincronizar Google Calendar.
-Para limpiar states OAuth antiguos desde un contexto seguro con service role:
+La migracion `008_google_oauth_state_cleanup.sql` programa limpieza diaria con `pg_cron`.
+Tambien puede ejecutarse manualmente desde un contexto seguro con service role:
 
 ```sql
 select public.cleanup_google_oauth_states();
@@ -162,6 +165,7 @@ build
 - RLS debe permanecer habilitado.
 - La app requiere usuarios autenticados.
 - Las Edge Functions deben validar JWT Supabase y usar `APP_ORIGIN` para CORS.
+- `clinical-ai` requiere `009_ai_rate_limit_persistence.sql` para rate limit persistente.
 - `session_notes` tiene indice unico por `patient_id` + `session_number`; corregir duplicados antes de aplicar la migracion si ya existen datos.
 - `patients` y `therapists` quedan asociados a una clinica. Los datos clinicos se filtran por `clinic_memberships`.
 - No usar datos reales hasta validar Auth, RLS, IA, Calendar y auditoria.

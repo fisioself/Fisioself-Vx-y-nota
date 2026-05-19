@@ -21,3 +21,26 @@ $$;
 
 revoke all on function public.cleanup_google_oauth_states() from public;
 grant execute on function public.cleanup_google_oauth_states() to service_role;
+
+create extension if not exists pg_cron with schema extensions;
+
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.schemata
+    where schema_name = 'cron'
+  )
+  and not exists (
+    select 1
+    from cron.job
+    where jobname = 'cleanup-google-oauth-states-daily'
+  ) then
+    perform cron.schedule(
+      'cleanup-google-oauth-states-daily',
+      '17 3 * * *',
+      'select public.cleanup_google_oauth_states();'
+    );
+  end if;
+end;
+$$;

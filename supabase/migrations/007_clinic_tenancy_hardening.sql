@@ -383,3 +383,35 @@ create policy "appointments clinic clinician update" on appointments
 -- OAuth tokens must be written only by Edge Functions using the service role.
 drop policy if exists "calendar connections own insert" on calendar_connections;
 drop policy if exists "calendar connections own update" on calendar_connections;
+
+create or replace function public.sync_default_clinic_membership()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  target_clinic_id uuid;
+begin
+  target_clinic_id := public.default_clinic_id();
+
+  if target_clinic_id is null then
+    return new;
+  end if;
+
+  insert into public.clinic_memberships (clinic_id, user_id, role, active)
+  values (target_clinic_id, new.id, new.role, new.active)
+  on conflict (clinic_id, user_id) do update
+  set role = excluded.role,
+      active = excluded.active,
+      updated_at = now();
+
+  return new;
+end;
+$$;
+
+drop trigger if exists profiles_sync_default_clinic_membership on profiles;
+create trigger profiles_sync_default_clinic_membership
+after insert or update of role, active on profiles
+for each row
+execute function public.sync_default_clinic_membership();
