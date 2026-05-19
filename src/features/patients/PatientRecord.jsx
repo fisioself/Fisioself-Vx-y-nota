@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { clinicalApi } from '../../services/clinicalApi.js';
+import { buildClinicalRecordText, downloadTextFile, printClinicalRecord } from '../../shared/exportClinicalRecord.js';
 import { EvaluationForm } from '../evaluations/EvaluationForm.jsx';
 import { SessionNoteEditor } from '../session-notes/SessionNoteEditor.jsx';
+import { SessionNotesList } from '../session-notes/SessionNotesList.jsx';
 import { ClinicalTimeline } from './ClinicalTimeline.jsx';
 import { PatientEditForm } from './PatientEditForm.jsx';
 
@@ -36,9 +38,7 @@ export function PatientRecord({ patient, onPatientUpdated }) {
     }
 
     load();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [patient?.id, refreshKey]);
 
   const notes = useMemo(() => {
@@ -70,6 +70,7 @@ export function PatientRecord({ patient, onPatientUpdated }) {
   const current = record || patient;
   const nextSession = notes.length + 1;
   const refreshRecord = () => setRefreshKey((value) => value + 1);
+  const exportRecord = () => downloadTextFile({ filename: `expediente-${current.full_name || current.id}.txt`, text: buildClinicalRecordText(current) });
 
   return (
     <section className="record-stack">
@@ -77,18 +78,14 @@ export function PatientRecord({ patient, onPatientUpdated }) {
         <div>
           <p className="eyebrow">Expediente clinico</p>
           <h2>{current.full_name}</h2>
-          <p className="muted">
-            {current.functional_diagnosis || current.medical_diagnosis || 'Sin diagnostico registrado'}
-          </p>
+          <p className="muted">{current.functional_diagnosis || current.medical_diagnosis || 'Sin diagnostico registrado'}</p>
         </div>
         <div className="hero-actions">
           <span className="pill">{current.status || 'Sin estado'}</span>
-          <button type="button" className="secondary" onClick={() => setShowEdit((value) => !value)}>
-            {showEdit ? 'Cerrar edicion' : 'Editar'}
-          </button>
-          <button type="button" onClick={() => setShowEvaluation((value) => !value)}>
-            {showEvaluation ? 'Cerrar valoracion' : 'Nueva valoracion'}
-          </button>
+          <button type="button" className="secondary" onClick={exportRecord}>Exportar TXT</button>
+          <button type="button" className="secondary" onClick={() => printClinicalRecord(current)}>Imprimir/PDF</button>
+          <button type="button" className="secondary" onClick={() => setShowEdit((value) => !value)}>{showEdit ? 'Cerrar edicion' : 'Editar'}</button>
+          <button type="button" onClick={() => setShowEvaluation((value) => !value)}>{showEvaluation ? 'Cerrar valoracion' : 'Nueva valoracion'}</button>
         </div>
       </article>
 
@@ -147,9 +144,7 @@ export function PatientRecord({ patient, onPatientUpdated }) {
             <article key={evaluation.id} className="note-row">
               <div className="form-header">
                 <strong>{evaluation.evaluation_date}</strong>
-                {evaluation.eva_initial !== null && evaluation.eva_initial !== undefined && (
-                  <span>EVA inicial {evaluation.eva_initial}/10</span>
-                )}
+                {evaluation.eva_initial !== null && evaluation.eva_initial !== undefined && <span>EVA inicial {evaluation.eva_initial}/10</span>}
               </div>
               <p>{evaluation.prognosis || 'Sin pronostico registrado'}</p>
               {evaluation.red_flags && <p className="error">Banderas rojas: {evaluation.red_flags}</p>}
@@ -159,34 +154,9 @@ export function PatientRecord({ patient, onPatientUpdated }) {
         </div>
       </section>
 
-      <SessionNoteEditor
-        patientId={current.id}
-        sessionNumber={nextSession}
-        onSaved={refreshRecord}
-      />
+      <SessionNoteEditor patientId={current.id} sessionNumber={nextSession} onSaved={refreshRecord} />
 
-      <section className="card">
-        <div className="form-header">
-          <div>
-            <p className="eyebrow">Historial</p>
-            <h2>Notas de sesion</h2>
-          </div>
-          <span className="pill">{notes.length}</span>
-        </div>
-        <div className="list-stack">
-          {notes.map((note) => (
-            <article key={note.id} className="note-row">
-              <div className="form-header">
-                <strong>Sesion #{note.session_number}</strong>
-                <span>{note.session_date}</span>
-              </div>
-              {note.eva !== null && note.eva !== undefined && <p className="muted">EVA: {note.eva}/10</p>}
-              <pre>{note.raw_text}</pre>
-            </article>
-          ))}
-          {!notes.length && <p className="muted">Aun no hay notas para este paciente.</p>}
-        </div>
-      </section>
+      <SessionNotesList notes={notes} />
 
       <section className="card">
         <div className="form-header">
