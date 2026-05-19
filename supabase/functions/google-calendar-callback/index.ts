@@ -1,0 +1,102 @@
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+const html = (status: number, body: string) =>
+  new Response(body, {
+    status,
+    headers: { 'Content-Type': 'text/html;charset=utf-8' }
+  });
+
+const requireEnv = (name: string) => {
+  const value = Deno.env.get(name);
+  if (!value) throw new Error(`${name} no configurado`);
+  return value;
+};
+
+const page = (title: string, message: string) => `<!doctype html>
+<html lang="es">
+  <head><meta charset="utf-8"><title>${title}</title></head>
+  <body style="font-family:system-ui;padding:32px;line-height:1.5;color:#12372a;background:#f7f3ea">
+    <h1>${title}</h1>
+    <p>${message}</p>
+    <p>Ya puedes cerrar esta ventana y volver a FISIOSELF App Notas VX.</p>
+  </body>
+</html>`;
+
+Deno.serve(async (req) => {
+  try {
+    const url = new URL(req.url);
+    const code = url.searchParams.get('code');
+    const state = url.searchParams.get('state');
+    const errorParam = url.searchParams.get('error');
+
+    if (errorParam) return html(400, page('Conexion cancelada', `Google respondio: ${errorParam}`));
+    if (!code || !state) return html(400, page('Faltan datos', 'No se recibio codigo o state.'));
+
+    const supabaseUrl = requireEnv('SUPABASE_URL');
+    const serviceRoleKey = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
+    const googleClientId = requireEnv('GOOGLE_CLIENT_ID');
+    const googleClientSecret = requireEnv('GOOGLE_CLIENT_SECRET');
+    const redirectUri = requireEnv('GOOGLE_REDIRECT_URI');
+
+    const supabase = createClient(supabaseUrl, serviceRoleKey);
+
+    const { data: stateRow, error: stateError } = await supabase
+      .from('google_oauth_states')
+      .select('*')
+      .eq('state', state)
+      .single();
+
+    if (stateError || !stateRow) return html(400, page('State invalido', 'La solicitud no coincide con una conexion iniciada.'));
+    if (stateRow.consumed_at) return html(400, page('State usado', 'Esta autorizacion ya fue utilizada.'));
+    if (new Date(stateRow.expires_at) <= new Date()) return html(400, page('State expirado', 'Vuelve a iniciar la conexion.'));
+
+    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: googleClientId,
+        client_secret: googleClientSecret,
+        code,
+        grant_type: 'authorization_code',
+        redirect_uri: redirectUri
+      })
+    });
+
+    const tokenData = await tokenResponse.json().catch(() => ({}));
+    if (!tokenResponse.ok) {
+      return html(400, page('Error OAuth', tokenData.error_description || tokenData.error || 'No se pudo obtener token.'));
+    }
+
+    const accessToken = tokenData.access_token;
+    const refreshToken = tokenData.refresh_token;
+    const expiresIn = Number(tokenData.expires_in || 3600);
+    const tokenExpiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
+
+    const profileResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
+    const profile = await profileResponse.json().catch(() => ({}));
+
+    const { error: upsertError } = await supabase.from('calendar_connections').upsert({
+      user_id: stateRow.user_id,
+      provider: 'google',
+      provider_account_email: profile.email || null,
+      calendar_id: 'primary',
+      access_token: accessToken,
+      refresh_token: refreshToken || null,
+      token_expires_at: tokenExpiresAt,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'user_id,provider,calendar_id' });
+
+    if (upsertError) throw upsertError;
+
+    await supabase
+      .from('google_oauth_states')
+      .update({ consumed_at: new Date().toISOString() })
+      .eq('state', state);
+
+    return html(200, page('Google Calendar conectado', `Cuenta conectada: ${profile.email || 'Google Calendar'}.`));
+  } catch (error) {
+    return html(500, page('Error interno', error instanceof Error ? error.message : 'Error desconocido.'));
+  }
+});
