@@ -72,6 +72,7 @@ npm run dev
 005_google_oauth_token_hardening.sql
 006_session_number_integrity.sql
 007_clinic_tenancy_hardening.sql
+008_google_oauth_state_cleanup.sql
 ```
 
 3. Crear usuarios en Supabase Auth.
@@ -86,6 +87,7 @@ npm run dev
 - Validacion de paciente y nota en cliente.
 - La IA no usa API keys en frontend y la Edge Function valida JWT Supabase.
 - Google Calendar guarda tokens solo desde Edge Functions con service role.
+- Google Calendar solo puede conectarse/sincronizarse por usuarios `admin` o `therapist`.
 - Configurar `APP_ORIGIN` en Edge Functions para cerrar CORS en produccion.
 - Las notas de sesion tienen integridad por paciente y numero de sesion.
 - Este repo no usa Notion.

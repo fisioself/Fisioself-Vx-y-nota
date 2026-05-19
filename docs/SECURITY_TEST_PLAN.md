@@ -60,6 +60,8 @@ Casos:
 - Sync sin conexion Google falla de forma controlada.
 - Sync con cita `disabled` no intenta llamar Google.
 - Error de Google deja `sync_status = failed` y `sync_error`.
+- Assistant no puede iniciar conexion ni sincronizar Google Calendar.
+- `cleanup_google_oauth_states()` elimina states consumidos o expirados antiguos.
 
 ## 4. IA clinica
 

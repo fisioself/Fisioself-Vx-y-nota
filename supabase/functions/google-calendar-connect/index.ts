@@ -38,12 +38,8 @@ Deno.serve(async (req) => {
       .select('role, active')
       .eq('id', userData.user.id)
       .single();
-    if (
-      profileError ||
-      !profile?.active ||
-      !['admin', 'therapist', 'assistant'].includes(profile.role)
-    ) {
-      return json(req, 403, { error: 'Usuario clinico no autorizado' });
+    if (profileError || !profile?.active || !['admin', 'therapist'].includes(profile.role)) {
+      return json(req, 403, { error: 'Solo admin o therapist pueden conectar Google Calendar' });
     }
 
     const state = crypto.randomUUID();

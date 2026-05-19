@@ -58,3 +58,4 @@ Las migraciones de endurecimiento limitan los datos clinicos por rol y por membr
 - Probar RLS con usuarios de distintas clinicas antes de abrir multi-sede.
 - Agregar rate limit persistente a la funcion IA.
 - Registrar uso de IA con paciente, tipo y usuario.
+- Programar limpieza periodica de `google_oauth_states` usando `cleanup_google_oauth_states()`.

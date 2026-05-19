@@ -17,6 +17,7 @@ supabase/migrations/004_google_oauth_states.sql
 supabase/migrations/005_google_oauth_token_hardening.sql
 supabase/migrations/006_session_number_integrity.sql
 supabase/migrations/007_clinic_tenancy_hardening.sql
+supabase/migrations/008_google_oauth_state_cleanup.sql
 ```
 
 3. Crear usuarios en Supabase Auth.
@@ -90,6 +91,13 @@ La app usa el scope:
 https://www.googleapis.com/auth/calendar.events
 ```
 
+Solo usuarios con rol `admin` o `therapist` deben conectar y sincronizar Google Calendar.
+Para limpiar states OAuth antiguos desde un contexto seguro con service role:
+
+```sql
+select public.cleanup_google_oauth_states();
+```
+
 ## 4. Vercel
 
 1. Crear nuevo proyecto en Vercel.
@@ -150,6 +158,7 @@ build
 - No guardar claves privadas en Vercel como variables expuestas al navegador.
 - La clave de Claude solo vive como secret de Supabase Edge Function.
 - Los secretos de Google OAuth solo viven en Supabase Edge Functions.
+- Solo `admin` y `therapist` pueden conectar/sincronizar Google Calendar.
 - RLS debe permanecer habilitado.
 - La app requiere usuarios autenticados.
 - Las Edge Functions deben validar JWT Supabase y usar `APP_ORIGIN` para CORS.
