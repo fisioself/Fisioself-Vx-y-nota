@@ -10,7 +10,8 @@ const AI_TYPES = new Set([
   'exercises',
   'clinical_analysis',
   'treatment_plan',
-  'discharge_letter'
+  'discharge_letter',
+  'informed_consent'
 ]);
 
 const SYSTEM_PROMPT = `Eres un asistente clinico para fisioterapia.
@@ -26,7 +27,8 @@ const prompts: Record<string, string> = {
   exercises: 'Sugiere ejercicios generales seguros basados solo en la nota. Incluye precauciones.',
   clinical_analysis: 'Realiza un analisis clinico prudente. Incluye banderas rojas si aparecen en el texto.',
   treatment_plan: 'Propone un plan de tratamiento fisioterapeutico razonable y progresivo.',
-  discharge_letter: 'Redacta un borrador de carta de alta fisioterapeutica.'
+  discharge_letter: 'Redacta un borrador de carta de alta fisioterapeutica.',
+  informed_consent: 'Redacta un borrador de consentimiento informado para fisioterapia. Debe explicar objetivo, beneficios esperados, riesgos razonables, alternativas, derecho a retirar consentimiento y espacio para firma. No inventes datos personales.'
 };
 
 type Bucket = { count: number; resetAt: number };
