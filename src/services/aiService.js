@@ -6,7 +6,8 @@ export const AI_TYPES = [
   { id: 'exercises', label: 'Sugerir ejercicios', traceable: false },
   { id: 'clinical_analysis', label: 'Analisis clinico', traceable: true },
   { id: 'treatment_plan', label: 'Plan de tratamiento', traceable: true },
-  { id: 'discharge_letter', label: 'Carta de alta', traceable: true }
+  { id: 'discharge_letter', label: 'Carta de alta', traceable: true },
+  { id: 'informed_consent', label: 'Consentimiento informado', traceable: true }
 ];
 
 export const isAiConfigured = Boolean(proxyUrl);
