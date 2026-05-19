@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useToast } from '../../app/ToastProvider.jsx';
 import { clinicalApi } from '../../services/clinicalApi.js';
 import { aiService, AI_TYPES } from '../../services/aiService.js';
 import { hasErrors, validateSessionNote } from '../../shared/clinicalValidation.js';
+import { draftStorage, getDraftKey } from '../../shared/draftStorage.js';
 import { AiConsultModal } from './AiConsultModal.jsx';
 import { useDictation } from './useDictation.js';
 
@@ -17,6 +18,16 @@ export function SessionNoteEditor({ patientId, therapistId, sessionNumber = 1, o
   const [error, setError] = useState('');
   const [pendingConsult, setPendingConsult] = useState(null);
   const { notify } = useToast();
+  const draftKey = useMemo(() => getDraftKey({ patientId, sessionNumber }), [patientId, sessionNumber]);
+
+  useEffect(() => {
+    const savedDraft = draftStorage.get(draftKey);
+    setRawText(savedDraft);
+  }, [draftKey]);
+
+  useEffect(() => {
+    draftStorage.set(draftKey, rawText);
+  }, [draftKey, rawText]);
 
   const dictation = useDictation((chunk) => {
     setRawText((current) => current ? `${current} ${chunk}` : chunk);
@@ -71,6 +82,13 @@ export function SessionNoteEditor({ patientId, therapistId, sessionNumber = 1, o
     onSaved?.();
   };
 
+  const discardDraft = () => {
+    setRawText('');
+    setEva('');
+    draftStorage.remove(draftKey);
+    notify({ tone: 'success', message: 'Borrador descartado.' });
+  };
+
   const save = async () => {
     const payload = {
       patient_id: patientId,
@@ -95,6 +113,7 @@ export function SessionNoteEditor({ patientId, therapistId, sessionNumber = 1, o
       const saved = await clinicalApi.addSessionNote(payload);
       setRawText('');
       setEva('');
+      draftStorage.remove(draftKey);
       notify({ tone: 'success', message: 'Nota guardada en expediente.' });
       onSaved?.(saved);
     } catch (err) {
@@ -117,6 +136,7 @@ export function SessionNoteEditor({ patientId, therapistId, sessionNumber = 1, o
           <input type="number" min="0" max="10" value={eva} onChange={(e) => setEva(e.target.value)} placeholder="0-10" />
         </label>
         <span className="pill">Sesion #{sessionNumber}</span>
+        {rawText.trim() && <span className="pill">Borrador local activo</span>}
         {dictation.supported && (
           <button type="button" className={dictation.listening ? 'danger' : 'secondary'} onClick={dictation.toggle}>
             {dictation.listening ? 'Detener dictado' : 'Dictar por voz'}
@@ -153,6 +173,7 @@ export function SessionNoteEditor({ patientId, therapistId, sessionNumber = 1, o
       {error && <p className="error" role="alert">{error}</p>}
 
       <div className="actions">
+        {rawText.trim() && <button type="button" className="secondary" onClick={discardDraft}>Descartar borrador</button>}
         <button type="button" onClick={save} disabled={saving}>
           {saving ? 'Guardando...' : 'Guardar nota'}
         </button>
