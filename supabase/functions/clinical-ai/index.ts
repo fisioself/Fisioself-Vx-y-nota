@@ -29,15 +29,53 @@ const prompts: Record<string, string> = {
   discharge_letter: 'Redacta un borrador de carta de alta fisioterapeutica.'
 };
 
-const json = (status: number, body: unknown) =>
+type Bucket = { count: number; resetAt: number };
+const buckets = new Map<string, Bucket>();
+const WINDOW_MS = 60_000;
+const MAX_REQUESTS_PER_WINDOW = 12;
+
+const json = (status: number, body: unknown, extraHeaders: Record<string, string> = {}) =>
   new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    headers: { ...corsHeaders, ...extraHeaders, 'Content-Type': 'application/json' }
   });
+
+const getClientKey = (req: Request) => {
+  const auth = req.headers.get('authorization') || 'anonymous';
+  const forwardedFor = req.headers.get('x-forwarded-for') || req.headers.get('cf-connecting-ip') || 'unknown-ip';
+  return `${auth.slice(0, 48)}:${forwardedFor.split(',')[0].trim()}`;
+};
+
+const checkRateLimit = (key: string) => {
+  const now = Date.now();
+  const bucket = buckets.get(key);
+
+  if (!bucket || bucket.resetAt <= now) {
+    buckets.set(key, { count: 1, resetAt: now + WINDOW_MS });
+    return { allowed: true, retryAfterSeconds: 0 };
+  }
+
+  if (bucket.count >= MAX_REQUESTS_PER_WINDOW) {
+    return {
+      allowed: false,
+      retryAfterSeconds: Math.ceil((bucket.resetAt - now) / 1000)
+    };
+  }
+
+  bucket.count += 1;
+  return { allowed: true, retryAfterSeconds: 0 };
+};
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (req.method !== 'POST') return json(405, { error: 'Metodo no permitido' });
+
+  const rate = checkRateLimit(getClientKey(req));
+  if (!rate.allowed) {
+    return json(429, { error: 'Demasiadas solicitudes de IA. Intenta de nuevo en un momento.' }, {
+      'Retry-After': String(rate.retryAfterSeconds)
+    });
+  }
 
   const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
   const model = Deno.env.get('CLAUDE_MODEL') || 'claude-3-5-sonnet-latest';
