@@ -1,16 +1,23 @@
 import { useEffect, useMemo, useState } from 'react';
 import { clinicalApi } from '../../services/clinicalApi.js';
+import { EvaluationForm } from '../evaluations/EvaluationForm.jsx';
 import { SessionNoteEditor } from '../session-notes/SessionNoteEditor.jsx';
+import { ClinicalTimeline } from './ClinicalTimeline.jsx';
+import { PatientEditForm } from './PatientEditForm.jsx';
 
-export function PatientRecord({ patient }) {
+export function PatientRecord({ patient, onPatientUpdated }) {
   const [record, setRecord] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [refreshKey, setRefreshKey] = useState(0);
+  const [showEdit, setShowEdit] = useState(false);
+  const [showEvaluation, setShowEvaluation] = useState(false);
 
   useEffect(() => {
     if (!patient?.id) {
       setRecord(null);
+      setShowEdit(false);
+      setShowEvaluation(false);
       return;
     }
 
@@ -29,7 +36,9 @@ export function PatientRecord({ patient }) {
     }
 
     load();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [patient?.id, refreshKey]);
 
   const notes = useMemo(() => {
@@ -42,6 +51,13 @@ export function PatientRecord({ patient }) {
     return [...rows].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
   }, [record]);
 
+  const evaluations = useMemo(() => {
+    const rows = record?.evaluations || [];
+    return [...rows].sort((a, b) => new Date(b.evaluation_date) - new Date(a.evaluation_date));
+  }, [record]);
+
+  const timeline = useMemo(() => clinicalApi.buildTimeline(record), [record]);
+
   if (!patient) {
     return (
       <section className="card empty-record">
@@ -53,6 +69,7 @@ export function PatientRecord({ patient }) {
 
   const current = record || patient;
   const nextSession = notes.length + 1;
+  const refreshRecord = () => setRefreshKey((value) => value + 1);
 
   return (
     <section className="record-stack">
@@ -60,10 +77,44 @@ export function PatientRecord({ patient }) {
         <div>
           <p className="eyebrow">Expediente clinico</p>
           <h2>{current.full_name}</h2>
-          <p className="muted">{current.functional_diagnosis || current.medical_diagnosis || 'Sin diagnostico registrado'}</p>
+          <p className="muted">
+            {current.functional_diagnosis || current.medical_diagnosis || 'Sin diagnostico registrado'}
+          </p>
         </div>
-        <span className="pill">{current.status || 'Sin estado'}</span>
+        <div className="hero-actions">
+          <span className="pill">{current.status || 'Sin estado'}</span>
+          <button type="button" className="secondary" onClick={() => setShowEdit((value) => !value)}>
+            {showEdit ? 'Cerrar edicion' : 'Editar'}
+          </button>
+          <button type="button" onClick={() => setShowEvaluation((value) => !value)}>
+            {showEvaluation ? 'Cerrar valoracion' : 'Nueva valoracion'}
+          </button>
+        </div>
       </article>
+
+      {showEdit && (
+        <PatientEditForm
+          patient={current}
+          onCancel={() => setShowEdit(false)}
+          onUpdated={(updated) => {
+            setShowEdit(false);
+            setRecord((existing) => ({ ...(existing || {}), ...updated }));
+            onPatientUpdated?.(updated);
+            refreshRecord();
+          }}
+        />
+      )}
+
+      {showEvaluation && (
+        <EvaluationForm
+          patientId={current.id}
+          onCancel={() => setShowEvaluation(false)}
+          onCreated={() => {
+            setShowEvaluation(false);
+            refreshRecord();
+          }}
+        />
+      )}
 
       <div className="record-grid">
         <section className="card compact-card">
@@ -81,10 +132,37 @@ export function PatientRecord({ patient }) {
       {loading && <p className="muted">Cargando expediente...</p>}
       {error && <p className="error" role="alert">{error}</p>}
 
+      <ClinicalTimeline items={timeline} />
+
+      <section className="card">
+        <div className="form-header">
+          <div>
+            <p className="eyebrow">Valoraciones</p>
+            <h2>Historial de valoracion</h2>
+          </div>
+          <span className="pill">{evaluations.length}</span>
+        </div>
+        <div className="list-stack">
+          {evaluations.map((evaluation) => (
+            <article key={evaluation.id} className="note-row">
+              <div className="form-header">
+                <strong>{evaluation.evaluation_date}</strong>
+                {evaluation.eva_initial !== null && evaluation.eva_initial !== undefined && (
+                  <span>EVA inicial {evaluation.eva_initial}/10</span>
+                )}
+              </div>
+              <p>{evaluation.prognosis || 'Sin pronostico registrado'}</p>
+              {evaluation.red_flags && <p className="error">Banderas rojas: {evaluation.red_flags}</p>}
+            </article>
+          ))}
+          {!evaluations.length && <p className="muted">Aun no hay valoraciones registradas.</p>}
+        </div>
+      </section>
+
       <SessionNoteEditor
         patientId={current.id}
         sessionNumber={nextSession}
-        onSaved={() => setRefreshKey((value) => value + 1)}
+        onSaved={refreshRecord}
       />
 
       <section className="card">
