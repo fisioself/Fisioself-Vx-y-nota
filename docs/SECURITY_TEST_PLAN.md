@@ -108,6 +108,15 @@ npm run test:coverage
 npm run build
 ```
 
+## 8. Edge Functions
+
+Los tests de `src/services/edgeFunctionsSecurity.test.js` verifican contratos minimos de seguridad:
+
+- `clinical-ai` exige Bearer token.
+- `clinical-ai` usa `check_ai_rate_limit`.
+- Google Calendar Connect no permite `assistant`.
+- Google Calendar Sync valida `clinic_memberships` y rol `admin`/`therapist`.
+
 ## Go / No-Go para datos reales
 
 No usar datos reales hasta cumplir:
