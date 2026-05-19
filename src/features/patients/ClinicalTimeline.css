@@ -1,0 +1,32 @@
+.timeline {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.timeline-item {
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  gap: 12px;
+  align-items: start;
+}
+
+.timeline-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  margin-top: 5px;
+  background: #12372a;
+  box-shadow: 0 0 0 5px rgba(18, 55, 42, .10);
+}
+
+.timeline-type {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #edf7f0;
+  color: #12372a;
+  font-size: 12px;
+  font-weight: 800;
+}
