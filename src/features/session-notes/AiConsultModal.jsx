@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import './AiConsultModal.css';
 
 export function AiConsultModal({ consult, onClose, onSave }) {
   const [validated, setValidated] = useState(false);
