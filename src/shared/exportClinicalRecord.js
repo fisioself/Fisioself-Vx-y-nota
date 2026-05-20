@@ -1,5 +1,48 @@
 const safe = (value) => value || 'No registrado';
 
+const formatRows = (title, rows = [], valueKey) => [
+  title,
+  ...(rows.length
+    ? rows.map(
+        (row) =>
+          `- ${safe(row.joint || row.name)}: ${safe(row[valueKey])}${row.notes ? ` | ${row.notes}` : ''}`
+      )
+    : ['- No registrado'])
+];
+
+const formatEvaluationSections = (sections = {}) => {
+  const identity = sections.patient_identity || {};
+  const history = sections.history || {};
+  const consultation = sections.consultation || {};
+  const pain = sections.pain || {};
+  const exam = sections.physical_exam || {};
+
+  return [
+    `Edad: ${safe(identity.age)}`,
+    `Sexo: ${safe(identity.sex)}`,
+    `Ocupacion: ${safe(identity.occupation)}`,
+    `Fisioterapeuta: ${safe(identity.therapist_name)}`,
+    `Antecedentes personales: ${safe(history.personal_history)}`,
+    `Antecedentes quirurgicos: ${safe(history.surgical_history)}`,
+    `Medicamentos actuales: ${safe(history.current_medications)}`,
+    `Alergias conocidas: ${safe(history.known_allergies)}`,
+    `Uso de anticoagulantes: ${safe(history.anticoagulants)}`,
+    `Actividad fisica: ${safe(history.physical_activity)}`,
+    `Motivo de consulta: ${safe(consultation.reason)}`,
+    `Historia clinica: ${safe(consultation.clinical_history)}`,
+    `Dolor localizacion: ${safe(pain.location)}`,
+    `Dolor tipo: ${safe(pain.type)}`,
+    `Dolor intensidad: ${pain.intensity ?? 'No registrada'}/10`,
+    `Factores agravantes: ${safe(pain.aggravating_factors)}`,
+    `Factores que alivian: ${safe(pain.easing_factors)}`,
+    `Exploracion fisica: ${safe(exam.examination)}`,
+    `Inspeccion general: ${safe(exam.general_inspection)}`,
+    ...formatRows('Rangos de movimiento:', exam.movement_ranges, 'range'),
+    ...formatRows('Fuerza muscular:', exam.muscle_strength, 'strength'),
+    ...formatRows('Pruebas especiales:', exam.special_tests, 'result')
+  ];
+};
+
 export const buildClinicalRecordText = (record) => {
   const notes = record?.session_notes || [];
   const evaluations = record?.evaluations || [];
@@ -21,7 +64,8 @@ export const buildClinicalRecordText = (record) => {
       `Fecha: ${safe(item.evaluation_date)}`,
       `EVA inicial: ${item.eva_initial ?? 'No registrada'}`,
       `Banderas rojas: ${safe(item.red_flags)}`,
-      `Pronostico: ${safe(item.prognosis)}`
+      `Pronostico: ${safe(item.prognosis)}`,
+      ...formatEvaluationSections(item.sections)
     ]),
     '',
     'NOTAS DE SESION',

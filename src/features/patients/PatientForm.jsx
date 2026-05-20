@@ -1,21 +1,10 @@
 import { useState } from 'react';
 import { clinicalApi } from '../../services/clinicalApi.js';
-import {
-  PATIENT_STATUSES,
-  SEX_OPTIONS,
-  validatePatient,
-  hasErrors
-} from '../../shared/clinicalValidation.js';
+import { validatePatient, hasErrors } from '../../shared/clinicalValidation.js';
 
 const emptyPatient = {
   full_name: '',
   phone: '',
-  email: '',
-  sex: '',
-  birth_date: '',
-  occupation: '',
-  medical_diagnosis: '',
-  functional_diagnosis: '',
   status: 'En valoracion'
 };
 
@@ -56,8 +45,8 @@ export function PatientForm({ onCreated, onCancel }) {
     <form className="card form-grid" onSubmit={submit}>
       <div className="form-header span-2">
         <div>
-          <p className="eyebrow">Nuevo expediente</p>
-          <h2>Crear paciente</h2>
+          <p className="eyebrow">Alta rapida</p>
+          <h2>Nuevo paciente</h2>
         </div>
         {onCancel && (
           <button type="button" className="secondary" onClick={onCancel}>
@@ -66,7 +55,7 @@ export function PatientForm({ onCreated, onCancel }) {
         )}
       </div>
 
-      <label>
+      <label className="span-2">
         Nombre completo *
         <input
           value={values.full_name}
@@ -76,77 +65,13 @@ export function PatientForm({ onCreated, onCancel }) {
         {errors.full_name && <small className="field-error">{errors.full_name}</small>}
       </label>
 
-      <label>
+      <label className="span-2">
         Telefono
         <input
           value={values.phone}
           onChange={(e) => setField('phone', e.target.value)}
           inputMode="tel"
         />
-      </label>
-
-      <label>
-        Correo
-        <input
-          type="email"
-          value={values.email}
-          onChange={(e) => setField('email', e.target.value)}
-        />
-        {errors.email && <small className="field-error">{errors.email}</small>}
-      </label>
-
-      <label>
-        Sexo
-        <select value={values.sex} onChange={(e) => setField('sex', e.target.value)}>
-          {SEX_OPTIONS.map((option) => (
-            <option key={option} value={option}>
-              {option || 'Sin especificar'}
-            </option>
-          ))}
-        </select>
-      </label>
-
-      <label>
-        Fecha de nacimiento
-        <input
-          type="date"
-          value={values.birth_date}
-          onChange={(e) => setField('birth_date', e.target.value)}
-        />
-      </label>
-
-      <label>
-        Ocupacion
-        <input value={values.occupation} onChange={(e) => setField('occupation', e.target.value)} />
-      </label>
-
-      <label className="span-2">
-        Diagnostico medico
-        <textarea
-          rows="2"
-          value={values.medical_diagnosis}
-          onChange={(e) => setField('medical_diagnosis', e.target.value)}
-        />
-      </label>
-
-      <label className="span-2">
-        Diagnostico funcional
-        <textarea
-          rows="2"
-          value={values.functional_diagnosis}
-          onChange={(e) => setField('functional_diagnosis', e.target.value)}
-        />
-      </label>
-
-      <label>
-        Estado
-        <select value={values.status} onChange={(e) => setField('status', e.target.value)}>
-          {PATIENT_STATUSES.map((status) => (
-            <option key={status} value={status}>
-              {status}
-            </option>
-          ))}
-        </select>
       </label>
 
       {submitError && (

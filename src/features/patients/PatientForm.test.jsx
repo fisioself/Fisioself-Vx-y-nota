@@ -28,13 +28,13 @@ describe('PatientForm', () => {
     render(<PatientForm onCreated={onCreated} />);
 
     await userEvent.type(screen.getByLabelText(/nombre completo/i), 'Paciente Demo');
-    await userEvent.type(screen.getByLabelText(/correo/i), 'demo@example.com');
+    await userEvent.type(screen.getByLabelText(/telefono/i), '2221234567');
     await userEvent.click(screen.getByRole('button', { name: /crear paciente/i }));
 
     expect(clinicalApi.createPatient).toHaveBeenCalledWith(
       expect.objectContaining({
         full_name: 'Paciente Demo',
-        email: 'demo@example.com'
+        phone: '2221234567'
       })
     );
     expect(onCreated).toHaveBeenCalledWith(expect.objectContaining({ id: 'patient-1' }));
