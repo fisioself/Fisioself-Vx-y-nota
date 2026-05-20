@@ -24,9 +24,21 @@ export function LoginScreen({ onLogin }) {
   return (
     <main className="auth-shell">
       <form className="card auth-card" onSubmit={submit}>
-        <p className="eyebrow">FISIOSELF App Notas VX</p>
-        <h1>Acceso clinico seguro</h1>
-        <p className="muted">Entra con tu usuario de Supabase Auth.</p>
+        <div className="brand-lockup">
+          <span className="brand-mark" aria-hidden="true">
+            F
+          </span>
+          <div>
+            <p className="brand-name">FISIOSELF</p>
+            <p className="brand-system">Sistema clinico</p>
+          </div>
+        </div>
+
+        <div className="auth-copy">
+          <p className="eyebrow">App Notas VX</p>
+          <h1>Acceso privado</h1>
+          <p className="muted">Expediente, notas y agenda clinica del equipo FISIOSELF.</p>
+        </div>
 
         <label>
           Correo
@@ -58,6 +70,8 @@ export function LoginScreen({ onLogin }) {
         <button type="submit" disabled={busy}>
           {busy ? 'Entrando...' : 'Entrar'}
         </button>
+
+        <p className="auth-footnote">San Andres Cholula, Puebla · MX</p>
       </form>
     </main>
   );
