@@ -41,7 +41,7 @@ Prioridad: alta.
 
 Estado actual:
 
-Las Edge Functions deben usar allowlist por `APP_ORIGIN`. Revisar que todas las funciones nuevas importen `_shared/cors.ts`.
+Algunas Edge Functions usan `Access-Control-Allow-Origin: *`.
 
 Riesgo:
 
@@ -55,56 +55,36 @@ Recomendacion:
 
 Prioridad: alta.
 
-### 3. Multi-tenant / separacion por clinica
+### 3. Multi-tenant / separacion por clinica no implementada
 
 Estado actual:
 
-La migracion `007_clinic_tenancy_hardening.sql` agrega `clinics`, `clinic_memberships`,
-`clinic_id` en pacientes/terapeutas y politicas RLS por membresia.
+RLS permite que usuarios clinicos activos lean datos clinicos en general. La funcion `clinical-ai` ya exige `clinic_memberships.active = true` antes de enviar texto clinico al proveedor externo, pero el modelo multi-tenant completo aun debe aterrizarse en todas las tablas clinicas.
 
 Riesgo:
 
-Si se agregan usuarios manualmente sin membresia activa, no podran operar datos clinicos.
-Si se crean nuevas sedes, cada usuario debe quedar asociado explicitamente a su clinica.
+Si en el futuro hay mas terapeutas, sedes o cuentas separadas, todos los usuarios activos podrian leer toda la clinica.
 
 Recomendacion:
 
-- Mantener `clinic_memberships` actualizado junto con `profiles`.
-- Probar RLS con usuarios de distintas clinicas antes de usar datos reales multi-sede.
+- Crear `clinics` y `clinic_memberships`.
+- Asociar pacientes/citas/notas a `clinic_id`.
+- RLS por membresia.
 
-Prioridad: operativa.
+Prioridad: alta antes de crecer a mas usuarios.
 
 ## Hallazgos medios
 
-### 4. Rate limit persistente de IA
+### 4. Falta rate limit persistente
 
-Estado actual:
-
-La migracion `009_ai_rate_limit_persistence.sql` crea `ai_rate_limits` y `check_ai_rate_limit()`.
-La Edge Function `clinical-ai` usa esa funcion antes de llamar al proveedor de IA.
+La funcion de IA tiene rate limit en memoria. Es util pero no persistente entre instancias.
 
 Recomendacion:
 
-- Monitorear usuarios con rechazos 429 frecuentes.
-- Ajustar `max_requests` y ventana si la operacion clinica lo requiere.
-- Registrar uso de IA por paciente/tipo como siguiente mejora de auditoria.
+- Rate limit en tabla Supabase o proveedor externo.
+- Registrar uso de IA por usuario.
 
-Prioridad: operativa.
-
-### 4.1 Limpieza de OAuth states
-
-Estado actual:
-
-Existe `cleanup_google_oauth_states()` para borrar states expirados o consumidos antiguos.
-La migracion `008_google_oauth_state_cleanup.sql` intenta programar el job diario
-`cleanup-google-oauth-states-daily` con `pg_cron`.
-
-Recomendacion:
-
-- Ejecutarla periodicamente desde un job seguro con service role.
-- No exponerla al frontend.
-
-Prioridad: baja/media operativa.
+Prioridad: media.
 
 ### 5. Falta auditoria completa de lectura
 
@@ -148,8 +128,12 @@ Prioridad: media.
 - Politicas por rol iniciales.
 - Sin delete policies fisicas.
 - IA mediante Edge Function, no API key en frontend.
+- IA bloqueada para usuarios sin membresia clinica activa.
 - IA trazable y validacion clinica obligatoria.
 - Rate limit basico de IA.
+- Google Calendar recibe eventos sin PHI del paciente.
+- Errores de Google Calendar e IA se devuelven sanitizados al usuario.
+- Auditoria de inserts/updates clinicos movida a triggers SQL.
 - Headers de seguridad en Vercel.
 - CSP inicial.
 - GitHub Actions configurado.
@@ -160,10 +144,11 @@ Prioridad: media.
 
 Antes de usar datos reales de pacientes:
 
-1. Mantener CORS cerrado con allowlist.
+1. Cerrar CORS con allowlist.
 2. Proteger tokens OAuth de Google.
-3. Verificar `clinic_memberships` para cada usuario activo.
-4. Ejecutar CI y corregir fallos.
-5. Probar RLS con usuarios reales: admin, therapist, assistant, usuario inactivo.
-6. Auditar exportaciones e impresiones.
-7. Activar MFA para cuentas administrativas.
+3. Aplicar `010_clinical_audit_triggers.sql` junto con el flujo normal de despliegue.
+4. Completar modelo `clinics`/`clinic_memberships` en tablas clinicas si habra mas de un usuario/sede.
+5. Ejecutar CI y corregir fallos.
+6. Probar RLS con usuarios reales: admin, therapist, assistant, usuario inactivo.
+7. Auditar exportaciones e impresiones.
+8. Activar MFA para cuentas administrativas.

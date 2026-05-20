@@ -32,6 +32,7 @@ const prompts: Record<string, string> = {
 
 const WINDOW_MS = 60_000;
 const MAX_REQUESTS_PER_WINDOW = 12;
+const GENERIC_AI_ERROR = 'No se pudo consultar IA. Intenta de nuevo mas tarde.';
 
 const json = (
   req: Request,
@@ -75,6 +76,17 @@ Deno.serve(async (req) => {
     return json(req, 403, { error: 'Usuario clinico no autorizado' });
   }
 
+  const { data: membership, error: membershipError } = await supabase
+    .from('clinic_memberships')
+    .select('clinic_id')
+    .eq('user_id', userData.user.id)
+    .eq('active', true)
+    .limit(1)
+    .maybeSingle();
+  if (membershipError || !membership) {
+    return json(req, 403, { error: 'No tienes acceso a una clinica activa' });
+  }
+
   const { data: rateRows, error: rateError } = await supabase.rpc('check_ai_rate_limit', {
     target_user_id: userData.user.id,
     window_seconds: Math.floor(WINDOW_MS / 1000),
@@ -113,38 +125,49 @@ Deno.serve(async (req) => {
   if (text.length > 12000) return json(req, 400, { error: 'Texto demasiado largo' });
   if (!AI_TYPES.has(type)) return json(req, 400, { error: 'Tipo de IA invalido' });
 
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01'
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: 1400,
-      system: SYSTEM_PROMPT,
-      messages: [
-        {
-          role: 'user',
-          content: `${prompts[type]}\n\nNota clinica:\n${text}`
-        }
-      ]
-    })
-  });
-
-  const data = await response.json().catch(() => ({}));
-
-  if (!response.ok) {
-    return json(req, response.status, {
-      error: data?.error?.message || 'Error al consultar IA'
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: 1400,
+        system: SYSTEM_PROMPT,
+        messages: [
+          {
+            role: 'user',
+            content: `${prompts[type]}\n\nNota clinica:\n${text}`
+          }
+        ]
+      })
     });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      console.error('clinical_ai_upstream_failed', {
+        status: response.status,
+        code: data?.error?.type || 'unknown'
+      });
+      return json(req, response.status, { error: GENERIC_AI_ERROR });
+    }
+
+    const output = (data.content || [])
+      .map((item: { text?: string }) => item.text || '')
+      .join('\n')
+      .trim();
+
+    if (!output) return json(req, 502, { error: 'La IA no devolvio contenido.' });
+
+    return json(req, 200, { text: output });
+  } catch (error) {
+    console.error('clinical_ai_failed', {
+      name: error instanceof Error ? error.name : 'UnknownError'
+    });
+    return json(req, 502, { error: GENERIC_AI_ERROR });
   }
-
-  const output = (data.content || [])
-    .map((item: { text?: string }) => item.text || '')
-    .join('\n')
-    .trim();
-
-  return json(req, 200, { text: output });
 });

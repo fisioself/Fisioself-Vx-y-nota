@@ -33,8 +33,8 @@ describe('Edge Function security contracts', () => {
     expect(source).toContain('clinic_memberships');
     expect(source).toContain("!['admin', 'therapist'].includes(membership.role)");
     expect(source).toContain('No tienes permiso para sincronizar esta cita');
-    expect(source).toContain(
-      'patients(full_name, phone, email, medical_diagnosis, functional_diagnosis, clinic_id)'
-    );
+    expect(source).toContain("select('*, patients(clinic_id)')");
+    expect(source).toContain("const SAFE_EVENT_SUMMARY = 'Cita Fisioself'");
+    expect(source).toContain("const SAFE_EVENT_DESCRIPTION = 'Ver detalles en Fisioself.'");
   });
 });

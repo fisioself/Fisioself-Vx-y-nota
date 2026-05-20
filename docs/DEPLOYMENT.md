@@ -19,11 +19,11 @@ supabase/migrations/006_session_number_integrity.sql
 supabase/migrations/007_clinic_tenancy_hardening.sql
 supabase/migrations/008_google_oauth_state_cleanup.sql
 supabase/migrations/009_ai_rate_limit_persistence.sql
+supabase/migrations/010_clinical_audit_triggers.sql
 ```
 
 3. Crear usuarios en Supabase Auth.
 4. Crear el registro correspondiente en `profiles` para cada usuario activo.
-5. Verificar que `clinic_memberships` tenga un registro activo para cada usuario que usara la app.
 
 Ejemplo de perfil inicial:
 
@@ -31,10 +31,6 @@ Ejemplo de perfil inicial:
 insert into profiles (id, full_name, role, active)
 values ('USER_ID_DE_SUPABASE_AUTH', 'Nombre del fisioterapeuta', 'admin', true);
 ```
-
-La migracion `007_clinic_tenancy_hardening.sql` crea una clinica `FISIOSELF` por default,
-asocia los perfiles existentes a esa clinica, crea un trigger para sincronizar altas futuras
-desde `profiles` hacia `clinic_memberships` y endurece RLS por membresia.
 
 ## 2. Funcion segura de IA
 
@@ -49,14 +45,11 @@ Configurar secretos en Supabase, no en el frontend:
 ```text
 ANTHROPIC_API_KEY
 CLAUDE_MODEL
-SUPABASE_SERVICE_ROLE_KEY
-APP_ORIGIN
-ENVIRONMENT
 ```
 
 `CLAUDE_MODEL` puede quedar como opcional si se usa el valor default definido en la funcion.
-`APP_ORIGIN` debe contener el dominio de la app en produccion. Ejemplo:
-`https://app.fisioself.com`.
+
+La funcion valida `clinic_memberships.active = true` antes de enviar texto clinico al proveedor de IA. Confirmar que el modelo de clinicas/membresias exista y tenga al usuario activo antes de habilitar IA.
 
 ## 3. Google Calendar
 
@@ -83,22 +76,12 @@ GOOGLE_CLIENT_ID
 GOOGLE_CLIENT_SECRET
 GOOGLE_REDIRECT_URI
 SUPABASE_SERVICE_ROLE_KEY
-APP_ORIGIN
-ENVIRONMENT
 ```
 
 La app usa el scope:
 
 ```text
 https://www.googleapis.com/auth/calendar.events
-```
-
-Solo usuarios con rol `admin` o `therapist` deben conectar y sincronizar Google Calendar.
-La migracion `008_google_oauth_state_cleanup.sql` programa limpieza diaria con `pg_cron`.
-Tambien puede ejecutarse manualmente desde un contexto seguro con service role:
-
-```sql
-select public.cleanup_google_oauth_states();
 ```
 
 ## 4. Vercel
@@ -161,11 +144,8 @@ build
 - No guardar claves privadas en Vercel como variables expuestas al navegador.
 - La clave de Claude solo vive como secret de Supabase Edge Function.
 - Los secretos de Google OAuth solo viven en Supabase Edge Functions.
-- Solo `admin` y `therapist` pueden conectar/sincronizar Google Calendar.
+- Google Calendar no debe recibir nombre, telefono, correo, diagnosticos ni notas del paciente.
+- Aplicar `010_clinical_audit_triggers.sql` para que la auditoria ocurra en base de datos.
 - RLS debe permanecer habilitado.
 - La app requiere usuarios autenticados.
-- Las Edge Functions deben validar JWT Supabase y usar `APP_ORIGIN` para CORS.
-- `clinical-ai` requiere `009_ai_rate_limit_persistence.sql` para rate limit persistente.
-- `session_notes` tiene indice unico por `patient_id` + `session_number`; corregir duplicados antes de aplicar la migracion si ya existen datos.
-- `patients` y `therapists` quedan asociados a una clinica. Los datos clinicos se filtran por `clinic_memberships`.
 - No usar datos reales hasta validar Auth, RLS, IA, Calendar y auditoria.

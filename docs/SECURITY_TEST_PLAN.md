@@ -13,15 +13,11 @@ Probar usuarios:
 - assistant activo
 - usuario sin profile
 - usuario inactive
-- usuario activo sin `clinic_memberships`
-- usuarios activos en dos clinicas distintas
 
 Casos esperados:
 
 - Usuario sin profile no debe leer datos clinicos.
 - Usuario inactive no debe leer datos clinicos.
-- Usuario sin membresia activa no debe leer datos clinicos.
-- Usuario de clinica A no debe leer pacientes/notas/citas de clinica B.
 - Assistant puede leer pero no debe crear/editar datos clinicos sensibles.
 - Therapist puede crear pacientes, notas, valoraciones y citas.
 - Admin puede gestionar terapeutas.
@@ -46,9 +42,6 @@ Verificaciones:
 - `audit_log` solo es legible por admin.
 - `calendar_connections` no expone tokens al frontend.
 - `calendar_connection_status` solo expone metadata sin tokens.
-- `patients.clinic_id` se asigna por default y filtra expedientes por membresia.
-- Al crear/actualizar `profiles`, el trigger sincroniza `clinic_memberships` para la clinica default.
-- Notas, valoraciones, citas, seguimientos e IA heredan acceso desde el paciente.
 
 ## 3. Google Calendar OAuth
 
@@ -61,9 +54,8 @@ Casos:
 - Sync sin conexion Google falla de forma controlada.
 - Sync con cita `disabled` no intenta llamar Google.
 - Error de Google deja `sync_status = failed` y `sync_error`.
-- Assistant no puede iniciar conexion ni sincronizar Google Calendar.
-- `cleanup_google_oauth_states()` elimina states consumidos o expirados antiguos.
-- El job `cleanup-google-oauth-states-daily` existe si `pg_cron` esta disponible.
+- Evento creado/actualizado en Google no contiene nombre, telefono, correo, diagnosticos, notas ni descripcion clinica.
+- Errores de OAuth/Google no devuelven mensajes crudos del proveedor al usuario.
 
 ## 4. IA clinica
 
@@ -74,8 +66,9 @@ Casos:
 - IA trazable exige validacion clinica en modal.
 - Uso de IA queda en `ai_consults`.
 - Rate limit responde 429 si se excede.
-- Rate limit persiste por usuario en `ai_rate_limits` aunque cambie la instancia Edge.
 - API key de Claude no existe en frontend.
+- Sin `clinic_memberships.active = true`, la funcion responde 403 antes de enviar texto clinico al proveedor.
+- Errores del proveedor de IA no devuelven mensajes crudos al usuario.
 
 ## 5. Frontend / navegador
 
@@ -95,7 +88,8 @@ Casos:
 
 - Exportar TXT no debe fallar con datos vacios.
 - Imprimir/PDF no debe ejecutar HTML del expediente.
-- Exportaciones deben auditarse antes de datos reales.
+- Inserts/updates en `patients`, `evaluations`, `session_notes`, `appointments` y `ai_consults` crean filas en `audit_log` via triggers.
+- El navegador no inserta directamente en `audit_log`.
 
 ## 7. CI
 
@@ -107,15 +101,6 @@ npm run lint
 npm run test:coverage
 npm run build
 ```
-
-## 8. Edge Functions
-
-Los tests de `src/services/edgeFunctionsSecurity.test.js` verifican contratos minimos de seguridad:
-
-- `clinical-ai` exige Bearer token.
-- `clinical-ai` usa `check_ai_rate_limit`.
-- Google Calendar Connect no permite `assistant`.
-- Google Calendar Sync valida `clinic_memberships` y rol `admin`/`therapist`.
 
 ## Go / No-Go para datos reales
 

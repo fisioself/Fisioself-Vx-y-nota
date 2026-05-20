@@ -21,11 +21,6 @@ Este repositorio es independiente de la web publica.
 src/
 |-- app/
 |-- features/
-|   |-- appointments/
-|   |-- auth/
-|   |-- evaluations/
-|   |-- patients/
-|   `-- session-notes/
 |-- lib/
 |-- services/
 |-- shared/
@@ -74,6 +69,7 @@ npm run dev
 007_clinic_tenancy_hardening.sql
 008_google_oauth_state_cleanup.sql
 009_ai_rate_limit_persistence.sql
+010_clinical_audit_triggers.sql
 ```
 
 3. Crear usuarios en Supabase Auth.
@@ -83,15 +79,10 @@ npm run dev
 ## Seguridad
 
 - RLS habilitado en tablas clinicas.
-- Solo usuarios autenticados pueden leer y escribir datos clinicos.
 - Los expedientes quedan separados por clinica/sede con `clinics` y `clinic_memberships`.
-- Validacion de paciente y nota en cliente.
-- La IA no usa API keys en frontend y la Edge Function valida JWT Supabase.
-- La IA tiene rate limit persistente por usuario en Supabase.
-- Google Calendar guarda tokens solo desde Edge Functions con service role.
-- Google Calendar solo puede conectarse/sincronizarse por usuarios `admin` o `therapist`.
-- Configurar `APP_ORIGIN` en Edge Functions para cerrar CORS en produccion.
-- Las notas de sesion tienen integridad por paciente y numero de sesion.
+- La funcion `clinical-ai` valida membresia activa antes de enviar texto clinico al proveedor externo.
+- Google Calendar recibe eventos sin PHI: titulo generico `Cita Fisioself` y descripcion `Ver detalles en Fisioself.`.
+- La auditoria clinica critica se registra con triggers SQL en `audit_log`, no desde el navegador.
 - Este repo no usa Notion.
 
 ## Calidad
@@ -119,10 +110,3 @@ Output directory:
 ```text
 dist
 ```
-
-## Documentacion
-
-- [Deploy](./DEPLOYMENT.md)
-- [Seguridad](./SECURITY.md)
-- [Auditoria de seguridad](./SECURITY_AUDIT.md)
-- [Plan de pruebas de seguridad](./SECURITY_TEST_PLAN.md)

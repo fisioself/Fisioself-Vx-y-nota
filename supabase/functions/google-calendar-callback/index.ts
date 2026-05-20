@@ -5,6 +5,7 @@ const html = (status: number, body: string) =>
     status,
     headers: { 'Content-Type': 'text/html;charset=utf-8' }
   });
+const GENERIC_CALLBACK_ERROR = 'No se pudo completar la conexion con Google Calendar.';
 
 const requireEnv = (name: string) => {
   const value = Deno.env.get(name);
@@ -78,13 +79,11 @@ Deno.serve(async (req) => {
 
     const tokenData = await tokenResponse.json().catch(() => ({}));
     if (!tokenResponse.ok) {
-      return html(
-        400,
-        page(
-          'Error OAuth',
-          tokenData.error_description || tokenData.error || 'No se pudo obtener token.'
-        )
-      );
+      console.error('google_calendar_callback_token_failed', {
+        status: tokenResponse.status,
+        code: tokenData.error || 'unknown'
+      });
+      return html(400, page('Error OAuth', GENERIC_CALLBACK_ERROR));
     }
 
     const accessToken = tokenData.access_token;
@@ -123,9 +122,9 @@ Deno.serve(async (req) => {
       page('Google Calendar conectado', `Cuenta conectada: ${profile.email || 'Google Calendar'}.`)
     );
   } catch (error) {
-    return html(
-      500,
-      page('Error interno', error instanceof Error ? error.message : 'Error desconocido.')
-    );
+    console.error('google_calendar_callback_failed', {
+      name: error instanceof Error ? error.name : 'UnknownError'
+    });
+    return html(500, page('Error interno', GENERIC_CALLBACK_ERROR));
   }
 });

@@ -35,19 +35,34 @@ describe('clinicalApi.buildTimeline', () => {
           scheduled_date: '2026-05-02',
           status: 'Pendiente'
         }
+      ],
+      appointments: [
+        {
+          id: 'appointment-1',
+          title: 'Cita Fisioself',
+          starts_at: '2026-05-05T09:00:00.000Z',
+          status: 'scheduled',
+          sync_status: 'pending'
+        }
       ]
     };
 
     const timeline = clinicalApi.buildTimeline(record);
 
-    expect(timeline).toHaveLength(4);
+    expect(timeline).toHaveLength(5);
     expect(timeline.map((item) => item.type)).toEqual([
+      'appointment',
       'ai_consult',
       'session_note',
       'follow_up',
       'evaluation'
     ]);
     expect(timeline[0]).toMatchObject({
+      id: 'appointment-1',
+      label: 'Cita Fisioself',
+      description: 'scheduled · pending'
+    });
+    expect(timeline[1]).toMatchObject({
       id: 'ai-1',
       label: 'IA: clinical_analysis',
       description: 'Pendiente de validacion'

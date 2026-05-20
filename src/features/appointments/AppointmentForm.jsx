@@ -11,7 +11,7 @@ export function AppointmentForm({ patient, therapistId, onCreated, onCancel }) {
   const now = new Date();
   const end = new Date(now.getTime() + 45 * 60 * 1000);
   const [values, setValues] = useState({
-    title: patient?.full_name ? `Sesion FISIOSELF - ${patient.full_name}` : 'Sesion FISIOSELF',
+    title: 'Cita Fisioself',
     starts_at: toLocalInputValue(now),
     ends_at: toLocalInputValue(end),
     location: '',

@@ -2,6 +2,9 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { jsonResponse, buildCorsHeaders } from '../_shared/cors.ts';
 
 const json = (req: Request, status: number, body: unknown) => jsonResponse(req, status, body);
+const GENERIC_SYNC_ERROR = 'No se pudo sincronizar la cita. Intenta de nuevo mas tarde.';
+const SAFE_EVENT_SUMMARY = 'Cita Fisioself';
+const SAFE_EVENT_DESCRIPTION = 'Ver detalles en Fisioself.';
 
 const requireEnv = (name: string) => {
   const value = Deno.env.get(name);
@@ -36,8 +39,13 @@ const refreshGoogleToken = async ({
   });
 
   const data = await response.json().catch(() => ({}));
-  if (!response.ok)
-    throw new Error(data.error_description || data.error || 'No se pudo refrescar token Google');
+  if (!response.ok) {
+    console.error('google_token_refresh_failed', {
+      status: response.status,
+      code: data.error || 'unknown'
+    });
+    throw new Error('No se pudo refrescar token Google');
+  }
   return data;
 };
 
@@ -65,9 +73,7 @@ Deno.serve(async (req) => {
 
     const { data: appointment, error: appointmentError } = await supabase
       .from('appointments')
-      .select(
-        '*, patients(full_name, phone, email, medical_diagnosis, functional_diagnosis, clinic_id)'
-      )
+      .select('*, patients(clinic_id)')
       .eq('id', appointmentId)
       .single();
 
@@ -132,20 +138,10 @@ Deno.serve(async (req) => {
         .eq('id', connection.id);
     }
 
-    const patient = appointment.patients || {};
     const eventPayload = {
-      summary: appointment.title,
+      summary: SAFE_EVENT_SUMMARY,
       location: appointment.location || undefined,
-      description: [
-        appointment.description,
-        '',
-        `Paciente: ${patient.full_name || 'No registrado'}`,
-        patient.phone ? `Telefono: ${patient.phone}` : null,
-        patient.email ? `Correo: ${patient.email}` : null,
-        patient.functional_diagnosis ? `Dx funcional: ${patient.functional_diagnosis}` : null
-      ]
-        .filter(Boolean)
-        .join('\n'),
+      description: SAFE_EVENT_DESCRIPTION,
       start: { dateTime: appointment.starts_at },
       end: { dateTime: appointment.ends_at }
     };
@@ -167,12 +163,15 @@ Deno.serve(async (req) => {
 
     const googleData = await googleResponse.json().catch(() => ({}));
     if (!googleResponse.ok) {
-      const message = googleData.error?.message || 'Google Calendar rechazo la sincronizacion';
+      console.error('google_calendar_sync_rejected', {
+        status: googleResponse.status,
+        code: googleData.error?.code || googleData.error?.status || 'unknown'
+      });
       await supabase
         .from('appointments')
-        .update({ sync_status: 'failed', sync_error: message })
+        .update({ sync_status: 'failed', sync_error: GENERIC_SYNC_ERROR })
         .eq('id', appointmentId);
-      return json(req, googleResponse.status, { error: message });
+      return json(req, googleResponse.status, { error: GENERIC_SYNC_ERROR });
     }
 
     const { data: updated, error: updateError } = await supabase
@@ -201,8 +200,9 @@ Deno.serve(async (req) => {
 
     return json(req, 200, { appointment: updated });
   } catch (error) {
-    return json(req, 500, {
-      error: error instanceof Error ? error.message : 'Error al sincronizar Google Calendar'
+    console.error('google_calendar_sync_failed', {
+      name: error instanceof Error ? error.name : 'UnknownError'
     });
+    return json(req, 500, { error: GENERIC_SYNC_ERROR });
   }
 });

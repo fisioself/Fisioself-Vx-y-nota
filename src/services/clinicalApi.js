@@ -9,20 +9,6 @@ const unwrap = ({ data, error }) => {
   return data;
 };
 
-const audit = async ({ action, entityType, entityId, before, after }) => {
-  try {
-    await supabase.from('audit_log').insert({
-      action,
-      entity_type: entityType,
-      entity_id: entityId,
-      before_json: before || null,
-      after_json: after || null
-    });
-  } catch (error) {
-    if (import.meta.env.DEV) console.warn('Audit log failed', error);
-  }
-};
-
 const sortByDateDesc = (a, b) => new Date(b.date) - new Date(a.date);
 
 export const clinicalApi = {
@@ -36,19 +22,12 @@ export const clinicalApi = {
   async createPatient(payload) {
     assertReady();
     const patient = unwrap(await supabase.from('patients').insert(payload).select('*').single());
-    await audit({
-      action: 'patient.created',
-      entityType: 'patients',
-      entityId: patient.id,
-      after: patient
-    });
     return patient;
   },
 
   async updatePatient(id, payload) {
     assertReady();
-    const before = unwrap(await supabase.from('patients').select('*').eq('id', id).single());
-    const after = unwrap(
+    return unwrap(
       await supabase
         .from('patients')
         .update({ ...payload, updated_at: new Date().toISOString() })
@@ -56,8 +35,6 @@ export const clinicalApi = {
         .select('*')
         .single()
     );
-    await audit({ action: 'patient.updated', entityType: 'patients', entityId: id, before, after });
-    return after;
   },
 
   async getPatient(id) {
@@ -78,12 +55,6 @@ export const clinicalApi = {
     const evaluation = unwrap(
       await supabase.from('evaluations').insert(payload).select('*').single()
     );
-    await audit({
-      action: 'evaluation.created',
-      entityType: 'evaluations',
-      entityId: evaluation.id,
-      after: evaluation
-    });
     return evaluation;
   },
 
@@ -96,24 +67,12 @@ export const clinicalApi = {
       );
     }
     const note = unwrap(response);
-    await audit({
-      action: 'session_note.created',
-      entityType: 'session_notes',
-      entityId: note.id,
-      after: note
-    });
     return note;
   },
 
   async addAiConsult(payload) {
     assertReady();
     const consult = unwrap(await supabase.from('ai_consults').insert(payload).select('*').single());
-    await audit({
-      action: 'ai_consult.created',
-      entityType: 'ai_consults',
-      entityId: consult.id,
-      after: consult
-    });
     return consult;
   },
 
@@ -122,19 +81,12 @@ export const clinicalApi = {
     const appointment = unwrap(
       await supabase.from('appointments').insert(payload).select('*').single()
     );
-    await audit({
-      action: 'appointment.created',
-      entityType: 'appointments',
-      entityId: appointment.id,
-      after: appointment
-    });
     return appointment;
   },
 
   async updateAppointment(id, payload) {
     assertReady();
-    const before = unwrap(await supabase.from('appointments').select('*').eq('id', id).single());
-    const after = unwrap(
+    return unwrap(
       await supabase
         .from('appointments')
         .update({ ...payload, updated_at: new Date().toISOString() })
@@ -142,14 +94,6 @@ export const clinicalApi = {
         .select('*')
         .single()
     );
-    await audit({
-      action: 'appointment.updated',
-      entityType: 'appointments',
-      entityId: id,
-      before,
-      after
-    });
-    return after;
   },
 
   buildTimeline(record) {

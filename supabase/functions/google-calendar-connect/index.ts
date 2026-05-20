@@ -2,6 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { jsonResponse, buildCorsHeaders } from '../_shared/cors.ts';
 
 const json = (req: Request, status: number, body: unknown) => jsonResponse(req, status, body);
+const GENERIC_CONNECT_ERROR = 'No se pudo iniciar Google Calendar. Intenta de nuevo mas tarde.';
 
 const requireEnv = (name: string) => {
   const value = Deno.env.get(name);
@@ -67,8 +68,9 @@ Deno.serve(async (req) => {
       url: `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`
     });
   } catch (error) {
-    return json(req, 500, {
-      error: error instanceof Error ? error.message : 'Error al iniciar Google Calendar'
+    console.error('google_calendar_connect_failed', {
+      name: error instanceof Error ? error.name : 'UnknownError'
     });
+    return json(req, 500, { error: GENERIC_CONNECT_ERROR });
   }
 });
