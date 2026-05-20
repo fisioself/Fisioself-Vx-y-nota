@@ -5,8 +5,6 @@ import {
   downloadTextFile,
   printClinicalRecord
 } from '../../shared/exportClinicalRecord.js';
-import { AppointmentForm } from '../appointments/AppointmentForm.jsx';
-import { AppointmentsList } from '../appointments/AppointmentsList.jsx';
 import { EvaluationForm } from '../evaluations/EvaluationForm.jsx';
 import { SessionNoteEditor } from '../session-notes/SessionNoteEditor.jsx';
 import { SessionNotesList } from '../session-notes/SessionNotesList.jsx';
@@ -119,14 +117,14 @@ export function PatientRecord({ patient, onPatientUpdated, onPatientDeleted }) {
   const [refreshKey, setRefreshKey] = useState(0);
   const [showEdit, setShowEdit] = useState(false);
   const [showEvaluation, setShowEvaluation] = useState(false);
-  const [showAppointment, setShowAppointment] = useState(false);
+  const [showSessionNote, setShowSessionNote] = useState(false);
 
   useEffect(() => {
     if (!patient?.id) {
       setRecord(null);
       setShowEdit(false);
       setShowEvaluation(false);
-      setShowAppointment(false);
+      setShowSessionNote(false);
       return;
     }
 
@@ -165,18 +163,13 @@ export function PatientRecord({ patient, onPatientUpdated, onPatientDeleted }) {
     return [...rows].sort((a, b) => new Date(b.evaluation_date) - new Date(a.evaluation_date));
   }, [record]);
 
-  const appointments = useMemo(() => {
-    const rows = record?.appointments || [];
-    return [...rows].sort((a, b) => new Date(b.starts_at) - new Date(a.starts_at));
-  }, [record]);
-
   const timeline = useMemo(() => clinicalApi.buildTimeline(record), [record]);
 
   if (!patient) {
     return (
       <section className="card empty-record">
         <h2>Selecciona un paciente</h2>
-        <p className="muted">El expediente, notas, citas, IA y seguimiento apareceran aqui.</p>
+        <p className="muted">El expediente, notas de sesion, IA y seguimiento apareceran aqui.</p>
       </section>
     );
   }
@@ -237,9 +230,9 @@ export function PatientRecord({ patient, onPatientUpdated, onPatientDeleted }) {
           <button
             type="button"
             className="secondary"
-            onClick={() => setShowAppointment((value) => !value)}
+            onClick={() => setShowSessionNote((value) => !value)}
           >
-            {showAppointment ? 'Cerrar cita' : 'Nueva cita'}
+            {showSessionNote ? 'Cerrar nota' : `Nota de sesion #${nextSession}`}
           </button>
           <button type="button" onClick={() => setShowEvaluation((value) => !value)}>
             {showEvaluation ? 'Cerrar valoracion' : 'Nueva valoracion'}
@@ -258,17 +251,6 @@ export function PatientRecord({ patient, onPatientUpdated, onPatientDeleted }) {
             setShowEdit(false);
             setRecord((existing) => ({ ...(existing || {}), ...updated }));
             onPatientUpdated?.(updated);
-            refreshRecord();
-          }}
-        />
-      )}
-
-      {showAppointment && (
-        <AppointmentForm
-          patient={current}
-          onCancel={() => setShowAppointment(false)}
-          onCreated={() => {
-            setShowAppointment(false);
             refreshRecord();
           }}
         />
@@ -306,7 +288,18 @@ export function PatientRecord({ patient, onPatientUpdated, onPatientDeleted }) {
       )}
 
       <ClinicalTimeline items={timeline} />
-      <AppointmentsList appointments={appointments} onSynced={refreshRecord} />
+
+      {showSessionNote && (
+        <SessionNoteEditor
+          patientId={current.id}
+          sessionNumber={nextSession}
+          onCancel={() => setShowSessionNote(false)}
+          onSaved={() => {
+            setShowSessionNote(false);
+            refreshRecord();
+          }}
+        />
+      )}
 
       <section className="card">
         <div className="form-header">
@@ -336,11 +329,6 @@ export function PatientRecord({ patient, onPatientUpdated, onPatientDeleted }) {
         </div>
       </section>
 
-      <SessionNoteEditor
-        patientId={current.id}
-        sessionNumber={nextSession}
-        onSaved={refreshRecord}
-      />
       <SessionNotesList notes={notes} />
 
       <section className="card">

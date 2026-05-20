@@ -9,7 +9,28 @@ import { draftStorage, getDraftKey } from '../../shared/draftStorage.js';
 import { AiConsultModal } from './AiConsultModal.jsx';
 import { useDictation } from './useDictation.js';
 
-export function SessionNoteEditor({ patientId, therapistId, sessionNumber = 1, onSaved }) {
+const SOAP_TEMPLATE = `S - Subjetivo:
+Motivo de la sesion, sintomas reportados, cambios desde la ultima visita.
+
+O - Objetivo:
+Intervenciones realizadas, ejercicios, movilidad, fuerza, dolor observado, respuesta al tratamiento.
+
+A - Analisis:
+Interpretacion clinica de la sesion, avances, limitaciones y tolerancia.
+
+P - Plan:
+Indicaciones, ejercicios en casa, progresion y proxima sesion.
+
+Notas adicionales:
+`;
+
+export function SessionNoteEditor({
+  patientId,
+  therapistId,
+  sessionNumber = 1,
+  onSaved,
+  onCancel
+}) {
   const [sessionDate, setSessionDate] = useState(new Date().toISOString().slice(0, 10));
   const [eva, setEva] = useState('');
   const [rawText, setRawText] = useState('');
@@ -100,6 +121,13 @@ export function SessionNoteEditor({ patientId, therapistId, sessionNumber = 1, o
     notify({ tone: 'success', message: 'Borrador descartado.' });
   };
 
+  const insertSoapTemplate = () => {
+    setRawText((current) => {
+      if (!current.trim()) return SOAP_TEMPLATE;
+      return `${current.trim()}\n\n---\n${SOAP_TEMPLATE}`;
+    });
+  };
+
   const save = async () => {
     const payload = {
       patient_id: patientId,
@@ -137,6 +165,18 @@ export function SessionNoteEditor({ patientId, therapistId, sessionNumber = 1, o
 
   return (
     <section className="card editor">
+      <div className="form-header">
+        <div>
+          <p className="eyebrow">Nota de sesion</p>
+          <h2>Sesion #{sessionNumber}</h2>
+        </div>
+        {onCancel && (
+          <button type="button" className="secondary" onClick={onCancel}>
+            Cancelar
+          </button>
+        )}
+      </div>
+
       <div className="row wrap">
         <label>
           Fecha
@@ -153,8 +193,11 @@ export function SessionNoteEditor({ patientId, therapistId, sessionNumber = 1, o
             placeholder="0-10"
           />
         </label>
-        <span className="pill">Sesion #{sessionNumber}</span>
+        <span className="pill">Nota #{sessionNumber}</span>
         {rawText.trim() && <span className="pill">Borrador local activo</span>}
+        <button type="button" className="secondary" onClick={insertSoapTemplate}>
+          Usar plantilla SOAP
+        </button>
         {dictation.supported && (
           <button
             type="button"
@@ -167,12 +210,16 @@ export function SessionNoteEditor({ patientId, therapistId, sessionNumber = 1, o
       </div>
 
       <label>
-        Nota clinica
+        Nota de sesion en formato SOAP
         <textarea
           rows="10"
           value={rawText}
           onChange={(e) => setRawText(e.target.value)}
-          placeholder="Escribe o dicta la nota de sesion..."
+          placeholder={`S - Subjetivo: como llega el paciente y que refiere.
+O - Objetivo: que se trabajo, ejercicios, tecnica y respuesta.
+A - Analisis: interpretacion clinica de la sesion.
+P - Plan: indicaciones y siguiente paso.
+Notas adicionales: cualquier detalle relevante.`}
         />
       </label>
 
@@ -216,7 +263,7 @@ export function SessionNoteEditor({ patientId, therapistId, sessionNumber = 1, o
           </button>
         )}
         <button type="button" onClick={save} disabled={saving}>
-          {saving ? 'Guardando...' : 'Guardar nota'}
+          {saving ? 'Guardando...' : `Guardar sesion #${sessionNumber}`}
         </button>
       </div>
 

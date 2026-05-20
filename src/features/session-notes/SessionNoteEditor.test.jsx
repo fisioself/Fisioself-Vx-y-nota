@@ -39,11 +39,11 @@ describe('SessionNoteEditor', () => {
       <SessionNoteEditor patientId="patient-1" sessionNumber={2} onSaved={onSaved} />
     );
 
-    fireEvent.change(screen.getByLabelText(/nota clinica/i), {
+    fireEvent.change(screen.getByLabelText(/nota de sesion/i), {
       target: { value: 'Dolor lumbar con mejora' }
     });
     fireEvent.change(screen.getByLabelText(/eva hoy/i), { target: { value: '4' } });
-    await userEvent.click(screen.getByRole('button', { name: /guardar nota/i }));
+    await userEvent.click(screen.getByRole('button', { name: /guardar sesion #2/i }));
 
     await waitFor(() => {
       expect(clinicalApi.addSessionNote).toHaveBeenCalledWith(
@@ -61,9 +61,20 @@ describe('SessionNoteEditor', () => {
   it('shows validation errors without calling the API', async () => {
     renderWithToast(<SessionNoteEditor patientId="patient-1" sessionNumber={1} />);
 
-    await userEvent.click(screen.getByRole('button', { name: /guardar nota/i }));
+    await userEvent.click(screen.getByRole('button', { name: /guardar sesion #1/i }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(/contenido clinico/i);
     expect(clinicalApi.addSessionNote).not.toHaveBeenCalled();
+  });
+
+  it('inserts a SOAP template for the numbered session', async () => {
+    renderWithToast(<SessionNoteEditor patientId="patient-1" sessionNumber={3} />);
+
+    await userEvent.click(screen.getByRole('button', { name: /usar plantilla soap/i }));
+
+    const note = screen.getByLabelText(/nota de sesion/i);
+    expect(note.value).toContain('S - Subjetivo:');
+    expect(note.value).toContain('Notas adicionales:');
+    expect(screen.getByRole('heading', { name: /sesion #3/i })).toBeInTheDocument();
   });
 });
