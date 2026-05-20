@@ -530,7 +530,7 @@ export function EvaluationForm({ patient, patientId, therapistId, onCreated, onC
       </label>
 
       <label className="span-2">
-        Pronostico / plan inicial
+        Diagnostico fisioterapeutico
         <textarea
           rows="3"
           value={values.prognosis}

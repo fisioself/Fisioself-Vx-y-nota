@@ -111,10 +111,11 @@ function EvaluationSummary({ evaluation }) {
   );
 }
 
-export function PatientRecord({ patient, onPatientUpdated }) {
+export function PatientRecord({ patient, onPatientUpdated, onPatientDeleted }) {
   const [record, setRecord] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [deleting, setDeleting] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [showEdit, setShowEdit] = useState(false);
   const [showEvaluation, setShowEvaluation] = useState(false);
@@ -188,6 +189,23 @@ export function PatientRecord({ patient, onPatientUpdated }) {
       filename: `expediente-${current.full_name || current.id}.txt`,
       text: buildClinicalRecordText(current)
     });
+  const deletePatient = async () => {
+    const confirmed = window.confirm(
+      `Eliminar definitivamente el expediente de ${current.full_name}? Esta accion tambien elimina sus valoraciones, notas y citas.`
+    );
+    if (!confirmed) return;
+
+    setDeleting(true);
+    setError('');
+    try {
+      await clinicalApi.deletePatient(current.id);
+      onPatientDeleted?.(current);
+    } catch (err) {
+      setError(err.message || 'No se pudo eliminar el paciente.');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   return (
     <section className="record-stack">
@@ -225,6 +243,9 @@ export function PatientRecord({ patient, onPatientUpdated }) {
           </button>
           <button type="button" onClick={() => setShowEvaluation((value) => !value)}>
             {showEvaluation ? 'Cerrar valoracion' : 'Nueva valoracion'}
+          </button>
+          <button type="button" className="danger" disabled={deleting} onClick={deletePatient}>
+            {deleting ? 'Eliminando...' : 'Eliminar paciente'}
           </button>
         </div>
       </article>
@@ -304,7 +325,7 @@ export function PatientRecord({ patient, onPatientUpdated }) {
                   <span>EVA inicial {evaluation.eva_initial}/10</span>
                 )}
               </div>
-              <p>{evaluation.prognosis || 'Sin pronostico registrado'}</p>
+              <p>{evaluation.prognosis || 'Sin diagnostico fisioterapeutico registrado'}</p>
               <EvaluationSummary evaluation={evaluation} />
               {evaluation.red_flags && (
                 <p className="error">Banderas rojas: {evaluation.red_flags}</p>

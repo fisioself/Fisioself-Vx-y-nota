@@ -37,6 +37,11 @@ export const clinicalApi = {
     );
   },
 
+  async deletePatient(id) {
+    assertReady();
+    return unwrap(await supabase.from('patients').delete().eq('id', id));
+  },
+
   async getPatient(id) {
     assertReady();
     return unwrap(

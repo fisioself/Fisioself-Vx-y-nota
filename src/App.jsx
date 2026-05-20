@@ -135,7 +135,13 @@ export function App() {
 
       <section className="right-pane">
         <Suspense fallback={<LoadingCard>Cargando expediente...</LoadingCard>}>
-          <PatientRecord patient={selectedPatient} />
+          <PatientRecord
+            patient={selectedPatient}
+            onPatientDeleted={() => {
+              setSelectedPatient(null);
+              setRefreshPatients((value) => value + 1);
+            }}
+          />
         </Suspense>
       </section>
     </main>

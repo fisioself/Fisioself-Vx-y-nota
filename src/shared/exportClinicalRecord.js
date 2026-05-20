@@ -64,7 +64,7 @@ export const buildClinicalRecordText = (record) => {
       `Fecha: ${safe(item.evaluation_date)}`,
       `EVA inicial: ${item.eva_initial ?? 'No registrada'}`,
       `Banderas rojas: ${safe(item.red_flags)}`,
-      `Pronostico: ${safe(item.prognosis)}`,
+      `Diagnostico fisioterapeutico: ${safe(item.prognosis)}`,
       ...formatEvaluationSections(item.sections)
     ]),
     '',

@@ -55,4 +55,18 @@ describe('clinicalApi writes', () => {
     );
     expect(from).not.toHaveBeenCalledWith('audit_log');
   });
+
+  it('deletes patients through the patients table and leaves auditing to database triggers', async () => {
+    const eq = vi.fn().mockResolvedValue({ data: null, error: null });
+    const deleteFn = vi.fn(() => ({ eq }));
+    const from = vi.fn(() => ({ delete: deleteFn }));
+    const { clinicalApi } = await loadClinicalApi(from);
+
+    await expect(clinicalApi.deletePatient('patient-1')).resolves.toBeNull();
+
+    expect(from).toHaveBeenCalledWith('patients');
+    expect(deleteFn).toHaveBeenCalled();
+    expect(eq).toHaveBeenCalledWith('id', 'patient-1');
+    expect(from).not.toHaveBeenCalledWith('audit_log');
+  });
 });
