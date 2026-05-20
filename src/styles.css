@@ -301,6 +301,33 @@ textarea {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
 }
+.summary-card {
+  display: grid;
+  gap: 14px;
+}
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.summary-grid div {
+  display: grid;
+  gap: 4px;
+  min-height: 88px;
+  align-content: center;
+  border-radius: 16px;
+  background: #edf7f0;
+  border: 1px solid rgba(18, 55, 42, 0.12);
+  padding: 12px;
+}
+.summary-grid strong {
+  font-size: 22px;
+}
+.summary-grid span {
+  color: rgba(18, 55, 42, 0.66);
+  font-size: 13px;
+  font-weight: 800;
+}
 .compact-card p {
   margin: 6px 0;
 }
@@ -355,6 +382,13 @@ textarea {
   padding: 14px;
   background: #fffaf0;
 }
+.note-actions {
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+.note-actions button {
+  padding: 9px 12px;
+}
 .evaluation-summary {
   display: grid;
   gap: 12px;
@@ -387,7 +421,49 @@ pre {
   }
   .form-grid,
   .record-grid,
+  .summary-grid,
   .clinical-table-row {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+  .shell {
+    width: min(100% - 20px, 1280px);
+    padding-bottom: 128px;
+  }
+  .card {
+    border-radius: 16px;
+    padding: 16px;
+  }
+  .record-header .hero-actions {
+    position: fixed;
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+    z-index: 20;
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(132px, max-content);
+    justify-content: flex-start;
+    overflow-x: auto;
+    padding: 10px;
+    border: 1px solid rgba(18, 55, 42, 0.14);
+    border-radius: 18px;
+    background: rgba(255, 250, 240, 0.96);
+    box-shadow: 0 16px 40px rgba(18, 55, 42, 0.2);
+  }
+  .record-header .hero-actions button,
+  .record-header .hero-actions .pill {
+    min-height: 44px;
+    white-space: nowrap;
+  }
+  .actions,
+  .row {
+    align-items: stretch;
+  }
+  .actions button,
+  .row > button {
+    width: 100%;
   }
 }

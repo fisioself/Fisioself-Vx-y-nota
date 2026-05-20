@@ -19,7 +19,84 @@ export const getNextSessionNumber = (notes = []) => {
   return maxSession + 1;
 };
 
+export const buildPatientSummary = ({ notes = [], evaluations = [] }) => {
+  const sortedNotes = [...notes].sort(
+    (a, b) => Number(a.session_number) - Number(b.session_number)
+  );
+  const evaValues = sortedNotes
+    .map((note) => Number(note.eva))
+    .filter((value) => Number.isFinite(value));
+  const latestNote = sortedNotes.at(-1);
+  const latestEvaluation = [...evaluations].sort(
+    (a, b) => new Date(b.evaluation_date) - new Date(a.evaluation_date)
+  )[0];
+  const initialEva =
+    latestEvaluation?.eva_initial !== null && latestEvaluation?.eva_initial !== undefined
+      ? Number(latestEvaluation.eva_initial)
+      : evaValues[0];
+  const latestEva = evaValues.at(-1);
+  const evaChange =
+    Number.isFinite(initialEva) && Number.isFinite(latestEva) ? latestEva - initialEva : null;
+
+  return {
+    sessionsCount: sortedNotes.length,
+    latestSessionNumber: latestNote?.session_number || null,
+    latestSessionDate: latestNote?.session_date || null,
+    latestEva: Number.isFinite(latestEva) ? latestEva : null,
+    initialEva: Number.isFinite(initialEva) ? initialEva : null,
+    evaChange,
+    diagnosis: latestEvaluation?.prognosis || '',
+    latestNotePreview: latestNote?.raw_text?.trim().slice(0, 180) || ''
+  };
+};
+
 const renderValue = (value) => value || 'No registrado';
+
+function ClinicalSummary({ summary, nextSession }) {
+  const evaTrend =
+    summary.evaChange === null
+      ? 'Sin tendencia'
+      : summary.evaChange < 0
+        ? `${Math.abs(summary.evaChange)} puntos menos`
+        : summary.evaChange > 0
+          ? `${summary.evaChange} puntos mas`
+          : 'Sin cambio';
+
+  return (
+    <section className="card summary-card">
+      <div className="form-header">
+        <div>
+          <p className="eyebrow">Resumen clinico</p>
+          <h2>Estado del tratamiento</h2>
+        </div>
+        <span className="pill">Proxima #{nextSession}</span>
+      </div>
+      <div className="summary-grid">
+        <div>
+          <strong>{summary.sessionsCount}</strong>
+          <span>sesiones</span>
+        </div>
+        <div>
+          <strong>{summary.latestEva !== null ? `${summary.latestEva}/10` : 'S/EVA'}</strong>
+          <span>EVA actual</span>
+        </div>
+        <div>
+          <strong>{evaTrend}</strong>
+          <span>cambio de dolor</span>
+        </div>
+      </div>
+      <p>
+        <strong>Diagnostico fisioterapeutico:</strong>{' '}
+        {summary.diagnosis || 'Pendiente de registrar en valoracion.'}
+      </p>
+      <p className="muted">
+        {summary.latestNotePreview
+          ? `Ultima nota: ${summary.latestNotePreview}`
+          : 'Aun no hay notas de sesion registradas.'}
+      </p>
+    </section>
+  );
+}
 
 function EvaluationSummary({ evaluation }) {
   const sections = evaluation.sections || {};
@@ -164,6 +241,7 @@ export function PatientRecord({ patient, onPatientUpdated, onPatientDeleted }) {
   }, [record]);
 
   const timeline = useMemo(() => clinicalApi.buildTimeline(record), [record]);
+  const summary = useMemo(() => buildPatientSummary({ notes, evaluations }), [notes, evaluations]);
 
   if (!patient) {
     return (
@@ -218,7 +296,7 @@ export function PatientRecord({ patient, onPatientUpdated, onPatientDeleted }) {
             Exportar TXT
           </button>
           <button type="button" className="secondary" onClick={() => printClinicalRecord(current)}>
-            Imprimir/PDF
+            Exportar PDF
           </button>
           <button
             type="button"
@@ -288,6 +366,7 @@ export function PatientRecord({ patient, onPatientUpdated, onPatientDeleted }) {
       )}
 
       <ClinicalTimeline items={timeline} />
+      <ClinicalSummary summary={summary} nextSession={nextSession} />
 
       {showSessionNote && (
         <SessionNoteEditor
@@ -329,7 +408,7 @@ export function PatientRecord({ patient, onPatientUpdated, onPatientDeleted }) {
         </div>
       </section>
 
-      <SessionNotesList notes={notes} />
+      <SessionNotesList notes={notes} onChanged={refreshRecord} />
 
       <section className="card">
         <div className="form-header">

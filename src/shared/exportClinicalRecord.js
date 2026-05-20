@@ -1,4 +1,11 @@
 const safe = (value) => value || 'No registrado';
+const escapeHtml = (value) =>
+  String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
 
 const formatRows = (title, rows = [], valueKey) => [
   title,
@@ -99,13 +106,92 @@ export const downloadTextFile = ({ filename, text }) => {
   URL.revokeObjectURL(url);
 };
 
+const paragraph = (label, value) =>
+  `<p><strong>${escapeHtml(label)}:</strong> ${escapeHtml(safe(value))}</p>`;
+
+const noteHtml = (item) => `
+  <article class="entry">
+    <h3>Sesion #${escapeHtml(item.session_number)} · ${escapeHtml(safe(item.session_date))}</h3>
+    ${paragraph('EVA', item.eva ?? 'No registrada')}
+    <pre>${escapeHtml(item.raw_text || '')}</pre>
+  </article>
+`;
+
+const evaluationHtml = (item) => `
+  <article class="entry">
+    <h3>Valoracion · ${escapeHtml(safe(item.evaluation_date))}</h3>
+    ${paragraph('EVA inicial', item.eva_initial ?? 'No registrada')}
+    ${paragraph('Diagnostico fisioterapeutico', item.prognosis)}
+    ${paragraph('Banderas rojas', item.red_flags)}
+  </article>
+`;
+
+export const buildClinicalRecordHtml = (record) => {
+  const notes = record?.session_notes || [];
+  const evaluations = record?.evaluations || [];
+  const aiConsults = record?.ai_consults || [];
+
+  return `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Expediente clinico FISIOSELF</title>
+    <style>
+      @page { margin: 18mm; }
+      * { box-sizing: border-box; }
+      body { font-family: Arial, sans-serif; color: #12372a; line-height: 1.45; margin: 0; }
+      header { border-bottom: 3px solid #1f5d45; padding-bottom: 18px; margin-bottom: 22px; }
+      h1 { font-family: Georgia, serif; font-size: 30px; margin: 0 0 6px; }
+      h2 { font-size: 17px; margin: 28px 0 10px; color: #1f5d45; text-transform: uppercase; letter-spacing: 0.08em; }
+      h3 { margin: 0 0 8px; font-size: 16px; }
+      p { margin: 5px 0; }
+      .meta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 18px; }
+      .entry { border: 1px solid rgba(18, 55, 42, 0.18); border-radius: 10px; padding: 12px; margin: 10px 0; break-inside: avoid; }
+      pre { white-space: pre-wrap; font-family: Arial, sans-serif; margin: 8px 0 0; }
+      .footer { margin-top: 28px; font-size: 12px; color: rgba(18, 55, 42, 0.66); }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>FISIOSELF</h1>
+      <p>Expediente clinico · ${escapeHtml(new Date().toLocaleDateString('es-MX'))}</p>
+    </header>
+    <section class="meta">
+      ${paragraph('Paciente', record?.full_name)}
+      ${paragraph('Telefono', record?.phone)}
+      ${paragraph('Estado', record?.status)}
+      ${paragraph('Diagnostico medico', record?.medical_diagnosis)}
+      ${paragraph('Diagnostico funcional', record?.functional_diagnosis)}
+    </section>
+    <h2>Valoraciones</h2>
+    ${evaluations.length ? evaluations.map(evaluationHtml).join('') : '<p>No hay valoraciones registradas.</p>'}
+    <h2>Notas de sesion</h2>
+    ${notes.length ? notes.map(noteHtml).join('') : '<p>No hay notas de sesion registradas.</p>'}
+    <h2>Consultas IA trazables</h2>
+    ${
+      aiConsults.length
+        ? aiConsults
+            .map(
+              (item) => `
+                <article class="entry">
+                  <h3>${escapeHtml(item.type)} · ${escapeHtml(safe(item.created_at))}</h3>
+                  ${paragraph('Validada', item.validated ? 'si' : 'no')}
+                  <pre>${escapeHtml(item.output_text || '')}</pre>
+                </article>
+              `
+            )
+            .join('')
+        : '<p>No hay consultas IA registradas.</p>'
+    }
+    <p class="footer">Documento generado desde FISIOSELF App VX. Revisar antes de compartir fuera de la clinica.</p>
+  </body>
+</html>`;
+};
+
 export const printClinicalRecord = (record) => {
-  const text = buildClinicalRecordText(record);
   const win = window.open('', '_blank', 'noopener,noreferrer');
   if (!win) throw new Error('No se pudo abrir ventana de impresion.');
-  win.document.write(
-    `<!doctype html><html><head><title>Expediente clinico</title><style>body{font-family:Arial,sans-serif;line-height:1.5;padding:32px;white-space:pre-wrap;color:#12372a}</style></head><body>${text.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')}</body></html>`
-  );
+  win.document.write(buildClinicalRecordHtml(record));
   win.document.close();
   win.focus();
   win.print();

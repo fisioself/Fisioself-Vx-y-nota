@@ -69,4 +69,42 @@ describe('clinicalApi writes', () => {
     expect(eq).toHaveBeenCalledWith('id', 'patient-1');
     expect(from).not.toHaveBeenCalledWith('audit_log');
   });
+
+  it('updates session notes and leaves auditing to database triggers', async () => {
+    const single = vi.fn().mockResolvedValue({
+      data: { id: 'note-1', raw_text: 'Nota editada' },
+      error: null
+    });
+    const select = vi.fn(() => ({ single }));
+    const eq = vi.fn(() => ({ select }));
+    const update = vi.fn(() => ({ eq }));
+    const from = vi.fn(() => ({ update }));
+    const { clinicalApi } = await loadClinicalApi(from);
+
+    const note = await clinicalApi.updateSessionNote('note-1', { raw_text: 'Nota editada' });
+
+    expect(note).toMatchObject({ id: 'note-1' });
+    expect(from).toHaveBeenCalledWith('session_notes');
+    expect(update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        raw_text: 'Nota editada',
+        updated_at: expect.any(String)
+      })
+    );
+    expect(from).not.toHaveBeenCalledWith('audit_log');
+  });
+
+  it('deletes session notes through the notes table and leaves auditing to database triggers', async () => {
+    const eq = vi.fn().mockResolvedValue({ data: null, error: null });
+    const deleteFn = vi.fn(() => ({ eq }));
+    const from = vi.fn(() => ({ delete: deleteFn }));
+    const { clinicalApi } = await loadClinicalApi(from);
+
+    await expect(clinicalApi.deleteSessionNote('note-1')).resolves.toBeNull();
+
+    expect(from).toHaveBeenCalledWith('session_notes');
+    expect(deleteFn).toHaveBeenCalled();
+    expect(eq).toHaveBeenCalledWith('id', 'note-1');
+    expect(from).not.toHaveBeenCalledWith('audit_log');
+  });
 });

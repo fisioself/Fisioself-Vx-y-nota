@@ -1,8 +1,14 @@
 import { useMemo, useState } from 'react';
+import { useToast } from '../../app/ToastProvider.jsx';
+import { clinicalApi } from '../../services/clinicalApi.js';
+import { SessionNoteEditor } from './SessionNoteEditor.jsx';
 
-export function SessionNotesList({ notes = [] }) {
+export function SessionNotesList({ notes = [], onChanged }) {
   const [query, setQuery] = useState('');
   const [openId, setOpenId] = useState(null);
+  const [editingId, setEditingId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
+  const { notify } = useToast();
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -14,6 +20,24 @@ export function SessionNotesList({ notes = [] }) {
         .some((value) => String(value).toLowerCase().includes(q))
     );
   }, [notes, query]);
+
+  const deleteNote = async (note) => {
+    const confirmed = window.confirm(
+      `Eliminar definitivamente la nota de sesion #${note.session_number}?`
+    );
+    if (!confirmed) return;
+
+    setDeletingId(note.id);
+    try {
+      await clinicalApi.deleteSessionNote(note.id);
+      notify({ tone: 'success', message: `Sesion #${note.session_number} eliminada.` });
+      onChanged?.();
+    } catch (err) {
+      notify({ tone: 'error', message: err.message || 'No se pudo eliminar la nota.' });
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   return (
     <section className="card">
@@ -34,6 +58,7 @@ export function SessionNotesList({ notes = [] }) {
       <div className="list-stack">
         {filtered.map((note) => {
           const isOpen = openId === note.id;
+          const isEditing = editingId === note.id;
           return (
             <article key={note.id} className="note-row">
               <button
@@ -49,6 +74,36 @@ export function SessionNotesList({ notes = [] }) {
                   {note.eva !== null && note.eva !== undefined ? `EVA ${note.eva}/10` : 'Sin EVA'}
                 </span>
               </button>
+              <div className="row wrap note-actions">
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={() => setEditingId(isEditing ? null : note.id)}
+                >
+                  {isEditing ? 'Cerrar edicion' : 'Editar'}
+                </button>
+                <button
+                  type="button"
+                  className="danger"
+                  disabled={deletingId === note.id}
+                  onClick={() => deleteNote(note)}
+                >
+                  {deletingId === note.id ? 'Eliminando...' : 'Eliminar'}
+                </button>
+              </div>
+              {isEditing && (
+                <SessionNoteEditor
+                  patientId={note.patient_id}
+                  therapistId={note.therapist_id}
+                  sessionNumber={note.session_number}
+                  note={note}
+                  onCancel={() => setEditingId(null)}
+                  onSaved={() => {
+                    setEditingId(null);
+                    onChanged?.();
+                  }}
+                />
+              )}
               {isOpen && <pre>{note.raw_text}</pre>}
             </article>
           );

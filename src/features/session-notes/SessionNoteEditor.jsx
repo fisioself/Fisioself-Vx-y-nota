@@ -28,12 +28,16 @@ export function SessionNoteEditor({
   patientId,
   therapistId,
   sessionNumber = 1,
+  note,
   onSaved,
   onCancel
 }) {
-  const [sessionDate, setSessionDate] = useState(new Date().toISOString().slice(0, 10));
-  const [eva, setEva] = useState('');
-  const [rawText, setRawText] = useState('');
+  const isEditing = Boolean(note?.id);
+  const [sessionDate, setSessionDate] = useState(
+    note?.session_date || new Date().toISOString().slice(0, 10)
+  );
+  const [eva, setEva] = useState(note?.eva ?? '');
+  const [rawText, setRawText] = useState(note?.raw_text || '');
   const [aiBusy, setAiBusy] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -45,13 +49,21 @@ export function SessionNoteEditor({
   );
 
   useEffect(() => {
+    if (isEditing) {
+      setSessionDate(note?.session_date || new Date().toISOString().slice(0, 10));
+      setEva(note?.eva ?? '');
+      setRawText(note?.raw_text || '');
+      return;
+    }
+
     const savedDraft = draftStorage.get(draftKey);
     setRawText(savedDraft);
-  }, [draftKey]);
+  }, [draftKey, isEditing, note]);
 
   useEffect(() => {
+    if (isEditing) return;
     draftStorage.set(draftKey, rawText);
-  }, [draftKey, rawText]);
+  }, [draftKey, isEditing, rawText]);
 
   const dictation = useDictation((chunk) => {
     setRawText((current) => (current ? `${current} ${chunk}` : chunk));
@@ -163,12 +175,49 @@ export function SessionNoteEditor({
     }
   };
 
+  const update = async () => {
+    if (!note?.id) return;
+
+    const payload = {
+      patient_id: patientId,
+      therapist_id: therapistId || null,
+      session_number: sessionNumber,
+      session_date: sessionDate,
+      eva: eva === '' ? null : Number(eva),
+      raw_text: rawText
+    };
+
+    const validation = validateSessionNote(payload);
+    if (hasErrors(validation)) {
+      const message = Object.values(validation)[0];
+      setError(message);
+      notify({ tone: 'warning', message });
+      return;
+    }
+
+    setSaving(true);
+    setError('');
+    try {
+      const saved = await clinicalApi.updateSessionNote(note.id, payload);
+      setRawText('');
+      setEva('');
+      draftStorage.remove(draftKey);
+      notify({ tone: 'success', message: 'Nota actualizada.' });
+      onSaved?.(saved);
+    } catch (err) {
+      setError(err.message || 'No se pudo actualizar la nota.');
+      notify({ tone: 'error', message: err.message || 'No se pudo actualizar la nota.' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <section className="card editor">
       <div className="form-header">
         <div>
           <p className="eyebrow">Nota de sesion</p>
-          <h2>Sesion #{sessionNumber}</h2>
+          <h2>{isEditing ? `Editar sesion #${sessionNumber}` : `Sesion #${sessionNumber}`}</h2>
         </div>
         {onCancel && (
           <button type="button" className="secondary" onClick={onCancel}>
@@ -259,11 +308,15 @@ Notas adicionales: cualquier detalle relevante.`}
       <div className="actions">
         {rawText.trim() && (
           <button type="button" className="secondary" onClick={discardDraft}>
-            Descartar borrador
+            {isEditing ? 'Limpiar cambios' : 'Descartar borrador'}
           </button>
         )}
-        <button type="button" onClick={save} disabled={saving}>
-          {saving ? 'Guardando...' : `Guardar sesion #${sessionNumber}`}
+        <button type="button" onClick={isEditing ? update : save} disabled={saving}>
+          {saving
+            ? 'Guardando...'
+            : isEditing
+              ? `Actualizar sesion #${sessionNumber}`
+              : `Guardar sesion #${sessionNumber}`}
         </button>
       </div>
 

@@ -8,6 +8,7 @@ import { SessionNoteEditor } from './SessionNoteEditor.jsx';
 vi.mock('../../services/clinicalApi.js', () => ({
   clinicalApi: {
     addSessionNote: vi.fn(),
+    updateSessionNote: vi.fn(),
     addAiConsult: vi.fn()
   }
 }));
@@ -76,5 +77,41 @@ describe('SessionNoteEditor', () => {
     expect(note.value).toContain('S - Subjetivo:');
     expect(note.value).toContain('Notas adicionales:');
     expect(screen.getByRole('heading', { name: /sesion #3/i })).toBeInTheDocument();
+  });
+
+  it('updates an existing session note', async () => {
+    clinicalApi.updateSessionNote.mockResolvedValueOnce({ id: 'note-1', raw_text: 'Editada' });
+    const onSaved = vi.fn();
+
+    renderWithToast(
+      <SessionNoteEditor
+        patientId="patient-1"
+        sessionNumber={4}
+        note={{
+          id: 'note-1',
+          patient_id: 'patient-1',
+          session_number: 4,
+          session_date: '2026-05-20',
+          eva: 2,
+          raw_text: 'Nota previa'
+        }}
+        onSaved={onSaved}
+      />
+    );
+
+    const note = screen.getByLabelText(/nota de sesion/i);
+    await userEvent.clear(note);
+    await userEvent.type(note, 'Nota editada con SOAP');
+    await userEvent.click(screen.getByRole('button', { name: /actualizar sesion #4/i }));
+
+    expect(clinicalApi.updateSessionNote).toHaveBeenCalledWith(
+      'note-1',
+      expect.objectContaining({
+        patient_id: 'patient-1',
+        session_number: 4,
+        raw_text: 'Nota editada con SOAP'
+      })
+    );
+    expect(onSaved).toHaveBeenCalledWith(expect.objectContaining({ id: 'note-1' }));
   });
 });

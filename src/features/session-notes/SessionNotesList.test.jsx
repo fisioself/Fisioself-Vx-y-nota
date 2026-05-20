@@ -1,12 +1,34 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ToastProvider } from '../../app/ToastProvider.jsx';
+import { clinicalApi } from '../../services/clinicalApi.js';
 import { SessionNotesList } from './SessionNotesList.jsx';
+
+vi.mock('../../services/clinicalApi.js', () => ({
+  clinicalApi: {
+    deleteSessionNote: vi.fn(),
+    updateSessionNote: vi.fn(),
+    addSessionNote: vi.fn()
+  }
+}));
+
+vi.mock('../../services/aiService.js', () => ({
+  AI_TYPES: [],
+  aiService: { transform: vi.fn() }
+}));
+
+vi.mock('./useDictation.js', () => ({
+  useDictation: () => ({ supported: false, listening: false, toggle: vi.fn() })
+}));
+
+const renderWithToast = (ui) => render(<ToastProvider>{ui}</ToastProvider>);
 
 describe('SessionNotesList', () => {
   const notes = [
     {
       id: '1',
+      patient_id: 'patient-1',
       session_number: 1,
       session_date: '2026-05-01',
       eva: 6,
@@ -14,6 +36,7 @@ describe('SessionNotesList', () => {
     },
     {
       id: '2',
+      patient_id: 'patient-1',
       session_number: 2,
       session_date: '2026-05-03',
       eva: 3,
@@ -21,8 +44,12 @@ describe('SessionNotesList', () => {
     }
   ];
 
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('filters notes by clinical text', async () => {
-    render(<SessionNotesList notes={notes} />);
+    renderWithToast(<SessionNotesList notes={notes} />);
 
     await userEvent.type(screen.getByPlaceholderText(/buscar/i), 'lumbar');
 
@@ -31,10 +58,23 @@ describe('SessionNotesList', () => {
   });
 
   it('expands a note when clicked', async () => {
-    render(<SessionNotesList notes={notes} />);
+    renderWithToast(<SessionNotesList notes={notes} />);
 
     await userEvent.click(screen.getByText(/sesion #2/i));
 
     expect(screen.getByText(/mejora tolerancia/i)).toBeInTheDocument();
+  });
+
+  it('deletes a session note after confirmation', async () => {
+    clinicalApi.deleteSessionNote.mockResolvedValueOnce(null);
+    vi.spyOn(window, 'confirm').mockReturnValueOnce(true);
+    const onChanged = vi.fn();
+
+    renderWithToast(<SessionNotesList notes={notes} onChanged={onChanged} />);
+
+    await userEvent.click(screen.getAllByRole('button', { name: /eliminar/i })[0]);
+
+    expect(clinicalApi.deleteSessionNote).toHaveBeenCalledWith('2');
+    expect(onChanged).toHaveBeenCalled();
   });
 });

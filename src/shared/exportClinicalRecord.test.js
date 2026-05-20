@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildClinicalRecordText } from './exportClinicalRecord.js';
+import { buildClinicalRecordHtml, buildClinicalRecordText } from './exportClinicalRecord.js';
 
 describe('buildClinicalRecordText', () => {
   it('includes patient, evaluations, notes and AI consults', () => {
@@ -42,5 +42,28 @@ describe('buildClinicalRecordText', () => {
     expect(text).toContain('Sesion #1');
     expect(text).toContain('CONSULTAS IA TRAZABLES');
     expect(text).toContain('Analisis clinico');
+  });
+
+  it('builds a styled PDF-safe HTML record and escapes clinical text', () => {
+    const html = buildClinicalRecordHtml({
+      full_name: '<Paciente>',
+      phone: '555',
+      status: 'En tratamiento',
+      session_notes: [
+        {
+          session_number: 1,
+          session_date: '2026-05-02',
+          eva: 5,
+          raw_text: '<script>alert("x")</script>'
+        }
+      ],
+      evaluations: [],
+      ai_consults: []
+    });
+
+    expect(html).toContain('FISIOSELF');
+    expect(html).toContain('&lt;Paciente&gt;');
+    expect(html).toContain('&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt;');
+    expect(html).not.toContain('<script>alert');
   });
 });

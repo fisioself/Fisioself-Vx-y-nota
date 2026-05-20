@@ -75,6 +75,29 @@ export const clinicalApi = {
     return note;
   },
 
+  async updateSessionNote(id, payload) {
+    assertReady();
+    const response = await supabase
+      .from('session_notes')
+      .update({ ...payload, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select('*')
+      .single();
+
+    if (response.error?.code === '23505') {
+      throw new Error(
+        'Ya existe una nota con ese numero de sesion. Actualiza el expediente e intenta de nuevo.'
+      );
+    }
+
+    return unwrap(response);
+  },
+
+  async deleteSessionNote(id) {
+    assertReady();
+    return unwrap(await supabase.from('session_notes').delete().eq('id', id));
+  },
+
   async addAiConsult(payload) {
     assertReady();
     const consult = unwrap(await supabase.from('ai_consults').insert(payload).select('*').single());
