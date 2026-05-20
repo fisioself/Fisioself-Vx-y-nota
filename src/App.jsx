@@ -1,10 +1,27 @@
-import { useEffect, useState } from 'react';
-import { LoginScreen } from './features/auth/LoginScreen.jsx';
-import { PatientForm } from './features/patients/PatientForm.jsx';
-import { PatientList } from './features/patients/PatientList.jsx';
-import { PatientRecord } from './features/patients/PatientRecord.jsx';
+import { Suspense, lazy, useEffect, useState } from 'react';
 import { authService } from './services/authService.js';
 import { isSupabaseConfigured } from './lib/supabaseClient.js';
+
+const LoginScreen = lazy(() =>
+  import('./features/auth/LoginScreen.jsx').then((module) => ({ default: module.LoginScreen }))
+);
+const PatientForm = lazy(() =>
+  import('./features/patients/PatientForm.jsx').then((module) => ({ default: module.PatientForm }))
+);
+const PatientList = lazy(() =>
+  import('./features/patients/PatientList.jsx').then((module) => ({ default: module.PatientList }))
+);
+const PatientRecord = lazy(() =>
+  import('./features/patients/PatientRecord.jsx').then((module) => ({
+    default: module.PatientRecord
+  }))
+);
+
+const LoadingCard = ({ children = 'Cargando...' }) => (
+  <section className="card" aria-busy="true">
+    {children}
+  </section>
+);
 
 export function App() {
   const [session, setSession] = useState(null);
@@ -66,7 +83,11 @@ export function App() {
   }
 
   if (!session) {
-    return <LoginScreen onLogin={setSession} />;
+    return (
+      <Suspense fallback={<LoadingCard>Cargando acceso...</LoadingCard>}>
+        <LoginScreen onLogin={setSession} />
+      </Suspense>
+    );
   }
 
   return (
@@ -92,26 +113,30 @@ export function App() {
           </button>
         </div>
 
-        {showNewPatient && (
-          <PatientForm
-            onCancel={() => setShowNewPatient(false)}
-            onCreated={(patient) => {
-              setSelectedPatient(patient);
-              setShowNewPatient(false);
-              setRefreshPatients((value) => value + 1);
-            }}
-          />
-        )}
+        <Suspense fallback={<LoadingCard>Cargando pacientes...</LoadingCard>}>
+          {showNewPatient && (
+            <PatientForm
+              onCancel={() => setShowNewPatient(false)}
+              onCreated={(patient) => {
+                setSelectedPatient(patient);
+                setShowNewPatient(false);
+                setRefreshPatients((value) => value + 1);
+              }}
+            />
+          )}
 
-        <PatientList
-          refreshKey={refreshPatients}
-          selectedId={selectedPatient?.id}
-          onSelect={setSelectedPatient}
-        />
+          <PatientList
+            refreshKey={refreshPatients}
+            selectedId={selectedPatient?.id}
+            onSelect={setSelectedPatient}
+          />
+        </Suspense>
       </aside>
 
       <section className="right-pane">
-        <PatientRecord patient={selectedPatient} />
+        <Suspense fallback={<LoadingCard>Cargando expediente...</LoadingCard>}>
+          <PatientRecord patient={selectedPatient} />
+        </Suspense>
       </section>
     </main>
   );
