@@ -41,7 +41,6 @@ Verificaciones:
 - No existen politicas DELETE para datos clinicos.
 - `audit_log` solo es legible por admin.
 - `calendar_connections` no expone tokens al frontend.
-- `calendar_connection_status` solo expone metadata sin tokens.
 
 ## 3. Google Calendar OAuth
 

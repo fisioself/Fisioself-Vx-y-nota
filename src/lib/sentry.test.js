@@ -24,6 +24,7 @@ describe('sentry', () => {
   it('does not initialise without a DSN', async () => {
     const { module, sentry } = await loadSentryModule('');
     module.initSentry();
+    await new Promise((resolve) => setTimeout(resolve, 0));
     expect(module.isSentryConfigured).toBe(false);
     expect(sentry.init).not.toHaveBeenCalled();
   });
@@ -31,6 +32,7 @@ describe('sentry', () => {
   it('initialises with PHI-safe defaults when a DSN is present', async () => {
     const { module, sentry } = await loadSentryModule('https://key@example.ingest.sentry.io/1');
     module.initSentry();
+    await new Promise((resolve) => setTimeout(resolve, 0));
     expect(module.isSentryConfigured).toBe(true);
     expect(sentry.init).toHaveBeenCalledTimes(1);
 
@@ -45,6 +47,7 @@ describe('sentry', () => {
   it('redacts PHI-like fields and drops cookies/headers in beforeSend', async () => {
     const { module, sentry } = await loadSentryModule('https://key@example.ingest.sentry.io/1');
     module.initSentry();
+    await new Promise((resolve) => setTimeout(resolve, 0));
     const { beforeSend } = sentry.init.mock.calls[0][0];
 
     const event = {
@@ -73,6 +76,7 @@ describe('sentry', () => {
   it('drops ui.input breadcrumbs so typed PHI never leaves the browser', async () => {
     const { module, sentry } = await loadSentryModule('https://key@example.ingest.sentry.io/1');
     module.initSentry();
+    await new Promise((resolve) => setTimeout(resolve, 0));
     const { beforeBreadcrumb } = sentry.init.mock.calls[0][0];
     expect(beforeBreadcrumb({ category: 'ui.input', message: 'something' })).toBeNull();
     expect(beforeBreadcrumb({ category: 'ui.click', message: 'btn' })).not.toBeNull();
@@ -81,6 +85,7 @@ describe('sentry', () => {
   it('reportError is a no-op without a DSN', async () => {
     const { module, sentry } = await loadSentryModule('');
     module.reportError(new Error('boom'));
+    await new Promise((resolve) => setTimeout(resolve, 0));
     expect(sentry.captureException).not.toHaveBeenCalled();
   });
 
@@ -88,6 +93,7 @@ describe('sentry', () => {
     const { module, sentry } = await loadSentryModule('https://key@example.ingest.sentry.io/1');
     module.initSentry();
     module.reportError(new Error('boom'), { patient_id: 'p1', step: 'save' });
+    await new Promise((resolve) => setTimeout(resolve, 0));
     expect(sentry.captureException).toHaveBeenCalledTimes(1);
     const [, options] = sentry.captureException.mock.calls[0];
     expect(options.extra.patient_id).toBe('[redacted:phi]');

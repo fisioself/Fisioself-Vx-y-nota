@@ -1,4 +1,6 @@
-import * as Sentry from '@sentry/react';
+// Sentry is loaded lazily so the ~45 KB gzip SDK only ships when a DSN is set.
+// Without VITE_SENTRY_DSN nothing is imported, initSentry() is a no-op and
+// reportError() drops calls on the floor.
 
 const SENTRY_DSN = import.meta.env.VITE_SENTRY_DSN;
 const ENVIRONMENT = import.meta.env.MODE;
@@ -25,10 +27,8 @@ function scrubObject(value, depth = 0) {
   return out;
 }
 
-export function initSentry() {
-  if (!isSentryConfigured) return;
-
-  Sentry.init({
+function buildSentryConfig(Sentry) {
+  return {
     dsn: SENTRY_DSN,
     environment: ENVIRONMENT,
     sendDefaultPii: false,
@@ -37,7 +37,10 @@ export function initSentry() {
     replaysOnErrorSampleRate: 0,
     integrations: [
       Sentry.browserTracingIntegration({ enableInp: false }),
-      Sentry.breadcrumbsIntegration({ console: false, dom: { serializeAttribute: 'data-sentry-id' } })
+      Sentry.breadcrumbsIntegration({
+        console: false,
+        dom: { serializeAttribute: 'data-sentry-id' }
+      })
     ],
     beforeSend(event) {
       if (event.request) {
@@ -58,10 +61,40 @@ export function initSentry() {
       if (breadcrumb.data) breadcrumb.data = scrubObject(breadcrumb.data);
       return breadcrumb;
     }
+  };
+}
+
+let sentryModulePromise = null;
+let sentryReady = null;
+
+function loadSentry() {
+  if (!sentryModulePromise) {
+    sentryModulePromise = import('@sentry/react');
+  }
+  return sentryModulePromise;
+}
+
+export function initSentry() {
+  if (!isSentryConfigured) return;
+  sentryReady = loadSentry().then((Sentry) => {
+    Sentry.init(buildSentryConfig(Sentry));
+    return Sentry;
   });
 }
 
 export function reportError(error, context) {
   if (!isSentryConfigured) return;
-  Sentry.captureException(error, context ? { extra: scrubObject(context) } : undefined);
+  // initSentry() was either already called or will be soon. Either way, queue
+  // the report on the loader promise so we never miss an error that fires
+  // during boot.
+  (sentryReady || loadSentry()).then((Sentry) => {
+    Sentry.captureException(error, context ? { extra: scrubObject(context) } : undefined);
+  });
+}
+
+// Test-only hook to reset internal state between cases. Not part of the public
+// surface; if you find yourself reaching for it in app code, that is a smell.
+export function __resetSentryForTests() {
+  sentryModulePromise = null;
+  sentryReady = null;
 }
