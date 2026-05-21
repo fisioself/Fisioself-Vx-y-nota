@@ -1,4 +1,5 @@
 import React from 'react';
+import { reportError } from '../lib/sentry.js';
 
 export class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -14,6 +15,7 @@ export class ErrorBoundary extends React.Component {
     if (import.meta.env.DEV) {
       console.error('Unhandled UI error', error, info);
     }
+    reportError(error, { componentStack: info?.componentStack });
   }
 
   render() {
