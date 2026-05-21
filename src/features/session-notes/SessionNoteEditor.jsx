@@ -5,8 +5,10 @@ import { useToast } from '../../app/ToastProvider.jsx';
 import { clinicalApi } from '../../services/clinicalApi.js';
 import { aiService, AI_TYPES } from '../../services/aiService.js';
 import { hasErrors, validateSessionNote } from '../../shared/clinicalValidation.js';
+import { consent, CONSENT_KEYS } from '../../shared/consent.js';
 import { draftStorage, getDraftKey } from '../../shared/draftStorage.js';
 import { AiConsultModal } from './AiConsultModal.jsx';
+import { ConsentGate } from './ConsentGate.jsx';
 import { useDictation } from './useDictation.js';
 
 const SOAP_TEMPLATE = `S - Subjetivo:
@@ -42,6 +44,7 @@ export function SessionNoteEditor({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [pendingConsult, setPendingConsult] = useState(null);
+  const [aiConsentRequest, setAiConsentRequest] = useState(null);
   const { notify } = useToast();
   const draftKey = useMemo(
     () => getDraftKey({ patientId, sessionNumber }),
@@ -69,7 +72,7 @@ export function SessionNoteEditor({
     setRawText((current) => (current ? `${current} ${chunk}` : chunk));
   });
 
-  const runAi = async (type) => {
+  const executeAi = async (type) => {
     setAiBusy(true);
     setError('');
     try {
@@ -96,6 +99,25 @@ export function SessionNoteEditor({
       setAiBusy(false);
     }
   };
+
+  // Gate: first AI use on this device shows a disclosure. The fisio confirms
+  // they have patient consent before the note text leaves the browser.
+  const runAi = (type) => {
+    if (!consent.has(CONSENT_KEYS.AI)) {
+      setAiConsentRequest(type);
+      return;
+    }
+    executeAi(type);
+  };
+
+  const grantAiConsentAndRun = () => {
+    const type = aiConsentRequest;
+    consent.grant(CONSENT_KEYS.AI);
+    setAiConsentRequest(null);
+    if (type) executeAi(type);
+  };
+
+  const cancelAiConsent = () => setAiConsentRequest(null);
 
   const savePendingConsult = async ({
     type,
@@ -324,6 +346,36 @@ Notas adicionales: cualquier detalle relevante.`}
         consult={pendingConsult}
         onClose={() => setPendingConsult(null)}
         onSave={savePendingConsult}
+      />
+
+      <ConsentGate
+        open={dictation.needsConsent}
+        eyebrow="Dictado por voz"
+        title="Tu voz se envia a Google para transcribir"
+        bullets={[
+          'El navegador transmite el audio a servidores de Google Speech.',
+          'No hay acuerdo de tratamiento de datos (BAA) entre tu app y Google para este flujo.',
+          'No dictes datos identificables del paciente sin su consentimiento explicito.',
+          'Puedes seguir escribiendo a mano si no quieres usar dictado.'
+        ]}
+        acceptLabel="Entendido, activar dictado"
+        onAccept={dictation.grantConsent}
+        onCancel={dictation.cancelConsent}
+      />
+
+      <ConsentGate
+        open={Boolean(aiConsentRequest)}
+        eyebrow="Asistencia IA"
+        title="La nota se procesa con Anthropic"
+        bullets={[
+          'El texto de la nota se envia a la API de Anthropic (Claude) via tu Edge Function.',
+          'La entrada y salida quedan guardadas en ai_consults para auditoria (RLS protegida).',
+          'No envies datos del paciente sin su consentimiento informado.',
+          'Toda salida IA es asistencia: la responsabilidad clinica es del fisioterapeuta.'
+        ]}
+        acceptLabel="Entendido, usar IA"
+        onAccept={grantAiConsentAndRun}
+        onCancel={cancelAiConsent}
       />
     </section>
   );

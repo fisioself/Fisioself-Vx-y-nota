@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
+import { consent, CONSENT_KEYS } from '../../shared/consent.js';
 
 export const useDictation = (onText) => {
   const recognitionRef = useRef(null);
   const onTextRef = useRef(onText);
   const [supported, setSupported] = useState(false);
   const [listening, setListening] = useState(false);
+  const [needsConsent, setNeedsConsent] = useState(false);
 
   onTextRef.current = onText;
 
@@ -42,6 +44,17 @@ export const useDictation = (onText) => {
     };
   }, []);
 
+  const startRecognition = () => {
+    const recognition = recognitionRef.current;
+    if (!recognition) return;
+    try {
+      recognition.start();
+      setListening(true);
+    } catch {
+      setListening(false);
+    }
+  };
+
   const toggle = () => {
     const recognition = recognitionRef.current;
     if (!recognition) return;
@@ -56,13 +69,26 @@ export const useDictation = (onText) => {
       return;
     }
 
-    try {
-      recognition.start();
-      setListening(true);
-    } catch {
-      setListening(false);
+    // First-time gate. The Web Speech API in Chromium streams audio to Google
+    // for transcription; before we open that pipe with potential patient data
+    // in the audio, the fisio must acknowledge it once per device.
+    if (!consent.has(CONSENT_KEYS.DICTATION)) {
+      setNeedsConsent(true);
+      return;
     }
+
+    startRecognition();
   };
 
-  return { supported, listening, toggle };
+  const grantConsent = () => {
+    consent.grant(CONSENT_KEYS.DICTATION);
+    setNeedsConsent(false);
+    startRecognition();
+  };
+
+  const cancelConsent = () => {
+    setNeedsConsent(false);
+  };
+
+  return { supported, listening, toggle, needsConsent, grantConsent, cancelConsent };
 };
