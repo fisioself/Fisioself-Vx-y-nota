@@ -21,6 +21,7 @@ const emptyEvaluation = {
   known_allergies: '',
   anticoagulants: '',
   physical_activity: '',
+  medical_diagnosis: '',
   consultation_reason: '',
   clinical_history: '',
   pain_location: '',
@@ -132,6 +133,7 @@ export function EvaluationForm({ patient, patientId, therapistId, onCreated, onC
           physical_activity: toNullable(values.physical_activity)
         },
         consultation: {
+          medical_diagnosis: toNullable(values.medical_diagnosis),
           reason: toNullable(values.consultation_reason),
           clinical_history: toNullable(values.clinical_history)
         },
@@ -302,6 +304,14 @@ export function EvaluationForm({ patient, patientId, therapistId, onCreated, onC
       <fieldset className="form-section span-2">
         <legend>Motivo de consulta e historia</legend>
         <div className="form-grid">
+          <label className="span-2">
+            Diagnostico medico
+            <textarea
+              rows="2"
+              value={values.medical_diagnosis}
+              onChange={(e) => setField('medical_diagnosis', e.target.value)}
+            />
+          </label>
           <label className="span-2">
             Motivo de consulta
             <textarea

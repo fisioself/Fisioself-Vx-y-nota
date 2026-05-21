@@ -31,6 +31,7 @@ describe('EvaluationForm', () => {
     );
 
     await userEvent.type(screen.getByLabelText(/intensidad/i), '5');
+    await userEvent.type(screen.getByLabelText(/diagnostico medico/i), 'Esguince de rodilla');
     await userEvent.type(screen.getByLabelText(/motivo de consulta/i), 'Dolor lumbar');
     await userEvent.type(screen.getAllByPlaceholderText(/articulacion/i)[0], 'Rodilla');
     await userEvent.selectOptions(screen.getByDisplayValue('Rango'), 'Funcional');
@@ -43,7 +44,10 @@ describe('EvaluationForm', () => {
         patient_id: 'patient-1',
         eva_initial: 5,
         sections: expect.objectContaining({
-          consultation: expect.objectContaining({ reason: 'Dolor lumbar' }),
+          consultation: expect.objectContaining({
+            medical_diagnosis: 'Esguince de rodilla',
+            reason: 'Dolor lumbar'
+          }),
           physical_exam: expect.objectContaining({
             movement_ranges: [expect.objectContaining({ joint: 'Rodilla', range: 'Funcional' })],
             special_tests: [expect.objectContaining({ name: 'Lachman', result: 'Negativo' })]

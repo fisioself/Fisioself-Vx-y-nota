@@ -68,7 +68,7 @@ export function SessionNotesList({ notes = [], onChanged }) {
               >
                 <span>
                   <strong>Sesion #{note.session_number}</strong>
-                  <small>{note.session_date}</small>
+                  <small>Fecha de sesion: {note.session_date || 'Sin fecha'}</small>
                 </span>
                 <span>
                   {note.eva !== null && note.eva !== undefined ? `EVA ${note.eva}/10` : 'Sin EVA'}

@@ -228,7 +228,7 @@ export function SessionNoteEditor({
 
       <div className="row wrap">
         <label>
-          Fecha
+          Fecha de la sesion
           <input type="date" value={sessionDate} onChange={(e) => setSessionDate(e.target.value)} />
         </label>
         <label>

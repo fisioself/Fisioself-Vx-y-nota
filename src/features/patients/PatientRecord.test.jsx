@@ -14,7 +14,14 @@ describe('getNextSessionNumber', () => {
 
   it('builds a compact clinical summary from evaluations and notes', () => {
     const summary = buildPatientSummary({
-      evaluations: [{ evaluation_date: '2026-05-01', eva_initial: 8, prognosis: 'Lumbalgia' }],
+      evaluations: [
+        {
+          evaluation_date: '2026-05-01',
+          eva_initial: 8,
+          prognosis: 'Control motor lumbar',
+          sections: { consultation: { medical_diagnosis: 'Lumbalgia' } }
+        }
+      ],
       notes: [
         { session_number: 1, session_date: '2026-05-02', eva: 6, raw_text: 'Dolor lumbar' },
         { session_number: 2, session_date: '2026-05-05', eva: 3, raw_text: 'Mejora marcha' }
@@ -24,7 +31,8 @@ describe('getNextSessionNumber', () => {
     expect(summary.sessionsCount).toBe(2);
     expect(summary.latestEva).toBe(3);
     expect(summary.evaChange).toBe(-5);
-    expect(summary.diagnosis).toBe('Lumbalgia');
+    expect(summary.medicalDiagnosis).toBe('Lumbalgia');
+    expect(summary.diagnosis).toBe('Control motor lumbar');
     expect(summary.latestNotePreview).toContain('Mejora marcha');
   });
 });

@@ -33,14 +33,7 @@ export function PatientList({ refreshKey = 0, selectedId, onSelect }) {
     const q = query.trim().toLowerCase();
     if (!q) return patients;
     return patients.filter((patient) =>
-      [
-        patient.full_name,
-        patient.phone,
-        patient.email,
-        patient.medical_diagnosis,
-        patient.functional_diagnosis,
-        patient.status
-      ]
+      [patient.full_name, patient.phone, patient.status]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(q))
     );
@@ -59,7 +52,7 @@ export function PatientList({ refreshKey = 0, selectedId, onSelect }) {
       <input
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder="Buscar paciente, telefono, diagnostico..."
+        placeholder="Buscar paciente o telefono..."
       />
 
       {loading && <p className="muted">Cargando pacientes...</p>}
@@ -79,9 +72,7 @@ export function PatientList({ refreshKey = 0, selectedId, onSelect }) {
           >
             <strong>{patient.full_name}</strong>
             <span>{patient.status || 'Sin estado'}</span>
-            <small>
-              {patient.functional_diagnosis || patient.medical_diagnosis || 'Sin diagnostico'}
-            </small>
+            <small>{patient.phone || 'Sin telefono'}</small>
           </button>
         ))}
         {!loading && !filtered.length && <p className="muted">No hay pacientes para mostrar.</p>}

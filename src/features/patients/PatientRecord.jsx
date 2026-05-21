@@ -30,6 +30,10 @@ export const buildPatientSummary = ({ notes = [], evaluations = [] }) => {
   const latestEvaluation = [...evaluations].sort(
     (a, b) => new Date(b.evaluation_date) - new Date(a.evaluation_date)
   )[0];
+  const latestMedicalDiagnosis =
+    latestEvaluation?.sections?.consultation?.medical_diagnosis ||
+    latestEvaluation?.medical_diagnosis ||
+    '';
   const initialEva =
     latestEvaluation?.eva_initial !== null && latestEvaluation?.eva_initial !== undefined
       ? Number(latestEvaluation.eva_initial)
@@ -45,6 +49,7 @@ export const buildPatientSummary = ({ notes = [], evaluations = [] }) => {
     latestEva: Number.isFinite(latestEva) ? latestEva : null,
     initialEva: Number.isFinite(initialEva) ? initialEva : null,
     evaChange,
+    medicalDiagnosis: latestMedicalDiagnosis,
     diagnosis: latestEvaluation?.prognosis || '',
     latestNotePreview: latestNote?.raw_text?.trim().slice(0, 180) || ''
   };
@@ -86,6 +91,10 @@ function ClinicalSummary({ summary, nextSession }) {
         </div>
       </div>
       <p>
+        <strong>Diagnostico medico:</strong>{' '}
+        {summary.medicalDiagnosis || 'Pendiente de registrar en valoracion.'}
+      </p>
+      <p>
         <strong>Diagnostico fisioterapeutico:</strong>{' '}
         {summary.diagnosis || 'Pendiente de registrar en valoracion.'}
       </p>
@@ -125,6 +134,10 @@ function EvaluationSummary({ evaluation }) {
         </div>
       </div>
 
+      <p>
+        <strong>Diagnostico medico:</strong>{' '}
+        {renderValue(consultation.medical_diagnosis || evaluation.medical_diagnosis)}
+      </p>
       <p>
         <strong>Motivo:</strong> {renderValue(consultation.reason)}
       </p>
@@ -285,9 +298,7 @@ export function PatientRecord({ patient, onPatientUpdated, onPatientDeleted }) {
           <p className="eyebrow">Expediente clinico</p>
           <h2>{current.full_name}</h2>
           <p className="muted">
-            {current.functional_diagnosis ||
-              current.medical_diagnosis ||
-              'Sin diagnostico registrado'}
+            {summary.medicalDiagnosis || summary.diagnosis || 'Sin diagnostico en valoracion'}
           </p>
         </div>
         <div className="hero-actions">
@@ -349,12 +360,11 @@ export function PatientRecord({ patient, onPatientUpdated, onPatientDeleted }) {
         <section className="card compact-card">
           <p className="eyebrow">Contacto</p>
           <p>{current.phone || 'Sin telefono'}</p>
-          <p>{current.email || 'Sin correo'}</p>
         </section>
         <section className="card compact-card">
-          <p className="eyebrow">Datos clinicos</p>
-          <p>{current.medical_diagnosis || 'Sin diagnostico medico'}</p>
-          <p>{current.functional_diagnosis || 'Sin diagnostico funcional'}</p>
+          <p className="eyebrow">Diagnosticos desde valoracion</p>
+          <p>{summary.medicalDiagnosis || 'Sin diagnostico medico'}</p>
+          <p>{summary.diagnosis || 'Sin diagnostico fisioterapeutico'}</p>
         </section>
       </div>
 

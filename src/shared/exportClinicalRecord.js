@@ -35,6 +35,7 @@ const formatEvaluationSections = (sections = {}) => {
     `Alergias conocidas: ${safe(history.known_allergies)}`,
     `Uso de anticoagulantes: ${safe(history.anticoagulants)}`,
     `Actividad fisica: ${safe(history.physical_activity)}`,
+    `Diagnostico medico: ${safe(consultation.medical_diagnosis)}`,
     `Motivo de consulta: ${safe(consultation.reason)}`,
     `Historia clinica: ${safe(consultation.clinical_history)}`,
     `Dolor localizacion: ${safe(pain.location)}`,
@@ -50,20 +51,26 @@ const formatEvaluationSections = (sections = {}) => {
   ];
 };
 
+const latestEvaluation = (evaluations = []) =>
+  [...evaluations].sort((a, b) => new Date(b.evaluation_date) - new Date(a.evaluation_date))[0];
+
+const evaluationMedicalDiagnosis = (evaluation) =>
+  evaluation?.sections?.consultation?.medical_diagnosis || evaluation?.medical_diagnosis || '';
+
 export const buildClinicalRecordText = (record) => {
   const notes = record?.session_notes || [];
   const evaluations = record?.evaluations || [];
   const aiConsults = record?.ai_consults || [];
+  const latest = latestEvaluation(evaluations);
 
   return [
     'FISIOSELF - Expediente clinico',
     '',
     `Paciente: ${safe(record?.full_name)}`,
     `Telefono: ${safe(record?.phone)}`,
-    `Correo: ${safe(record?.email)}`,
     `Estado: ${safe(record?.status)}`,
-    `Diagnostico medico: ${safe(record?.medical_diagnosis)}`,
-    `Diagnostico funcional: ${safe(record?.functional_diagnosis)}`,
+    `Diagnostico medico: ${safe(evaluationMedicalDiagnosis(latest))}`,
+    `Diagnostico fisioterapeutico: ${safe(latest?.prognosis)}`,
     '',
     'VALORACIONES',
     ...evaluations.flatMap((item) => [
@@ -121,6 +128,7 @@ const evaluationHtml = (item) => `
   <article class="entry">
     <h3>Valoracion · ${escapeHtml(safe(item.evaluation_date))}</h3>
     ${paragraph('EVA inicial', item.eva_initial ?? 'No registrada')}
+    ${paragraph('Diagnostico medico', evaluationMedicalDiagnosis(item))}
     ${paragraph('Diagnostico fisioterapeutico', item.prognosis)}
     ${paragraph('Banderas rojas', item.red_flags)}
   </article>
@@ -130,6 +138,7 @@ export const buildClinicalRecordHtml = (record) => {
   const notes = record?.session_notes || [];
   const evaluations = record?.evaluations || [];
   const aiConsults = record?.ai_consults || [];
+  const latest = latestEvaluation(evaluations);
 
   return `<!doctype html>
 <html>
@@ -160,8 +169,8 @@ export const buildClinicalRecordHtml = (record) => {
       ${paragraph('Paciente', record?.full_name)}
       ${paragraph('Telefono', record?.phone)}
       ${paragraph('Estado', record?.status)}
-      ${paragraph('Diagnostico medico', record?.medical_diagnosis)}
-      ${paragraph('Diagnostico funcional', record?.functional_diagnosis)}
+      ${paragraph('Diagnostico medico', evaluationMedicalDiagnosis(latest))}
+      ${paragraph('Diagnostico fisioterapeutico', latest?.prognosis)}
     </section>
     <h2>Valoraciones</h2>
     ${evaluations.length ? evaluations.map(evaluationHtml).join('') : '<p>No hay valoraciones registradas.</p>'}

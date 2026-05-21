@@ -8,7 +8,7 @@ describe('clinicalApi.buildTimeline', () => {
         {
           id: 'eval-1',
           evaluation_date: '2026-05-01',
-          prognosis: 'Diagnostico funcional favorable',
+          prognosis: 'Diagnostico fisioterapeutico favorable',
           red_flags: null
         }
       ],

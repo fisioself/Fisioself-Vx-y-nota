@@ -6,16 +6,14 @@ describe('buildClinicalRecordText', () => {
     const text = buildClinicalRecordText({
       full_name: 'Paciente Demo',
       phone: '555',
-      email: 'demo@example.com',
       status: 'En tratamiento',
-      medical_diagnosis: 'Lumbalgia',
-      functional_diagnosis: 'Dolor lumbar mecanico',
       evaluations: [
         {
           evaluation_date: '2026-05-01',
           eva_initial: 7,
           red_flags: 'Negadas',
-          prognosis: 'Bueno'
+          prognosis: 'Control motor lumbar',
+          sections: { consultation: { medical_diagnosis: 'Lumbalgia' } }
         }
       ],
       session_notes: [
@@ -38,6 +36,8 @@ describe('buildClinicalRecordText', () => {
     });
 
     expect(text).toContain('Paciente Demo');
+    expect(text).toContain('Diagnostico medico: Lumbalgia');
+    expect(text).toContain('Diagnostico fisioterapeutico: Control motor lumbar');
     expect(text).toContain('VALORACIONES');
     expect(text).toContain('Sesion #1');
     expect(text).toContain('CONSULTAS IA TRAZABLES');
