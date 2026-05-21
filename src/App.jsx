@@ -1,6 +1,7 @@
 import { Suspense, lazy, useEffect, useState } from 'react';
 import { authService } from './services/authService.js';
 import { isSupabaseConfigured } from './lib/supabaseClient.js';
+import { draftStorage } from './shared/draftStorage.js';
 
 const LoginScreen = lazy(() =>
   import('./features/auth/LoginScreen.jsx').then((module) => ({ default: module.LoginScreen }))
@@ -58,6 +59,7 @@ export function App() {
 
   const logout = async () => {
     await authService.signOut();
+    draftStorage.clearAll();
     setSelectedPatient(null);
     setSession(null);
   };

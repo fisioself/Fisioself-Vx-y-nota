@@ -26,4 +26,20 @@ describe('draftStorage', () => {
 
     expect(draftStorage.get(key)).toBe('');
   });
+
+  it('clearAll wipes every draft but leaves unrelated keys intact', () => {
+    const draftA = getDraftKey({ patientId: 'patient-a', sessionNumber: 1 });
+    const draftB = getDraftKey({ patientId: 'patient-b', sessionNumber: 2 });
+    draftStorage.set(draftA, 'PHI A');
+    draftStorage.set(draftB, 'PHI B');
+    window.localStorage.setItem('unrelated.key', 'preserve me');
+
+    draftStorage.clearAll();
+
+    expect(draftStorage.get(draftA)).toBe('');
+    expect(draftStorage.get(draftB)).toBe('');
+    expect(window.localStorage.getItem('unrelated.key')).toBe('preserve me');
+
+    window.localStorage.removeItem('unrelated.key');
+  });
 });

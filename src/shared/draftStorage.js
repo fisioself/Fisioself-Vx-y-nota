@@ -30,5 +30,19 @@ export const draftStorage = {
     } catch {
       // Best-effort only.
     }
+  },
+
+  clearAll() {
+    try {
+      const storage = window.localStorage;
+      const toRemove = [];
+      for (let i = 0; i < storage.length; i += 1) {
+        const key = storage.key(i);
+        if (key && key.startsWith(`${PREFIX}.`)) toRemove.push(key);
+      }
+      toRemove.forEach((key) => storage.removeItem(key));
+    } catch {
+      // Best-effort only.
+    }
   }
 };
