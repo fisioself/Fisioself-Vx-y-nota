@@ -98,9 +98,11 @@ Deno.serve(async (req) => {
       return json(req, 403, { error: 'No tienes permiso para sincronizar esta cita' });
     }
 
+    // Read metadata only; tokens come out of the encrypted columns via
+    // calendar_tokens_get below, never directly from this row.
     const { data: connection, error: connectionError } = await supabase
       .from('calendar_connections')
-      .select('*')
+      .select('id, calendar_id, token_expires_at')
       .eq('user_id', userData.user.id)
       .eq('provider', 'google')
       .eq('calendar_id', appointment.google_calendar_id || 'primary')
@@ -114,22 +116,38 @@ Deno.serve(async (req) => {
       return json(req, 400, { error: 'Google Calendar no conectado' });
     }
 
-    let accessToken = connection.access_token;
+    const { data: tokensRows, error: tokensError } = await supabase.rpc('calendar_tokens_get', {
+      p_connection_id: connection.id
+    });
+    if (tokensError) throw tokensError;
+    const tokens = Array.isArray(tokensRows) ? tokensRows[0] : tokensRows;
+
+    let accessToken: string | null = tokens?.access_token ?? null;
+    const refreshTokenStored: string | null = tokens?.refresh_token ?? null;
+
     if (
       !accessToken ||
       new Date(connection.token_expires_at || 0) <= new Date(Date.now() + 60_000)
     ) {
-      if (!connection.refresh_token) throw new Error('Falta refresh token de Google');
+      if (!refreshTokenStored) throw new Error('Falta refresh token de Google');
       const refreshed = await refreshGoogleToken({
-        refreshToken: connection.refresh_token,
+        refreshToken: refreshTokenStored,
         clientId: googleClientId,
         clientSecret: googleClientSecret
       });
       accessToken = refreshed.access_token;
+      // Persist the new access token (encrypted) and update the expiry. The
+      // refresh token does not rotate on a normal refresh, so we re-write it
+      // unchanged to keep both columns consistent.
+      const { error: tokenWriteError } = await supabase.rpc('calendar_tokens_set', {
+        p_connection_id: connection.id,
+        p_access_token: accessToken,
+        p_refresh_token: refreshTokenStored
+      });
+      if (tokenWriteError) throw tokenWriteError;
       await supabase
         .from('calendar_connections')
         .update({
-          access_token: accessToken,
           token_expires_at: new Date(
             Date.now() + Number(refreshed.expires_in || 3600) * 1000
           ).toISOString(),
@@ -138,9 +156,20 @@ Deno.serve(async (req) => {
         .eq('id', connection.id);
     }
 
+    // Location is the only event field that still passes through user-entered
+    // text into Google Calendar. summary and description are forced to safe
+    // constants above. To prevent accidental PHI leakage if someone wires up
+    // an appointments form again and puts a patient address in here, we cap
+    // the field to a short clinic-friendly length and never forward anything
+    // that looks paragraph-sized.
+    const MAX_LOCATION_LEN = 120;
+    const rawLocation = typeof appointment.location === 'string' ? appointment.location.trim() : '';
+    const safeLocation =
+      rawLocation && rawLocation.length <= MAX_LOCATION_LEN ? rawLocation : undefined;
+
     const eventPayload = {
       summary: SAFE_EVENT_SUMMARY,
-      location: appointment.location || undefined,
+      location: safeLocation,
       description: SAFE_EVENT_DESCRIPTION,
       start: { dateTime: appointment.starts_at },
       end: { dateTime: appointment.ends_at }

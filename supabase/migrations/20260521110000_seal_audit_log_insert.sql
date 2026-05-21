@@ -1,0 +1,22 @@
+-- Seal audit_log against client-side inserts.
+--
+-- Background:
+--   * 002_roles_rls_hardening.sql added policy "audit clinical insert" so the
+--     browser could write audit rows when the app first shipped.
+--   * 010_clinical_audit_triggers.sql replaced that flow with SECURITY DEFINER
+--     triggers that auto-insert from inside the database when patients,
+--     evaluations, session_notes, appointments or ai_consults change.
+--   * Other paths that still write audit rows (edge functions and the
+--     security-definer patient delete RPC from
+--     20260520212158_patient_admin_delete_policy.sql) bypass RLS by design.
+--   * Frontend code in src/services/clinicalApi.js never references audit_log;
+--     src/services/clinicalApiWrites.test.js explicitly asserts this on every
+--     write path.
+--
+-- Result: the insert policy is dead weight that doubles as an injection
+-- surface. An authenticated clinical user could currently POST arbitrary rows
+-- into audit_log (with actor_id = auth.uid()) to pollute or falsify the
+-- forensic trail. Dropping it leaves auto-trigger and service-role writes as
+-- the only paths.
+
+drop policy if exists "audit clinical insert" on public.audit_log;
