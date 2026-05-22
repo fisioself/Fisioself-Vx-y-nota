@@ -49,8 +49,7 @@ describe('clinicalApi writes', () => {
     expect(patient).toMatchObject({ id: 'patient-1' });
     expect(update).toHaveBeenCalledWith(
       expect.objectContaining({
-        full_name: 'Paciente Demo',
-        updated_at: expect.any(String)
+        full_name: 'Paciente Demo'
       })
     );
     expect(from).not.toHaveBeenCalledWith('audit_log');
@@ -87,8 +86,7 @@ describe('clinicalApi writes', () => {
     expect(from).toHaveBeenCalledWith('session_notes');
     expect(update).toHaveBeenCalledWith(
       expect.objectContaining({
-        raw_text: 'Nota editada',
-        updated_at: expect.any(String)
+        raw_text: 'Nota editada'
       })
     );
     expect(from).not.toHaveBeenCalledWith('audit_log');

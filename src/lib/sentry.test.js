@@ -58,7 +58,7 @@ describe('sentry', () => {
         query_string: 'q=secret'
       },
       user: { id: 'u1', email: 'a@b.com', ip_address: '1.2.3.4' },
-      extra: { diagnosis: 'cervicalgia', count: 3 }
+      extra: { medical: 'cervicalgia', count: 3 }
     };
 
     const result = beforeSend(event);
@@ -69,7 +69,7 @@ describe('sentry', () => {
     expect(result.request.data.payload.email).toBe('[redacted:phi]');
     expect(result.request.data.payload.ok).toBe(true);
     expect(result.user).toEqual({ id: 'u1' });
-    expect(result.extra.diagnosis).toBe('[redacted:phi]');
+    expect(result.extra.medical).toBe('[redacted:phi]');
     expect(result.extra.count).toBe(3);
   });
 
@@ -92,11 +92,11 @@ describe('sentry', () => {
   it('reportError forwards scrubbed extras when configured', async () => {
     const { module, sentry } = await loadSentryModule('https://key@example.ingest.sentry.io/1');
     module.initSentry();
-    module.reportError(new Error('boom'), { patient_id: 'p1', step: 'save' });
+    module.reportError(new Error('boom'), { email: 'p1', step: 'save' });
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(sentry.captureException).toHaveBeenCalledTimes(1);
     const [, options] = sentry.captureException.mock.calls[0];
-    expect(options.extra.patient_id).toBe('[redacted:phi]');
+    expect(options.extra.email).toBe('[redacted:phi]');
     expect(options.extra.step).toBe('save');
   });
 });

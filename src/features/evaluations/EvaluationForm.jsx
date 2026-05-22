@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { clinicalApi } from '../../services/clinicalApi.js';
+import { draftStorage, getEvaluationDraftKey } from '../../shared/draftStorage.js';
+import { useDraftAutosave } from '../../shared/useDraftAutosave.js';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -56,17 +58,34 @@ const cleanRows = (rows) =>
     .filter((row) => Object.values(row).some(Boolean));
 
 export function EvaluationForm({ patient, patientId, therapistId, onCreated, onCancel }) {
-  const [values, setValues] = useState(() => ({
-    ...emptyEvaluation,
-    full_name: patient?.full_name || '',
-    phone: patient?.phone || '',
-    sex: patient?.sex || '',
-    occupation: patient?.occupation || ''
-  }));
+  const resolvedPatientId = patient?.id || patientId;
+  const draftKey = getEvaluationDraftKey(resolvedPatientId);
+
+  const [values, setValues] = useState(() => {
+    const draft = draftStorage.get(draftKey);
+    if (draft) {
+    try {
+      return JSON.parse(draft);
+    } catch {
+      // ignore
+    }
+    }    return {
+      ...emptyEvaluation,
+      full_name: patient?.full_name || '',
+      phone: patient?.phone || '',
+      sex: patient?.sex || '',
+      occupation: patient?.occupation || ''
+    };
+  });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  const resolvedPatientId = patient?.id || patientId;
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      draftStorage.set(draftKey, JSON.stringify(values));
+    }, 1000);
+    return () => clearTimeout(handler);
+  }, [values, draftKey]);
 
   const setField = (field, value) => {
     setValues((current) => ({ ...current, [field]: value }));
@@ -305,14 +324,6 @@ export function EvaluationForm({ patient, patientId, therapistId, onCreated, onC
         <legend>Motivo de consulta e historia</legend>
         <div className="form-grid">
           <label className="span-2">
-            Diagnostico medico
-            <textarea
-              rows="2"
-              value={values.medical_diagnosis}
-              onChange={(e) => setField('medical_diagnosis', e.target.value)}
-            />
-          </label>
-          <label className="span-2">
             Motivo de consulta
             <textarea
               rows="3"
@@ -404,11 +415,13 @@ export function EvaluationForm({ patient, patientId, therapistId, onCreated, onC
           {values.movement_ranges.map((row, index) => (
             <div className="clinical-table-row" key={`movement-${index}`}>
               <input
+                aria-label="Articulación"
                 placeholder="Articulacion"
                 value={row.joint}
                 onChange={(e) => setRow('movement_ranges', index, 'joint', e.target.value)}
               />
               <select
+                aria-label="Rango de movimiento"
                 value={row.range}
                 onChange={(e) => setRow('movement_ranges', index, 'range', e.target.value)}
               >
@@ -419,6 +432,7 @@ export function EvaluationForm({ patient, patientId, therapistId, onCreated, onC
                 ))}
               </select>
               <input
+                aria-label="Notas del rango"
                 placeholder="Notas"
                 value={row.notes}
                 onChange={(e) => setRow('movement_ranges', index, 'notes', e.target.value)}
@@ -448,11 +462,13 @@ export function EvaluationForm({ patient, patientId, therapistId, onCreated, onC
           {values.muscle_strength.map((row, index) => (
             <div className="clinical-table-row" key={`strength-${index}`}>
               <input
+                aria-label="Articulación o grupo muscular"
                 placeholder="Articulacion / grupo muscular"
                 value={row.joint}
                 onChange={(e) => setRow('muscle_strength', index, 'joint', e.target.value)}
               />
               <select
+                aria-label="Fuerza muscular"
                 value={row.strength}
                 onChange={(e) => setRow('muscle_strength', index, 'strength', e.target.value)}
               >
@@ -463,6 +479,7 @@ export function EvaluationForm({ patient, patientId, therapistId, onCreated, onC
                 ))}
               </select>
               <input
+                aria-label="Notas de fuerza"
                 placeholder="Notas"
                 value={row.notes}
                 onChange={(e) => setRow('muscle_strength', index, 'notes', e.target.value)}
@@ -492,11 +509,13 @@ export function EvaluationForm({ patient, patientId, therapistId, onCreated, onC
           {values.special_tests.map((row, index) => (
             <div className="clinical-table-row" key={`test-${index}`}>
               <input
+                aria-label="Nombre de la prueba especial"
                 placeholder="Prueba"
                 value={row.name}
                 onChange={(e) => setRow('special_tests', index, 'name', e.target.value)}
               />
               <select
+                aria-label="Resultado de la prueba"
                 value={row.result}
                 onChange={(e) => setRow('special_tests', index, 'result', e.target.value)}
               >
@@ -507,6 +526,7 @@ export function EvaluationForm({ patient, patientId, therapistId, onCreated, onC
                 ))}
               </select>
               <input
+                aria-label="Notas de la prueba"
                 placeholder="Notas"
                 value={row.notes}
                 onChange={(e) => setRow('special_tests', index, 'notes', e.target.value)}

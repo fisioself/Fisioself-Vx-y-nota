@@ -30,7 +30,7 @@ export const clinicalApi = {
     return unwrap(
       await supabase
         .from('patients')
-        .update({ ...payload, updated_at: new Date().toISOString() })
+        .update(payload)
         .eq('id', id)
         .select('*')
         .single()
@@ -65,7 +65,11 @@ export const clinicalApi = {
 
   async addSessionNote(payload) {
     assertReady();
-    const response = await supabase.from('session_notes').insert(payload).select('*').single();
+    const response = await supabase
+      .from('session_notes')
+      .insert(payload)
+      .select('*')
+      .single();
     if (response.error?.code === '23505') {
       throw new Error(
         'Ya existe una nota con ese numero de sesion. Actualiza el expediente e intenta de nuevo.'
@@ -79,7 +83,7 @@ export const clinicalApi = {
     assertReady();
     const response = await supabase
       .from('session_notes')
-      .update({ ...payload, updated_at: new Date().toISOString() })
+      .update(payload)
       .eq('id', id)
       .select('*')
       .single();
@@ -117,7 +121,7 @@ export const clinicalApi = {
     return unwrap(
       await supabase
         .from('appointments')
-        .update({ ...payload, updated_at: new Date().toISOString() })
+        .update(payload)
         .eq('id', id)
         .select('*')
         .single()
@@ -129,7 +133,7 @@ export const clinicalApi = {
       id: item.id,
       type: 'evaluation',
       label: 'Valoracion inicial',
-      date: item.evaluation_date || item.created_at,
+      date: item.evaluation_date || item.created_at || new Date(0).toISOString(),
       description: item.prognosis || item.red_flags || 'Valoracion registrada',
       payload: item
     }));
@@ -138,7 +142,7 @@ export const clinicalApi = {
       id: item.id,
       type: 'session_note',
       label: `Sesion #${item.session_number}`,
-      date: item.session_date || item.created_at,
+      date: item.session_date || item.created_at || new Date(0).toISOString(),
       description:
         item.eva !== null && item.eva !== undefined ? `EVA ${item.eva}/10` : 'Nota de sesion',
       payload: item
@@ -148,7 +152,7 @@ export const clinicalApi = {
       id: item.id,
       type: 'ai_consult',
       label: `IA: ${item.type}`,
-      date: item.created_at,
+      date: item.created_at || new Date(0).toISOString(),
       description: item.validated ? 'Validada' : 'Pendiente de validacion',
       payload: item
     }));
@@ -157,7 +161,7 @@ export const clinicalApi = {
       id: item.id,
       type: 'follow_up',
       label: `Seguimiento dia ${item.day_number}`,
-      date: item.scheduled_date || item.created_at,
+      date: item.scheduled_date || item.created_at || new Date(0).toISOString(),
       description: item.status || 'Seguimiento',
       payload: item
     }));
@@ -166,13 +170,13 @@ export const clinicalApi = {
       id: item.id,
       type: 'appointment',
       label: item.title || 'Cita clinica',
-      date: item.starts_at,
+      date: item.starts_at || new Date(0).toISOString(),
       description: `${item.status || 'scheduled'} · ${item.sync_status || 'pending'}`,
       payload: item
     }));
 
-    return [...evaluations, ...notes, ...consults, ...followUps, ...appointments].sort(
-      sortByDateDesc
-    );
+    return [...evaluations, ...notes, ...consults, ...followUps, ...appointments]
+      .filter((item) => item.date)
+      .sort(sortByDateDesc);
   }
 };

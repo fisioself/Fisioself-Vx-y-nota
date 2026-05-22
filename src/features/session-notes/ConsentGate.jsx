@@ -1,4 +1,15 @@
+import { useEffect } from 'react';
+
 export function ConsentGate({ open, title, eyebrow, bullets, acceptLabel, onAccept, onCancel }) {
+  useEffect(() => {
+    if (open) {
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = '';
+      };
+    }
+  }, [open]);
+
   if (!open) return null;
 
   return (
@@ -18,8 +29,8 @@ export function ConsentGate({ open, title, eyebrow, bullets, acceptLabel, onAcce
 
         <div className="warning-box">
           <ul>
-            {bullets.map((bullet) => (
-              <li key={bullet}>{bullet}</li>
+            {bullets.map((bullet, index) => (
+              <li key={index}>{bullet}</li>
             ))}
           </ul>
         </div>
@@ -30,7 +41,7 @@ export function ConsentGate({ open, title, eyebrow, bullets, acceptLabel, onAcce
         </p>
 
         <div className="actions">
-          <button type="button" className="secondary" onClick={onCancel}>
+          <button type="button" className="secondary" onClick={onCancel} autoFocus>
             Cancelar
           </button>
           <button type="button" onClick={onAccept}>

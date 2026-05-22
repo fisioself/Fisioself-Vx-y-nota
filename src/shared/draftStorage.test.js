@@ -4,7 +4,7 @@ import { draftStorage, getDraftKey } from './draftStorage.js';
 describe('draftStorage', () => {
   it('builds stable draft keys per patient and session', () => {
     expect(getDraftKey({ patientId: 'patient-1', sessionNumber: 3 })).toBe(
-      'fisioself.notas-vx.draft.patient-1.3'
+      'fisioself.notas-vx.draft.patient-1.new.3'
     );
   });
 

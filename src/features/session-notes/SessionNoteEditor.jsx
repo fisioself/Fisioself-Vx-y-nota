@@ -7,6 +7,7 @@ import { aiService, AI_TYPES } from '../../services/aiService.js';
 import { hasErrors, validateSessionNote } from '../../shared/clinicalValidation.js';
 import { consent, CONSENT_KEYS } from '../../shared/consent.js';
 import { draftStorage, getDraftKey } from '../../shared/draftStorage.js';
+import { useDraftAutosave } from '../../shared/useDraftAutosave.js';
 import { AiConsultModal } from './AiConsultModal.jsx';
 import { ConsentGate } from './ConsentGate.jsx';
 import { useDictation } from './useDictation.js';
@@ -35,41 +36,47 @@ export function SessionNoteEditor({
   onCancel
 }) {
   const isEditing = Boolean(note?.id);
-  const [sessionDate, setSessionDate] = useState(
-    note?.session_date || new Date().toISOString().slice(0, 10)
-  );
-  const [eva, setEva] = useState(note?.eva ?? '');
-  const [rawText, setRawText] = useState(note?.raw_text || '');
+  const [sessionDate, setSessionDate] = useState('');
+  const [eva, setEva] = useState('');
+  const [rawText, setRawText] = useState('');
   const [aiBusy, setAiBusy] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [pendingConsult, setPendingConsult] = useState(null);
   const [aiConsentRequest, setAiConsentRequest] = useState(null);
+  const [isDirty, setIsDirty] = useState(false);
   const { notify } = useToast();
+
   const draftKey = useMemo(
-    () => getDraftKey({ patientId, sessionNumber }),
-    [patientId, sessionNumber]
+    () => getDraftKey({ patientId, sessionNumber, noteId: note?.id }),
+    [patientId, sessionNumber, note?.id]
   );
 
+  // Inicialización única por ID de nota o sesión nueva
   useEffect(() => {
     if (isEditing) {
       setSessionDate(note?.session_date || new Date().toISOString().slice(0, 10));
       setEva(note?.eva ?? '');
       setRawText(note?.raw_text || '');
-      return;
+    } else {
+      const savedDraft = draftStorage.get(draftKey);
+      setSessionDate(new Date().toISOString().slice(0, 10));
+      setEva('');
+      setRawText(savedDraft || '');
     }
+    setIsDirty(false);
+  }, [note?.id, draftKey, isEditing]); // Dependemos del ID, no del objeto completo
 
-    const savedDraft = draftStorage.get(draftKey);
-    setRawText(savedDraft);
-  }, [draftKey, isEditing, note]);
+  // Guardar borrador automáticamente (solo si hay cambios)
+  useDraftAutosave(isDirty ? draftKey : null, rawText);
 
-  useEffect(() => {
-    if (isEditing) return;
-    draftStorage.set(draftKey, rawText);
-  }, [draftKey, isEditing, rawText]);
+  const handleTextChange = (val) => {
+    setRawText(val);
+    setIsDirty(true);
+  };
 
   const dictation = useDictation((chunk) => {
-    setRawText((current) => (current ? `${current} ${chunk}` : chunk));
+    handleTextChange(rawText ? `${rawText} ${chunk}` : chunk);
   });
 
   const executeAi = async (type) => {
@@ -88,9 +95,12 @@ export function SessionNoteEditor({
         return;
       }
 
-      setRawText((current) =>
-        type.id === 'soap' ? output : `${current}\n\n---\n## ${type.label}\n${output}`
-      );
+      setRawText((current) => {
+        const result =
+          type.id === 'soap' ? output : `${current}\n\n---\n## ${type.label}\n${output}`;
+        setIsDirty(true);
+        return result;
+      });
       notify({ tone: 'success', message: `${type.label} aplicado.` });
     } catch (err) {
       setError(err.message || 'No se pudo usar IA.');
@@ -141,25 +151,23 @@ export function SessionNoteEditor({
     });
 
     if (alsoInsert) {
-      setRawText((current) => `${current}\n\n---\n## ${label || type}\n${output}`);
+      handleTextChange(`${rawText}\n\n---\n## ${label || type}\n${output}`);
     }
 
     notify({ tone: 'success', message: 'Consulta IA guardada en expediente.' });
-    onSaved?.();
+    // onSaved?.(); // Eliminamos el refresco automático para evitar que el padre destruya el estado local mientras se edita
   };
 
   const discardDraft = () => {
-    setRawText('');
-    setEva('');
+    setRawText(isEditing ? note.raw_text : '');
+    setEva(isEditing ? note.eva : '');
+    setIsDirty(false);
     draftStorage.remove(draftKey);
     notify({ tone: 'success', message: 'Borrador descartado.' });
   };
 
   const insertSoapTemplate = () => {
-    setRawText((current) => {
-      if (!current.trim()) return SOAP_TEMPLATE;
-      return `${current.trim()}\n\n---\n${SOAP_TEMPLATE}`;
-    });
+    handleTextChange(rawText.trim() ? `${rawText.trim()}\n\n---\n${SOAP_TEMPLATE}` : SOAP_TEMPLATE);
   };
 
   const save = async () => {
@@ -184,9 +192,8 @@ export function SessionNoteEditor({
     setError('');
     try {
       const saved = await clinicalApi.addSessionNote(payload);
-      setRawText('');
-      setEva('');
       draftStorage.remove(draftKey);
+      setIsDirty(false);
       notify({ tone: 'success', message: 'Nota guardada en expediente.' });
       onSaved?.(saved);
     } catch (err) {
@@ -221,9 +228,8 @@ export function SessionNoteEditor({
     setError('');
     try {
       const saved = await clinicalApi.updateSessionNote(note.id, payload);
-      setRawText('');
-      setEva('');
       draftStorage.remove(draftKey);
+      setIsDirty(false);
       notify({ tone: 'success', message: 'Nota actualizada.' });
       onSaved?.(saved);
     } catch (err) {
@@ -251,7 +257,14 @@ export function SessionNoteEditor({
       <div className="row wrap">
         <label>
           Fecha de la sesion
-          <input type="date" value={sessionDate} onChange={(e) => setSessionDate(e.target.value)} />
+          <input
+            type="date"
+            value={sessionDate}
+            onChange={(e) => {
+              setSessionDate(e.target.value);
+              setIsDirty(true);
+            }}
+          />
         </label>
         <label>
           EVA hoy
@@ -260,12 +273,15 @@ export function SessionNoteEditor({
             min="0"
             max="10"
             value={eva}
-            onChange={(e) => setEva(e.target.value)}
+            onChange={(e) => {
+              setEva(e.target.value);
+              setIsDirty(true);
+            }}
             placeholder="0-10"
           />
         </label>
         <span className="pill">Nota #{sessionNumber}</span>
-        {rawText.trim() && <span className="pill">Borrador local activo</span>}
+        {isDirty && <span className="pill alert">Borrador local con cambios</span>}
         <button type="button" className="secondary" onClick={insertSoapTemplate}>
           Usar plantilla SOAP
         </button>
@@ -285,7 +301,7 @@ export function SessionNoteEditor({
         <textarea
           rows="10"
           value={rawText}
-          onChange={(e) => setRawText(e.target.value)}
+          onChange={(e) => handleTextChange(e.target.value)}
           placeholder={`S - Subjetivo: como llega el paciente y que refiere.
 O - Objetivo: que se trabajo, ejercicios, tecnica y respuesta.
 A - Analisis: interpretacion clinica de la sesion.

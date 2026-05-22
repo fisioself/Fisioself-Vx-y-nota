@@ -4,12 +4,9 @@ const proxyUrl = import.meta.env.VITE_CLAUDE_PROXY_URL;
 
 export const AI_TYPES = [
   { id: 'soap', label: 'Formatear SOAP', traceable: false },
-  { id: 'summary', label: 'Resumir', traceable: false },
   { id: 'exercises', label: 'Sugerir ejercicios', traceable: false },
   { id: 'clinical_analysis', label: 'Analisis clinico', traceable: true },
-  { id: 'treatment_plan', label: 'Plan de tratamiento', traceable: true },
-  { id: 'discharge_letter', label: 'Carta de alta', traceable: true },
-  { id: 'informed_consent', label: 'Consentimiento informado', traceable: true }
+  { id: 'treatment_plan', label: 'Plan de tratamiento', traceable: true }
 ];
 
 export const isAiConfigured = Boolean(proxyUrl);
@@ -41,9 +38,17 @@ export const aiService = {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({ text, type })
+    }).catch((err) => {
+      throw new Error(`Error de red al conectar con IA: ${err.message}`);
     });
 
-    const data = await response.json().catch(() => ({}));
+    let data;
+    try {
+      data = await response.json();
+    } catch {
+      throw new Error(`Respuesta invalida del servidor de IA (Status: ${response.status})`);
+    }
+
     if (!response.ok) throw new Error(data.error || `IA respondio ${response.status}`);
 
     const output = data.text || data.output || '';

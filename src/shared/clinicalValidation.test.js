@@ -40,7 +40,6 @@ describe('clinicalValidation', () => {
     });
 
     it('keeps patient enum constants explicit', () => {
-      expect(PATIENT_STATUSES).toContain('En valoracion');
       expect(PATIENT_STATUSES).toContain('En tratamiento');
       expect(SEX_OPTIONS).toContain('Otro');
     });

@@ -1,4 +1,5 @@
 import { Suspense, lazy, useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { authService } from './services/authService.js';
 import { isSupabaseConfigured } from './lib/supabaseClient.js';
 import { draftStorage } from './shared/draftStorage.js';
@@ -25,11 +26,11 @@ const LoadingCard = ({ children = 'Cargando...' }) => (
 );
 
 export function App() {
+  const queryClient = useQueryClient();
   const [session, setSession] = useState(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [showNewPatient, setShowNewPatient] = useState(false);
-  const [refreshPatients, setRefreshPatients] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -122,13 +123,12 @@ export function App() {
               onCreated={(patient) => {
                 setSelectedPatient(patient);
                 setShowNewPatient(false);
-                setRefreshPatients((value) => value + 1);
+                queryClient.invalidateQueries({ queryKey: ['patients'] });
               }}
             />
           )}
 
           <PatientList
-            refreshKey={refreshPatients}
             selectedId={selectedPatient?.id}
             onSelect={setSelectedPatient}
           />
@@ -139,9 +139,13 @@ export function App() {
         <Suspense fallback={<LoadingCard>Cargando expediente...</LoadingCard>}>
           <PatientRecord
             patient={selectedPatient}
+            onPatientUpdated={(updatedPatient) => {
+              setSelectedPatient(updatedPatient);
+              queryClient.invalidateQueries({ queryKey: ['patients'] });
+            }}
             onPatientDeleted={() => {
               setSelectedPatient(null);
-              setRefreshPatients((value) => value + 1);
+              queryClient.invalidateQueries({ queryKey: ['patients'] });
             }}
           />
         </Suspense>

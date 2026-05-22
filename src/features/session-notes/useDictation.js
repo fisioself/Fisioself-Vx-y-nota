@@ -46,12 +46,17 @@ export const useDictation = (onText) => {
 
   const startRecognition = () => {
     const recognition = recognitionRef.current;
-    if (!recognition) return;
+    if (!recognition || listening) return;
     try {
       recognition.start();
       setListening(true);
-    } catch {
-      setListening(false);
+    } catch (err) {
+      if (err.name === 'InvalidStateError') {
+        // Ya esta activo, simplemente actualizamos el estado visual
+        setListening(true);
+      } else {
+        setListening(false);
+      }
     }
   };
 

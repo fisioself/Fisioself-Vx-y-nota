@@ -68,10 +68,6 @@ export function SessionNotesList({ notes = [], onChanged }) {
               >
                 <span>
                   <strong>Sesion #{note.session_number}</strong>
-                  <small>Fecha de sesion: {note.session_date || 'Sin fecha'}</small>
-                </span>
-                <span>
-                  {note.eva !== null && note.eva !== undefined ? `EVA ${note.eva}/10` : 'Sin EVA'}
                 </span>
               </button>
               <div className="row wrap note-actions">
@@ -104,7 +100,15 @@ export function SessionNotesList({ notes = [], onChanged }) {
                   }}
                 />
               )}
-              {isOpen && <pre>{note.raw_text}</pre>}
+              {isOpen && (
+                <div className="note-details">
+                  <div className="row wrap muted">
+                    <span>Fecha: {note.session_date || 'Sin fecha'}</span>
+                    <span>{note.eva !== null && note.eva !== undefined ? `EVA ${note.eva}/10` : 'Sin EVA'}</span>
+                  </div>
+                  <pre>{note.raw_text}</pre>
+                </div>
+              )}
             </article>
           );
         })}

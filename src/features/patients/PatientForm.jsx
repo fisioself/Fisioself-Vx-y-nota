@@ -5,7 +5,7 @@ import { validatePatient, hasErrors } from '../../shared/clinicalValidation.js';
 const emptyPatient = {
   full_name: '',
   phone: '',
-  status: 'En valoracion'
+  status: 'En tratamiento',
 };
 
 export function PatientForm({ onCreated, onCancel }) {
@@ -60,9 +60,15 @@ export function PatientForm({ onCreated, onCancel }) {
         <input
           value={values.full_name}
           onChange={(e) => setField('full_name', e.target.value)}
+          onBlur={() => {
+            const validation = validatePatient(values);
+            if (validation.full_name) setErrors(curr => ({ ...curr, full_name: validation.full_name }));
+          }}
           required
+          aria-invalid={!!errors.full_name}
+          aria-describedby={errors.full_name ? 'full_name-error' : undefined}
         />
-        {errors.full_name && <small className="field-error">{errors.full_name}</small>}
+        {errors.full_name && <small id="full_name-error" className="field-error" role="alert">{errors.full_name}</small>}
       </label>
 
       <label className="span-2">

@@ -8,7 +8,7 @@ const ENVIRONMENT = import.meta.env.MODE;
 export const isSentryConfigured = Boolean(SENTRY_DSN);
 
 const PHI_KEY_PATTERN =
-  /(email|phone|name|patient|note|diagnos|evaluation|address|birth|dob|password|token|secret|key)/i;
+  /(email|phone|name|address|birth|dob|password|token|secret|key|medical|history|prognosis)/i;
 
 function scrubObject(value, depth = 0) {
   if (depth > 4 || value == null) return value;

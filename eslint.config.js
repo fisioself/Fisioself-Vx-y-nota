@@ -1,12 +1,14 @@
 import js from '@eslint/js';
 import globals from 'globals';
 import react from 'eslint-plugin-react';
+import pluginQuery from '@tanstack/eslint-plugin-query';
 
 export default [
   {
     ignores: ['dist/**', 'coverage/**', 'node_modules/**']
   },
   js.configs.recommended,
+  ...pluginQuery.configs['flat/recommended'],
   {
     files: ['**/*.{js,jsx}'],
     languageOptions: {

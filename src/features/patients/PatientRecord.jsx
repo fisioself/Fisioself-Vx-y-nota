@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState, memo } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { clinicalApi } from '../../services/clinicalApi.js';
 import {
   buildClinicalRecordText,
@@ -57,7 +58,7 @@ export const buildPatientSummary = ({ notes = [], evaluations = [] }) => {
 
 const renderValue = (value) => value || 'No registrado';
 
-function ClinicalSummary({ summary, nextSession }) {
+const ClinicalSummary = memo(function ClinicalSummary({ summary, nextSession }) {
   const evaTrend =
     summary.evaChange === null
       ? 'Sin tendencia'
@@ -105,7 +106,7 @@ function ClinicalSummary({ summary, nextSession }) {
       </p>
     </section>
   );
-}
+});
 
 function EvaluationSummary({ evaluation }) {
   const sections = evaluation.sections || {};
@@ -134,10 +135,6 @@ function EvaluationSummary({ evaluation }) {
         </div>
       </div>
 
-      <p>
-        <strong>Diagnostico medico:</strong>{' '}
-        {renderValue(consultation.medical_diagnosis || evaluation.medical_diagnosis)}
-      </p>
       <p>
         <strong>Motivo:</strong> {renderValue(consultation.reason)}
       </p>
@@ -199,44 +196,19 @@ function EvaluationSummary({ evaluation }) {
   );
 }
 
-export function PatientRecord({ patient, onPatientUpdated, onPatientDeleted }) {
-  const [record, setRecord] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+export const PatientRecord = memo(function PatientRecord({ patient, onPatientUpdated, onPatientDeleted }) {
+  const queryClient = useQueryClient();
   const [deleting, setDeleting] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
+  const [deleteError, setDeleteError] = useState('');
   const [showEdit, setShowEdit] = useState(false);
   const [showEvaluation, setShowEvaluation] = useState(false);
   const [showSessionNote, setShowSessionNote] = useState(false);
 
-  useEffect(() => {
-    if (!patient?.id) {
-      setRecord(null);
-      setShowEdit(false);
-      setShowEvaluation(false);
-      setShowSessionNote(false);
-      return;
-    }
-
-    let cancelled = false;
-    async function load() {
-      setLoading(true);
-      setError('');
-      try {
-        const data = await clinicalApi.getPatient(patient.id);
-        if (!cancelled) setRecord(data);
-      } catch (err) {
-        if (!cancelled) setError(err.message || 'No se pudo cargar el expediente.');
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, [patient?.id, refreshKey]);
+  const { data: record, isLoading: loading, error } = useQuery({
+    queryKey: ['patient', patient?.id],
+    queryFn: () => clinicalApi.getPatient(patient.id),
+    enabled: !!patient?.id,
+  });
 
   const notes = useMemo(() => {
     const rows = record?.session_notes || [];
@@ -267,7 +239,7 @@ export function PatientRecord({ patient, onPatientUpdated, onPatientDeleted }) {
 
   const current = record || patient;
   const nextSession = getNextSessionNumber(notes);
-  const refreshRecord = () => setRefreshKey((value) => value + 1);
+  const refreshRecord = () => queryClient.invalidateQueries({ queryKey: ['patient', patient.id] });
   const exportRecord = () =>
     downloadTextFile({
       filename: `expediente-${current.full_name || current.id}.txt`,
@@ -280,12 +252,12 @@ export function PatientRecord({ patient, onPatientUpdated, onPatientDeleted }) {
     if (!confirmed) return;
 
     setDeleting(true);
-    setError('');
+    setDeleteError('');
     try {
       await clinicalApi.deletePatient(current.id);
       onPatientDeleted?.(current);
     } catch (err) {
-      setError(err.message || 'No se pudo eliminar el paciente.');
+      setDeleteError(err.message || 'No se pudo eliminar el paciente.');
     } finally {
       setDeleting(false);
     }
@@ -298,7 +270,7 @@ export function PatientRecord({ patient, onPatientUpdated, onPatientDeleted }) {
           <p className="eyebrow">Expediente clinico</p>
           <h2>{current.full_name}</h2>
           <p className="muted">
-            {summary.medicalDiagnosis || summary.diagnosis || 'Sin diagnostico en valoracion'}
+            {summary.diagnosis || 'Sin diagnostico fisioterapeutico'}
           </p>
         </div>
         <div className="hero-actions">
@@ -338,7 +310,6 @@ export function PatientRecord({ patient, onPatientUpdated, onPatientDeleted }) {
           onCancel={() => setShowEdit(false)}
           onUpdated={(updated) => {
             setShowEdit(false);
-            setRecord((existing) => ({ ...(existing || {}), ...updated }));
             onPatientUpdated?.(updated);
             refreshRecord();
           }}
@@ -362,8 +333,7 @@ export function PatientRecord({ patient, onPatientUpdated, onPatientDeleted }) {
           <p>{current.phone || 'Sin telefono'}</p>
         </section>
         <section className="card compact-card">
-          <p className="eyebrow">Diagnosticos desde valoracion</p>
-          <p>{summary.medicalDiagnosis || 'Sin diagnostico medico'}</p>
+          <p className="eyebrow">Diagnostico fisioterapeutico (desde valoracion)</p>
           <p>{summary.diagnosis || 'Sin diagnostico fisioterapeutico'}</p>
         </section>
       </div>
@@ -371,7 +341,12 @@ export function PatientRecord({ patient, onPatientUpdated, onPatientDeleted }) {
       {loading && <p className="muted">Cargando expediente...</p>}
       {error && (
         <p className="error" role="alert">
-          {error}
+          {error.message || 'Error cargando expediente'}
+        </p>
+      )}
+      {deleteError && (
+        <p className="error" role="alert">
+          {deleteError}
         </p>
       )}
 
@@ -444,4 +419,4 @@ export function PatientRecord({ patient, onPatientUpdated, onPatientDeleted }) {
       </section>
     </section>
   );
-}
+});

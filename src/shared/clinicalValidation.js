@@ -1,5 +1,4 @@
 export const PATIENT_STATUSES = [
-  'En valoracion',
   'En tratamiento',
   'Alta',
   'Seguimiento',

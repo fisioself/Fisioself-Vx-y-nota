@@ -10,12 +10,9 @@ describe('aiService', () => {
   it('keeps supported AI types explicit', () => {
     const ids = AI_TYPES.map((type) => type.id);
     expect(ids).toContain('soap');
-    expect(ids).toContain('summary');
     expect(ids).toContain('exercises');
     expect(ids).toContain('clinical_analysis');
     expect(ids).toContain('treatment_plan');
-    expect(ids).toContain('discharge_letter');
-    expect(ids).toContain('informed_consent');
   });
 
   it('rejects empty text before calling fetch', async () => {

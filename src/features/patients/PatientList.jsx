@@ -1,33 +1,14 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { clinicalApi } from '../../services/clinicalApi.js';
 
-export function PatientList({ refreshKey = 0, selectedId, onSelect }) {
-  const [patients, setPatients] = useState([]);
+export function PatientList({ selectedId, onSelect }) {
   const [query, setQuery] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function load() {
-      setLoading(true);
-      setError('');
-      try {
-        const rows = await clinicalApi.listPatients();
-        if (!cancelled) setPatients(rows || []);
-      } catch (err) {
-        if (!cancelled) setError(err.message || 'No se pudieron cargar pacientes.');
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, [refreshKey]);
+  const { data: patients = [], isLoading, error } = useQuery({
+    queryKey: ['patients'],
+    queryFn: () => clinicalApi.listPatients()
+  });
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -55,10 +36,10 @@ export function PatientList({ refreshKey = 0, selectedId, onSelect }) {
         placeholder="Buscar paciente o telefono..."
       />
 
-      {loading && <p className="muted">Cargando pacientes...</p>}
+      {isLoading && <p className="muted">Cargando pacientes...</p>}
       {error && (
         <p className="error" role="alert">
-          {error}
+          {error.message || 'No se pudieron cargar pacientes.'}
         </p>
       )}
 
@@ -75,7 +56,7 @@ export function PatientList({ refreshKey = 0, selectedId, onSelect }) {
             <small>{patient.phone || 'Sin telefono'}</small>
           </button>
         ))}
-        {!loading && !filtered.length && <p className="muted">No hay pacientes para mostrar.</p>}
+        {!isLoading && !filtered.length && <p className="muted">No hay pacientes para mostrar.</p>}
       </div>
     </section>
   );

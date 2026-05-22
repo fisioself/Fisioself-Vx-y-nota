@@ -44,6 +44,18 @@ button:disabled {
   cursor: not-allowed;
 }
 
+/* Accessibility Focus States */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+details:focus-visible summary {
+  outline: 3px solid #12372a;
+  outline-offset: 2px;
+  border-radius: 4px; /* O el radius específico del elemento */
+}
+
 .shell {
   width: min(1280px, calc(100% - 32px));
   margin: 0 auto;

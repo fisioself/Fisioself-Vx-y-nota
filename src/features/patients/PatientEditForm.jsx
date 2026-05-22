@@ -5,7 +5,7 @@ import { PATIENT_STATUSES, validatePatient, hasErrors } from '../../shared/clini
 const toEditablePatient = (patient) => ({
   full_name: patient?.full_name || '',
   phone: patient?.phone || '',
-  status: patient?.status || 'En valoracion'
+  status: patient.status || 'En tratamiento'
 });
 
 export function PatientEditForm({ patient, onUpdated, onCancel }) {
