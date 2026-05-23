@@ -9,6 +9,7 @@ import {
 import { EvaluationForm } from '../evaluations/EvaluationForm.jsx';
 import { SessionNoteEditor } from '../session-notes/SessionNoteEditor.jsx';
 import { SessionNotesList } from '../session-notes/SessionNotesList.jsx';
+import { AppointmentList } from '../appointments/AppointmentList.jsx';
 import { ClinicalTimeline } from './ClinicalTimeline.jsx';
 import { PatientEditForm } from './PatientEditForm.jsx';
 
@@ -50,8 +51,8 @@ export const buildPatientSummary = ({ notes = [], evaluations = [] }) => {
     latestEva: Number.isFinite(latestEva) ? latestEva : null,
     initialEva: Number.isFinite(initialEva) ? initialEva : null,
     evaChange,
-    medicalDiagnosis: latestMedicalDiagnosis,
     diagnosis: latestEvaluation?.prognosis || '',
+    medicalDiagnosis: latestMedicalDiagnosis,
     latestNotePreview: latestNote?.raw_text?.trim().slice(0, 180) || ''
   };
 };
@@ -246,10 +247,16 @@ export const PatientRecord = memo(function PatientRecord({ patient, onPatientUpd
       text: buildClinicalRecordText(current)
     });
   const deletePatient = async () => {
+    const name = current.full_name || 'este paciente';
     const confirmed = window.confirm(
-      `Eliminar definitivamente el expediente de ${current.full_name}? Esta accion tambien elimina sus valoraciones, notas y citas.`
+      `ELIMINACION DEFINITIVA: ¿Seguro que quieres borrar el expediente de ${name}? \n\nEsta accion es irreversible y eliminara todas sus notas, valoraciones e IA.`
     );
     if (!confirmed) return;
+
+    const secondConfirm = window.confirm(
+      `¿Confirmas que quieres borrar permanentemente todos los datos de ${name}?`
+    );
+    if (!secondConfirm) return;
 
     setDeleting(true);
     setDeleteError('');
@@ -395,6 +402,8 @@ export const PatientRecord = memo(function PatientRecord({ patient, onPatientUpd
 
       <SessionNotesList notes={notes} onChanged={refreshRecord} />
 
+      <AppointmentList patient={current} appointments={record?.appointments || []} onChanged={refreshRecord} />
+
       <section className="card">
         <div className="form-header">
           <div>
@@ -408,7 +417,7 @@ export const PatientRecord = memo(function PatientRecord({ patient, onPatientUpd
             <article key={consult.id} className="note-row">
               <div className="form-header">
                 <strong>{consult.type}</strong>
-                <span>{new Date(consult.created_at).toLocaleDateString('es-MX')}</span>
+                <span>{new Date(consult.created_at).toLocaleDateString()}</span>
               </div>
               <p className="muted">Validada: {consult.validated ? 'si' : 'pendiente'}</p>
               <pre>{consult.output_text}</pre>
