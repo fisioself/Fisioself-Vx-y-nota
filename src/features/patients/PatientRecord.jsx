@@ -37,7 +37,7 @@ export const buildPatientSummary = ({ notes = [], evaluations = [] }) => {
     latestEvaluation?.medical_diagnosis ||
     '';
   const initialEva =
-    latestEvaluation?.eva_initial !== null && latestEvaluation?.eva_initial !== undefined
+    latestEvaluation?.eva_initial != null
       ? Number(latestEvaluation.eva_initial)
       : evaValues[0];
   const latestEva = evaValues.at(-1);
@@ -385,7 +385,7 @@ export const PatientRecord = memo(function PatientRecord({ patient, onPatientUpd
             <article key={evaluation.id} className="note-row">
               <div className="form-header">
                 <strong>{evaluation.evaluation_date}</strong>
-                {evaluation.eva_initial !== null && evaluation.eva_initial !== undefined && (
+                {evaluation.eva_initial != null && (
                   <span>EVA inicial {evaluation.eva_initial}/10</span>
                 )}
               </div>

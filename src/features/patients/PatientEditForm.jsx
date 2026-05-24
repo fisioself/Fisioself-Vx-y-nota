@@ -1,11 +1,16 @@
 import { useEffect, useState } from 'react';
 import { clinicalApi } from '../../services/clinicalApi.js';
-import { PATIENT_STATUSES, validatePatient, hasErrors } from '../../shared/clinicalValidation.js';
+import {
+  emptyStringsToNull,
+  hasErrors,
+  PATIENT_STATUSES,
+  validatePatient
+} from '../../shared/clinicalValidation.js';
 
 const toEditablePatient = (patient) => ({
   full_name: patient?.full_name || '',
   phone: patient?.phone || '',
-  status: patient.status || 'En tratamiento'
+  status: patient?.status || 'En tratamiento'
 });
 
 export function PatientEditForm({ patient, onUpdated, onCancel }) {
@@ -36,10 +41,7 @@ export function PatientEditForm({ patient, onUpdated, onCancel }) {
     setSaving(true);
     setSubmitError('');
     try {
-      const payload = Object.fromEntries(
-        Object.entries(values).map(([key, value]) => [key, value === '' ? null : value])
-      );
-      const updated = await clinicalApi.updatePatient(patient.id, payload);
+      const updated = await clinicalApi.updatePatient(patient.id, emptyStringsToNull(values));
       onUpdated?.(updated);
     } catch (err) {
       setSubmitError(err.message || 'No se pudo actualizar el paciente.');

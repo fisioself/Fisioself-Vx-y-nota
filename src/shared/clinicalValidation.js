@@ -29,7 +29,7 @@ export const validateSessionNote = ({ raw_text, eva, patient_id }) => {
   if (text.length < 3) errors.raw_text = 'La nota debe tener contenido clinico.';
   if (text.length > 12000) errors.raw_text = 'La nota es demasiado larga.';
 
-  if (eva !== '' && eva !== null && eva !== undefined) {
+  if (eva != null && eva !== '') {
     const value = Number(eva);
     if (!Number.isFinite(value) || value < 0 || value > 10)
       errors.eva = 'EVA debe estar entre 0 y 10.';
@@ -39,3 +39,8 @@ export const validateSessionNote = ({ raw_text, eva, patient_id }) => {
 };
 
 export const hasErrors = (errors) => Object.keys(errors).length > 0;
+
+export const emptyStringsToNull = (values) =>
+  Object.fromEntries(
+    Object.entries(values).map(([key, value]) => [key, value === '' ? null : value])
+  );

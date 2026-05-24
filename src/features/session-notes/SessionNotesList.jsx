@@ -16,7 +16,7 @@ export function SessionNotesList({ notes = [], onChanged }) {
     if (!q) return sorted;
     return sorted.filter((note) =>
       [note.raw_text, note.session_date, note.eva, note.session_number]
-        .filter((value) => value !== null && value !== undefined)
+        .filter((value) => value != null)
         .some((value) => String(value).toLowerCase().includes(q))
     );
   }, [notes, query]);
@@ -104,7 +104,7 @@ export function SessionNotesList({ notes = [], onChanged }) {
                 <div className="note-details">
                   <div className="row wrap muted">
                     <span>Fecha: {note.session_date || 'Sin fecha'}</span>
-                    <span>{note.eva !== null && note.eva !== undefined ? `EVA ${note.eva}/10` : 'Sin EVA'}</span>
+                    <span>{note.eva != null ? `EVA ${note.eva}/10` : 'Sin EVA'}</span>
                   </div>
                   <pre>{note.raw_text}</pre>
                 </div>

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { clinicalApi } from '../../services/clinicalApi.js';
-import { validatePatient, hasErrors } from '../../shared/clinicalValidation.js';
+import { emptyStringsToNull, hasErrors, validatePatient } from '../../shared/clinicalValidation.js';
 
 const emptyPatient = {
   full_name: '',
@@ -28,10 +28,7 @@ export function PatientForm({ onCreated, onCancel }) {
     setSaving(true);
     setSubmitError('');
     try {
-      const payload = Object.fromEntries(
-        Object.entries(values).map(([key, value]) => [key, value === '' ? null : value])
-      );
-      const patient = await clinicalApi.createPatient(payload);
+      const patient = await clinicalApi.createPatient(emptyStringsToNull(values));
       setValues(emptyPatient);
       onCreated?.(patient);
     } catch (err) {

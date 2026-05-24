@@ -144,7 +144,7 @@ export const clinicalApi = {
       label: `Sesion #${item.session_number}`,
       date: item.session_date || item.created_at || new Date(0).toISOString(),
       description:
-        item.eva !== null && item.eva !== undefined ? `EVA ${item.eva}/10` : 'Nota de sesion',
+        item.eva != null ? `EVA ${item.eva}/10` : 'Nota de sesion',
       payload: item
     }));
 
