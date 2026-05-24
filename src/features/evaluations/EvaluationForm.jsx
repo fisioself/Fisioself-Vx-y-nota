@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { clinicalApi } from '../../services/clinicalApi.js';
 import { draftStorage, getEvaluationDraftKey } from '../../shared/draftStorage.js';
 import { useDraftAutosave } from '../../shared/useDraftAutosave.js';
@@ -64,12 +64,13 @@ export function EvaluationForm({ patient, patientId, therapistId, onCreated, onC
   const [values, setValues] = useState(() => {
     const draft = draftStorage.get(draftKey);
     if (draft) {
-    try {
-      return JSON.parse(draft);
-    } catch {
-      // ignore
+      try {
+        return JSON.parse(draft);
+      } catch {
+        // ignore
+      }
     }
-    }    return {
+    return {
       ...emptyEvaluation,
       full_name: patient?.full_name || '',
       phone: patient?.phone || '',
@@ -80,12 +81,7 @@ export function EvaluationForm({ patient, patientId, therapistId, onCreated, onC
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      draftStorage.set(draftKey, JSON.stringify(values));
-    }, 1000);
-    return () => clearTimeout(handler);
-  }, [values, draftKey]);
+  useDraftAutosave(draftKey, values);
 
   const setField = (field, value) => {
     setValues((current) => ({ ...current, [field]: value }));
