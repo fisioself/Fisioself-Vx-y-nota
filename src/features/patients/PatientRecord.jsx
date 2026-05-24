@@ -12,6 +12,8 @@ import { SessionNotesList } from '../session-notes/SessionNotesList.jsx';
 import { AppointmentList } from '../appointments/AppointmentList.jsx';
 import { ClinicalTimeline } from './ClinicalTimeline.jsx';
 import { PatientEditForm } from './PatientEditForm.jsx';
+import { ClinicalSummary } from './ClinicalSummary.jsx';
+import { EvaluationSummary } from '../evaluations/EvaluationSummary.jsx';
 
 export const getNextSessionNumber = (notes = []) => {
   const maxSession = notes.reduce((max, note) => {
@@ -57,146 +59,6 @@ export const buildPatientSummary = ({ notes = [], evaluations = [] }) => {
   };
 };
 
-const renderValue = (value) => value || 'No registrado';
-
-const ClinicalSummary = memo(function ClinicalSummary({ summary, nextSession }) {
-  const evaTrend =
-    summary.evaChange === null
-      ? 'Sin tendencia'
-      : summary.evaChange < 0
-        ? `${Math.abs(summary.evaChange)} puntos menos`
-        : summary.evaChange > 0
-          ? `${summary.evaChange} puntos mas`
-          : 'Sin cambio';
-
-  return (
-    <section className="card summary-card">
-      <div className="form-header">
-        <div>
-          <p className="eyebrow">Resumen clinico</p>
-          <h2>Estado del tratamiento</h2>
-        </div>
-        <span className="pill">Proxima #{nextSession}</span>
-      </div>
-      <div className="summary-grid">
-        <div>
-          <strong>{summary.sessionsCount}</strong>
-          <span>sesiones</span>
-        </div>
-        <div>
-          <strong>{summary.latestEva !== null ? `${summary.latestEva}/10` : 'S/EVA'}</strong>
-          <span>EVA actual</span>
-        </div>
-        <div>
-          <strong>{evaTrend}</strong>
-          <span>cambio de dolor</span>
-        </div>
-      </div>
-      <p>
-        <strong>Diagnostico medico:</strong>{' '}
-        {summary.medicalDiagnosis || 'Pendiente de registrar en valoracion.'}
-      </p>
-      <p>
-        <strong>Diagnostico fisioterapeutico:</strong>{' '}
-        {summary.diagnosis || 'Pendiente de registrar en valoracion.'}
-      </p>
-      <p className="muted">
-        {summary.latestNotePreview
-          ? `Ultima nota: ${summary.latestNotePreview}`
-          : 'Aun no hay notas de sesion registradas.'}
-      </p>
-    </section>
-  );
-});
-
-function EvaluationSummary({ evaluation }) {
-  const sections = evaluation.sections || {};
-  const identity = sections.patient_identity || {};
-  const history = sections.history || {};
-  const consultation = sections.consultation || {};
-  const pain = sections.pain || {};
-  const exam = sections.physical_exam || {};
-
-  return (
-    <div className="evaluation-summary">
-      <div className="record-grid">
-        <div>
-          <p className="eyebrow">Datos</p>
-          <p>Edad: {renderValue(identity.age)}</p>
-          <p>Sexo: {renderValue(identity.sex)}</p>
-          <p>Ocupacion: {renderValue(identity.occupation)}</p>
-          <p>Fisioterapeuta: {renderValue(identity.therapist_name)}</p>
-        </div>
-        <div>
-          <p className="eyebrow">Dolor</p>
-          <p>Localizacion: {renderValue(pain.location)}</p>
-          <p>Tipo: {renderValue(pain.type)}</p>
-          <p>Intensidad: {pain.intensity ?? 'No registrada'}/10</p>
-          <p>Agravantes: {renderValue(pain.aggravating_factors)}</p>
-        </div>
-      </div>
-
-      <p>
-        <strong>Motivo:</strong> {renderValue(consultation.reason)}
-      </p>
-      <p>
-        <strong>Historia clinica:</strong> {renderValue(consultation.clinical_history)}
-      </p>
-      <p>
-        <strong>Antecedentes:</strong> {renderValue(history.personal_history)}
-      </p>
-      <p>
-        <strong>Exploracion:</strong> {renderValue(exam.examination)}
-      </p>
-      <p>
-        <strong>Inspeccion general:</strong> {renderValue(exam.general_inspection)}
-      </p>
-
-      {!!exam.movement_ranges?.length && (
-        <div>
-          <p className="eyebrow">Rangos de movimiento</p>
-          <div className="mini-table">
-            {exam.movement_ranges.map((row, index) => (
-              <p key={`${row.joint}-${index}`}>
-                {renderValue(row.joint)}: {renderValue(row.range)}
-                {row.notes ? ` - ${row.notes}` : ''}
-              </p>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {!!exam.muscle_strength?.length && (
-        <div>
-          <p className="eyebrow">Fuerza muscular</p>
-          <div className="mini-table">
-            {exam.muscle_strength.map((row, index) => (
-              <p key={`${row.joint}-${index}`}>
-                {renderValue(row.joint)}: {renderValue(row.strength)}
-                {row.notes ? ` - ${row.notes}` : ''}
-              </p>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {!!exam.special_tests?.length && (
-        <div>
-          <p className="eyebrow">Pruebas especiales</p>
-          <div className="mini-table">
-            {exam.special_tests.map((row, index) => (
-              <p key={`${row.name}-${index}`}>
-                {renderValue(row.name)}: {renderValue(row.result)}
-                {row.notes ? ` - ${row.notes}` : ''}
-              </p>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 export const PatientRecord = memo(function PatientRecord({ patient, onPatientUpdated, onPatientDeleted }) {
   const queryClient = useQueryClient();
   const [deleting, setDeleting] = useState(false);
@@ -204,6 +66,7 @@ export const PatientRecord = memo(function PatientRecord({ patient, onPatientUpd
   const [showEdit, setShowEdit] = useState(false);
   const [showEvaluation, setShowEvaluation] = useState(false);
   const [showSessionNote, setShowSessionNote] = useState(false);
+  const [openEvaluationId, setOpenEvaluationId] = useState(null);
 
   const { data: record, isLoading: loading, error } = useQuery({
     queryKey: ['patient', patient?.id],
@@ -281,9 +144,15 @@ export const PatientRecord = memo(function PatientRecord({ patient, onPatientUpd
           </p>
         </div>
         <div className="hero-actions">
-          <span className="pill">{current.status || 'Sin estado'}</span>
-          <button type="button" className="secondary" onClick={exportRecord}>
-            Exportar TXT
+          <button type="button" onClick={() => setShowEvaluation((value) => !value)}>
+            {showEvaluation ? 'Cerrar valoracion' : 'Nueva valoracion'}
+          </button>
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => setShowSessionNote((value) => !value)}
+          >
+            {showSessionNote ? 'Cerrar nota' : `Nota de sesion #${nextSession}`}
           </button>
           <button type="button" className="secondary" onClick={() => printClinicalRecord(current)}>
             Exportar PDF
@@ -294,16 +163,6 @@ export const PatientRecord = memo(function PatientRecord({ patient, onPatientUpd
             onClick={() => setShowEdit((value) => !value)}
           >
             {showEdit ? 'Cerrar edicion' : 'Editar'}
-          </button>
-          <button
-            type="button"
-            className="secondary"
-            onClick={() => setShowSessionNote((value) => !value)}
-          >
-            {showSessionNote ? 'Cerrar nota' : `Nota de sesion #${nextSession}`}
-          </button>
-          <button type="button" onClick={() => setShowEvaluation((value) => !value)}>
-            {showEvaluation ? 'Cerrar valoracion' : 'Nueva valoracion'}
           </button>
           <button type="button" className="danger" disabled={deleting} onClick={deletePatient}>
             {deleting ? 'Eliminando...' : 'Eliminar paciente'}
@@ -381,21 +240,34 @@ export const PatientRecord = memo(function PatientRecord({ patient, onPatientUpd
           <span className="pill">{evaluations.length}</span>
         </div>
         <div className="list-stack">
-          {evaluations.map((evaluation) => (
-            <article key={evaluation.id} className="note-row">
-              <div className="form-header">
-                <strong>{evaluation.evaluation_date}</strong>
-                {evaluation.eva_initial !== null && evaluation.eva_initial !== undefined && (
-                  <span>EVA inicial {evaluation.eva_initial}/10</span>
+          {evaluations.map((evaluation) => {
+            const isOpen = openEvaluationId === evaluation.id;
+            return (
+              <article key={evaluation.id} className="note-row">
+                <button
+                  type="button"
+                  className="note-toggle"
+                  onClick={() => setOpenEvaluationId(isOpen ? null : evaluation.id)}
+                >
+                  <span>
+                    <strong>{evaluation.evaluation_date}</strong>
+                  </span>
+                  {evaluation.eva_initial !== null && evaluation.eva_initial !== undefined && (
+                    <span>EVA inicial {evaluation.eva_initial}/10</span>
+                  )}
+                </button>
+                <p style={{ marginTop: '0.5rem', marginBottom: '0.5rem' }}>
+                  {evaluation.prognosis || 'Sin diagnostico fisioterapeutico registrado'}
+                </p>
+                {evaluation.red_flags && (
+                  <p className="error" style={{ marginBottom: '0.5rem' }}>
+                    Banderas rojas: {evaluation.red_flags}
+                  </p>
                 )}
-              </div>
-              <p>{evaluation.prognosis || 'Sin diagnostico fisioterapeutico registrado'}</p>
-              <EvaluationSummary evaluation={evaluation} />
-              {evaluation.red_flags && (
-                <p className="error">Banderas rojas: {evaluation.red_flags}</p>
-              )}
-            </article>
-          ))}
+                {isOpen && <EvaluationSummary evaluation={evaluation} />}
+              </article>
+            );
+          })}
           {!evaluations.length && <p className="muted">Aun no hay valoraciones registradas.</p>}
         </div>
       </section>

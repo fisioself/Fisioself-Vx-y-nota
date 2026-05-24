@@ -1,40 +1,43 @@
 import { useState } from 'react';
 import { clinicalApi } from '../../services/clinicalApi.js';
 
-const DEFAULT_DURATION_MIN = 45;
-
 export function AppointmentForm({ patient, onCancel, onCreated }) {
   const [title, setTitle] = useState('');
   const [startsAt, setStartsAt] = useState('');
-  const [durationMin, setDurationMin] = useState(DEFAULT_DURATION_MIN);
-  const [location, setLocation] = useState('');
+  const [endsAt, setEndsAt] = useState('');
   const [description, setDescription] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
+  const handleStartsAtChange = (e) => {
+    const newStartsAt = e.target.value;
+    setStartsAt(newStartsAt);
+    
+    // Automatically set ends_at to 1 hour later if not set
+    if (newStartsAt && !endsAt) {
+      const date = new Date(newStartsAt);
+      date.setHours(date.getHours() + 1);
+      // Format back to YYYY-MM-DDThh:mm
+      setEndsAt(date.toISOString().slice(0, 16));
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!title.trim() || !startsAt) {
-      setError('El titulo y la fecha/hora de inicio son obligatorios.');
+    if (!title || !startsAt || !endsAt) {
+      setError('El titulo y las fechas son obligatorios.');
       return;
     }
-    const start = new Date(startsAt);
-    if (Number.isNaN(start.getTime())) {
-      setError('La fecha de inicio no es valida.');
-      return;
-    }
-    const minutes = Number(durationMin) > 0 ? Number(durationMin) : DEFAULT_DURATION_MIN;
-    const end = new Date(start.getTime() + minutes * 60 * 1000);
+
     setSaving(true);
     setError('');
     try {
       await clinicalApi.addAppointment({
         patient_id: patient.id,
-        title: title.trim(),
-        description: description.trim() || null,
-        location: location.trim() || null,
-        starts_at: start.toISOString(),
-        ends_at: end.toISOString()
+        title,
+        starts_at: new Date(startsAt).toISOString(),
+        ends_at: new Date(endsAt).toISOString(),
+        description
       });
       onCreated?.();
     } catch (err) {
@@ -46,38 +49,30 @@ export function AppointmentForm({ patient, onCancel, onCreated }) {
 
   return (
     <form className="card" onSubmit={handleSubmit}>
-      <h3>Nueva cita</h3>
+      <h3>Nueva Cita</h3>
       <label>
         Titulo
         <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} required />
       </label>
+      <div style={{ display: 'flex', gap: '1rem' }}>
+        <label style={{ flex: 1 }}>
+          Inicio
+          <input type="datetime-local" value={startsAt} onChange={handleStartsAtChange} required />
+        </label>
+        <label style={{ flex: 1 }}>
+          Fin
+          <input type="datetime-local" value={endsAt} onChange={(e) => setEndsAt(e.target.value)} required />
+        </label>
+      </div>
       <label>
-        Fecha y hora de inicio
-        <input type="datetime-local" value={startsAt} onChange={(e) => setStartsAt(e.target.value)} required />
-      </label>
-      <label>
-        Duracion (minutos)
-        <input type="number" min="5" step="5" value={durationMin} onChange={(e) => setDurationMin(e.target.value)} />
-      </label>
-      <label>
-        Lugar
-        <input type="text" value={location} onChange={(e) => setLocation(e.target.value)} />
-      </label>
-      <label>
-        Descripcion
+        Notas (Descripción)
         <textarea value={description} onChange={(e) => setDescription(e.target.value)} />
       </label>
-      {error && (
-        <p className="error" role="alert">
-          {error}
-        </p>
-      )}
+      {error && <p className="error">{error}</p>}
       <div className="actions">
-        <button type="button" className="secondary" onClick={onCancel}>
-          Cancelar
-        </button>
+        <button type="button" className="secondary" onClick={onCancel}>Cancelar</button>
         <button type="submit" disabled={saving}>
-          {saving ? 'Guardando...' : 'Guardar cita'}
+          {saving ? 'Guardando...' : 'Guardar Cita'}
         </button>
       </div>
     </form>

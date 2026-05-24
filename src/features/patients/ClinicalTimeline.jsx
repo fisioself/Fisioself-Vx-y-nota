@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import './ClinicalTimeline.css';
 
 const typeLabels = {
@@ -8,6 +9,11 @@ const typeLabels = {
 };
 
 export function ClinicalTimeline({ items = [] }) {
+  const [expanded, setExpanded] = useState(false);
+
+  const visibleItems = expanded ? items : items.slice(0, 2);
+  const hasMore = items.length > 2;
+
   return (
     <section className="card">
       <div className="form-header">
@@ -19,7 +25,7 @@ export function ClinicalTimeline({ items = [] }) {
       </div>
 
       <div className="timeline">
-        {items.map((item) => (
+        {visibleItems.map((item) => (
           <article key={`${item.type}-${item.id}`} className="timeline-item">
             <div className="timeline-dot" aria-hidden="true" />
             <div>
@@ -28,7 +34,7 @@ export function ClinicalTimeline({ items = [] }) {
                 <span className="timeline-type">{typeLabels[item.type] || item.type}</span>
               </div>
               <p className="muted">
-                {item.date ? new Date(item.date).toLocaleDateString('es-MX') : 'Sin fecha'}
+                {item.date ? new Date(item.date).toLocaleDateString() : 'Sin fecha'}
               </p>
               <p>{item.description}</p>
             </div>
@@ -36,6 +42,21 @@ export function ClinicalTimeline({ items = [] }) {
         ))}
         {!items.length && <p className="muted">Aun no hay actividad clinica para mostrar.</p>}
       </div>
+
+      {!expanded && hasMore && (
+        <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
+          <button type="button" className="secondary" onClick={() => setExpanded(true)}>
+            Ver historial completo ({items.length} eventos)
+          </button>
+        </div>
+      )}
+      {expanded && hasMore && (
+        <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
+          <button type="button" className="secondary" onClick={() => setExpanded(false)}>
+            Ocultar historial
+          </button>
+        </div>
+      )}
     </section>
   );
 }

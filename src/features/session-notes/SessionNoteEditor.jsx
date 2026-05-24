@@ -4,6 +4,7 @@ import remarkGfm from 'remark-gfm';
 import { useToast } from '../../app/ToastProvider.jsx';
 import { clinicalApi } from '../../services/clinicalApi.js';
 import { aiService, AI_TYPES } from '../../services/aiService.js';
+import { getLocalISODate } from '../../shared/dateUtils.js';
 import { hasErrors, validateSessionNote } from '../../shared/clinicalValidation.js';
 import { consent, CONSENT_KEYS } from '../../shared/consent.js';
 import { draftStorage, getDraftKey } from '../../shared/draftStorage.js';
@@ -52,23 +53,44 @@ export function SessionNoteEditor({
     [patientId, sessionNumber, note?.id]
   );
 
+  const draftValues = useMemo(() => ({
+    sessionDate,
+    eva,
+    rawText
+  }), [sessionDate, eva, rawText]);
+
   // Inicialización única por ID de nota o sesión nueva
   useEffect(() => {
+    const savedDraft = draftStorage.get(draftKey);
+    let draftData = null;
+    if (savedDraft) {
+      try {
+        draftData = JSON.parse(savedDraft);
+      } catch {
+        // Fallback para borradores antiguos que eran solo string
+        draftData = { rawText: savedDraft };
+      }
+    }
+
     if (isEditing) {
-      setSessionDate(note?.session_date || new Date().toISOString().slice(0, 10));
-      setEva(note?.eva ?? '');
-      setRawText(note?.raw_text || '');
+      // Priorizar el borrador local incluso al editar, si existe y tiene contenido
+      setSessionDate(draftData?.sessionDate || note?.session_date || getLocalISODate());
+      setEva(draftData?.eva ?? note?.eva ?? '');
+      setRawText(draftData?.rawText || note?.raw_text || '');
+      // Si el borrador es diferente a la nota original, marcar como sucio
+      if (draftData && (draftData.rawText !== note?.raw_text || draftData.eva !== note?.eva)) {
+        setIsDirty(true);
+      }
     } else {
-      const savedDraft = draftStorage.get(draftKey);
-      setSessionDate(new Date().toISOString().slice(0, 10));
-      setEva('');
-      setRawText(savedDraft || '');
+      setSessionDate(draftData?.sessionDate || getLocalISODate());
+      setEva(draftData?.eva ?? '');
+      setRawText(draftData?.rawText || '');
     }
     setIsDirty(false);
   }, [note?.id, draftKey, isEditing]); // Dependemos del ID, no del objeto completo
 
   // Guardar borrador automáticamente (solo si hay cambios)
-  useDraftAutosave(isDirty ? draftKey : null, rawText);
+  useDraftAutosave(isDirty ? draftKey : null, draftValues);
 
   const handleTextChange = (val) => {
     setRawText(val);

@@ -5,6 +5,7 @@ import { validatePatient, hasErrors } from '../../shared/clinicalValidation.js';
 const emptyPatient = {
   full_name: '',
   phone: '',
+  medical_diagnosis: '',
   status: 'En tratamiento',
 };
 
@@ -71,12 +72,21 @@ export function PatientForm({ onCreated, onCancel }) {
         {errors.full_name && <small id="full_name-error" className="field-error" role="alert">{errors.full_name}</small>}
       </label>
 
-      <label className="span-2">
+      <label>
         Telefono
         <input
           value={values.phone}
           onChange={(e) => setField('phone', e.target.value)}
           inputMode="tel"
+        />
+      </label>
+
+      <label>
+        Zona a tratar
+        <input
+          type="text"
+          value={values.medical_diagnosis}
+          onChange={(e) => setField('medical_diagnosis', e.target.value)}
         />
       </label>
 

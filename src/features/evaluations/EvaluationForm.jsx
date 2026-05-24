@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { clinicalApi } from '../../services/clinicalApi.js';
+import { getLocalISODate } from '../../shared/dateUtils.js';
 import { draftStorage, getEvaluationDraftKey } from '../../shared/draftStorage.js';
 import { useDraftAutosave } from '../../shared/useDraftAutosave.js';
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => getLocalISODate();
 
 const emptyJointRow = { joint: '', range: '', notes: '' };
 const emptyStrengthRow = { joint: '', strength: '', notes: '' };
@@ -80,17 +81,12 @@ export function EvaluationForm({ patient, patientId, therapistId, onCreated, onC
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      draftStorage.set(draftKey, JSON.stringify(values));
-    }, 1000);
-    return () => clearTimeout(handler);
-  }, [values, draftKey]);
-
   const setField = (field, value) => {
     setValues((current) => ({ ...current, [field]: value }));
     setError('');
   };
+
+  useDraftAutosave(draftKey, values);
 
   const setRow = (field, index, key, value) => {
     setValues((current) => ({
@@ -181,6 +177,7 @@ export function EvaluationForm({ patient, patientId, therapistId, onCreated, onC
         prognosis: values.prognosis.trim() || null,
         sections
       });
+      draftStorage.remove(draftKey);
       setValues(emptyEvaluation);
       onCreated?.(evaluation);
     } catch (err) {

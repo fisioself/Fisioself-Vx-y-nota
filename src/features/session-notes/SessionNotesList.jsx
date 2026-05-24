@@ -1,17 +1,25 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useToast } from '../../app/ToastProvider.jsx';
 import { clinicalApi } from '../../services/clinicalApi.js';
 import { SessionNoteEditor } from './SessionNoteEditor.jsx';
 
 export function SessionNotesList({ notes = [], onChanged }) {
   const [query, setQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
   const [openId, setOpenId] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const { notify } = useToast();
 
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedQuery(query);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [query]);
+
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
+    const q = debouncedQuery.trim().toLowerCase();
     const sorted = [...notes].sort((a, b) => Number(b.session_number) - Number(a.session_number));
     if (!q) return sorted;
     return sorted.filter((note) =>
@@ -19,13 +27,18 @@ export function SessionNotesList({ notes = [], onChanged }) {
         .filter((value) => value !== null && value !== undefined)
         .some((value) => String(value).toLowerCase().includes(q))
     );
-  }, [notes, query]);
+  }, [notes, debouncedQuery]);
 
   const deleteNote = async (note) => {
     const confirmed = window.confirm(
-      `Eliminar definitivamente la nota de sesion #${note.session_number}?`
+      `¿Seguro que quieres eliminar la nota de la sesion #${note.session_number}?`
     );
     if (!confirmed) return;
+
+    const secondConfirm = window.confirm(
+      `CONFIRMACION FINAL: Esta accion borrara permanentemente el contenido clínico de la sesion #${note.session_number}. ¿Continuar?`
+    );
+    if (!secondConfirm) return;
 
     setDeletingId(note.id);
     try {
@@ -53,6 +66,7 @@ export function SessionNotesList({ notes = [], onChanged }) {
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Buscar en notas, fecha o EVA..."
+        aria-label="Buscar en notas de sesion"
       />
 
       <div className="list-stack">

@@ -19,7 +19,8 @@ export const useDictation = (onText) => {
 
     setSupported(true);
     const recognition = new Speech();
-    recognition.lang = 'es-MX';
+    // Use device language or fallback to es-MX
+    recognition.lang = navigator.language || 'es-MX';
     recognition.continuous = true;
     recognition.interimResults = false;
 

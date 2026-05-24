@@ -63,6 +63,18 @@ export const clinicalApi = {
     return evaluation;
   },
 
+  async updateEvaluation(id, payload) {
+    assertReady();
+    return unwrap(
+      await supabase
+        .from('evaluations')
+        .update(payload)
+        .eq('id', id)
+        .select('*')
+        .single()
+    );
+  },
+
   async addSessionNote(payload) {
     assertReady();
     const response = await supabase

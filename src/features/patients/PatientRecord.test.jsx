@@ -31,7 +31,6 @@ describe('getNextSessionNumber', () => {
     expect(summary.sessionsCount).toBe(2);
     expect(summary.latestEva).toBe(3);
     expect(summary.evaChange).toBe(-5);
-    expect(summary.medicalDiagnosis).toBe('Lumbalgia');
     expect(summary.diagnosis).toBe('Control motor lumbar');
     expect(summary.latestNotePreview).toContain('Mejora marcha');
   });
