@@ -353,9 +353,9 @@ Notas adicionales: cualquier detalle relevante.`}
       <ConsentGate
         open={Boolean(aiConsentRequest)}
         eyebrow="Asistencia IA"
-        title="La nota se procesa con Anthropic"
+        title="La nota se procesa con un servicio externo de IA"
         bullets={[
-          'El texto de la nota se envia a la API de Anthropic (Claude) via tu Edge Function.',
+          'El texto de la nota se envia al servicio de IA configurado en tu Edge Function.',
           'La entrada y salida quedan guardadas en ai_consults para auditoria (RLS protegida).',
           'No envies datos del paciente sin su consentimiento informado.',
           'Toda salida IA es asistencia: la responsabilidad clinica es del fisioterapeuta.'

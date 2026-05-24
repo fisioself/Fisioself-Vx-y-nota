@@ -58,9 +58,9 @@ export function AiConsultModal({ consult, onClose, onSave }) {
             el contenido antes de guardarlo en el expediente.
           </p>
           <p className="muted">
-            Tu nota se envio a Anthropic (Claude) para generar este resultado. Entrada y salida
-            quedan registradas en ai_consults para auditoria, accesibles solo por personal de tu
-            clinica via RLS.
+            Tu nota se envio al servicio de IA configurado en la Edge Function para generar este
+            resultado. Entrada y salida quedan registradas en ai_consults para auditoria, accesibles
+            solo por personal de tu clinica via RLS.
           </p>
         </div>
 
