@@ -47,7 +47,11 @@ export function AppointmentList({ patient, appointments = [], onChanged }) {
                 {appointment.title || 'Cita sin titulo'}
               </strong>
               <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                <span className="pill">{appointment.sync_status}</span>
+                <span className="pill">
+                  {appointment.sync_status === 'synced' ? 'Sincronizada' : 
+                   appointment.sync_status === 'pending' ? 'Pendiente' : 
+                   appointment.sync_status === 'failed' ? 'Error' : appointment.sync_status}
+                </span>
                 {appointment.google_html_link && (
                   <a href={appointment.google_html_link} target="_blank" rel="noopener noreferrer">
                     Ver en Calendar
