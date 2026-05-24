@@ -1,9 +1,4 @@
-export const PATIENT_STATUSES = [
-  'En tratamiento',
-  'Alta',
-  'Seguimiento',
-  'Inactivo'
-];
+export const PATIENT_STATUSES = ['En tratamiento', 'Alta', 'Seguimiento', 'Inactivo'];
 export const SEX_OPTIONS = ['', 'M', 'F', 'Otro'];
 
 export const validatePatient = (values) => {

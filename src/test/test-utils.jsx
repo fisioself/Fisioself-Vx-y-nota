@@ -7,12 +7,12 @@ export function renderWithProviders(ui, options = {}) {
     defaultOptions: {
       queries: {
         retry: false,
-        gcTime: 0,
+        gcTime: 0
       },
       mutations: {
-        retry: false,
+        retry: false
       }
-    },
+    }
   });
 
   function Wrapper({ children }) {
@@ -25,7 +25,7 @@ export function renderWithProviders(ui, options = {}) {
 
   return {
     ...render(ui, { wrapper: Wrapper, ...options }),
-    queryClient,
+    queryClient
   };
 }
 

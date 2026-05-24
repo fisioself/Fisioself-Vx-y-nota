@@ -28,12 +28,7 @@ export const clinicalApi = {
   async updatePatient(id, payload) {
     assertReady();
     return unwrap(
-      await supabase
-        .from('patients')
-        .update(payload)
-        .eq('id', id)
-        .select('*')
-        .single()
+      await supabase.from('patients').update(payload).eq('id', id).select('*').single()
     );
   },
 
@@ -65,11 +60,7 @@ export const clinicalApi = {
 
   async addSessionNote(payload) {
     assertReady();
-    const response = await supabase
-      .from('session_notes')
-      .insert(payload)
-      .select('*')
-      .single();
+    const response = await supabase.from('session_notes').insert(payload).select('*').single();
     if (response.error?.code === '23505') {
       throw new Error(
         'Ya existe una nota con ese numero de sesion. Actualiza el expediente e intenta de nuevo.'
@@ -119,12 +110,7 @@ export const clinicalApi = {
   async updateAppointment(id, payload) {
     assertReady();
     return unwrap(
-      await supabase
-        .from('appointments')
-        .update(payload)
-        .eq('id', id)
-        .select('*')
-        .single()
+      await supabase.from('appointments').update(payload).eq('id', id).select('*').single()
     );
   },
 
@@ -143,8 +129,7 @@ export const clinicalApi = {
       type: 'session_note',
       label: `Sesion #${item.session_number}`,
       date: item.session_date || item.created_at || new Date(0).toISOString(),
-      description:
-        item.eva != null ? `EVA ${item.eva}/10` : 'Nota de sesion',
+      description: item.eva != null ? `EVA ${item.eva}/10` : 'Nota de sesion',
       payload: item
     }));
 

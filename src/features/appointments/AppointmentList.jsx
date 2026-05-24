@@ -88,7 +88,9 @@ export function AppointmentList({ patient, appointments = [], onChanged }) {
             <p className="muted">{formatDate(appointment.starts_at)}</p>
             {appointment.location && <p className="muted">Lugar: {appointment.location}</p>}
             <p>{appointment.description || 'Sin descripcion adicional'}</p>
-            <p className="pill">{SYNC_LABELS[appointment.sync_status] || appointment.sync_status}</p>
+            <p className="pill">
+              {SYNC_LABELS[appointment.sync_status] || appointment.sync_status}
+            </p>
             {appointment.google_html_link && (
               <p>
                 <a href={appointment.google_html_link} target="_blank" rel="noopener noreferrer">
@@ -98,9 +100,7 @@ export function AppointmentList({ patient, appointments = [], onChanged }) {
             )}
           </article>
         ))}
-        {!sorted.length && (
-          <p className="muted">No hay citas programadas para este paciente.</p>
-        )}
+        {!sorted.length && <p className="muted">No hay citas programadas para este paciente.</p>}
       </div>
     </section>
   );

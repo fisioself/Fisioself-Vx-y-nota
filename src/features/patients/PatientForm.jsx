@@ -5,7 +5,7 @@ import { emptyStringsToNull, hasErrors, validatePatient } from '../../shared/cli
 const emptyPatient = {
   full_name: '',
   phone: '',
-  status: 'En tratamiento',
+  status: 'En tratamiento'
 };
 
 export function PatientForm({ onCreated, onCancel }) {
@@ -59,13 +59,18 @@ export function PatientForm({ onCreated, onCancel }) {
           onChange={(e) => setField('full_name', e.target.value)}
           onBlur={() => {
             const validation = validatePatient(values);
-            if (validation.full_name) setErrors(curr => ({ ...curr, full_name: validation.full_name }));
+            if (validation.full_name)
+              setErrors((current) => ({ ...current, full_name: validation.full_name }));
           }}
           required
           aria-invalid={!!errors.full_name}
           aria-describedby={errors.full_name ? 'full_name-error' : undefined}
         />
-        {errors.full_name && <small id="full_name-error" className="field-error" role="alert">{errors.full_name}</small>}
+        {errors.full_name && (
+          <small id="full_name-error" className="field-error" role="alert">
+            {errors.full_name}
+          </small>
+        )}
       </label>
 
       <label className="span-2">

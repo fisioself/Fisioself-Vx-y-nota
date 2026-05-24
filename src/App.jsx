@@ -128,10 +128,7 @@ export function App() {
             />
           )}
 
-          <PatientList
-            selectedId={selectedPatient?.id}
-            onSelect={setSelectedPatient}
-          />
+          <PatientList selectedId={selectedPatient?.id} onSelect={setSelectedPatient} />
         </Suspense>
       </aside>
 

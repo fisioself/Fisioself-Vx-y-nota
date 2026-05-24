@@ -53,11 +53,22 @@ export function AppointmentForm({ patient, onCancel, onCreated }) {
       </label>
       <label>
         Fecha y hora de inicio
-        <input type="datetime-local" value={startsAt} onChange={(e) => setStartsAt(e.target.value)} required />
+        <input
+          type="datetime-local"
+          value={startsAt}
+          onChange={(e) => setStartsAt(e.target.value)}
+          required
+        />
       </label>
       <label>
         Duracion (minutos)
-        <input type="number" min="5" step="5" value={durationMin} onChange={(e) => setDurationMin(e.target.value)} />
+        <input
+          type="number"
+          min="5"
+          step="5"
+          value={durationMin}
+          onChange={(e) => setDurationMin(e.target.value)}
+        />
       </label>
       <label>
         Lugar

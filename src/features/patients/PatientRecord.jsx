@@ -37,9 +37,7 @@ export const buildPatientSummary = ({ notes = [], evaluations = [] }) => {
     latestEvaluation?.medical_diagnosis ||
     '';
   const initialEva =
-    latestEvaluation?.eva_initial != null
-      ? Number(latestEvaluation.eva_initial)
-      : evaValues[0];
+    latestEvaluation?.eva_initial != null ? Number(latestEvaluation.eva_initial) : evaValues[0];
   const latestEva = evaValues.at(-1);
   const evaChange =
     Number.isFinite(initialEva) && Number.isFinite(latestEva) ? latestEva - initialEva : null;
@@ -197,7 +195,11 @@ function EvaluationSummary({ evaluation }) {
   );
 }
 
-export const PatientRecord = memo(function PatientRecord({ patient, onPatientUpdated, onPatientDeleted }) {
+export const PatientRecord = memo(function PatientRecord({
+  patient,
+  onPatientUpdated,
+  onPatientDeleted
+}) {
   const queryClient = useQueryClient();
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
@@ -205,10 +207,14 @@ export const PatientRecord = memo(function PatientRecord({ patient, onPatientUpd
   const [showEvaluation, setShowEvaluation] = useState(false);
   const [showSessionNote, setShowSessionNote] = useState(false);
 
-  const { data: record, isLoading: loading, error } = useQuery({
+  const {
+    data: record,
+    isLoading: loading,
+    error
+  } = useQuery({
     queryKey: ['patient', patient?.id],
     queryFn: () => clinicalApi.getPatient(patient.id),
-    enabled: !!patient?.id,
+    enabled: !!patient?.id
   });
 
   const notes = useMemo(() => {
@@ -276,9 +282,7 @@ export const PatientRecord = memo(function PatientRecord({ patient, onPatientUpd
         <div>
           <p className="eyebrow">Expediente clinico</p>
           <h2>{current.full_name}</h2>
-          <p className="muted">
-            {summary.diagnosis || 'Sin diagnostico fisioterapeutico'}
-          </p>
+          <p className="muted">{summary.diagnosis || 'Sin diagnostico fisioterapeutico'}</p>
         </div>
         <div className="hero-actions">
           <span className="pill">{current.status || 'Sin estado'}</span>
@@ -402,7 +406,11 @@ export const PatientRecord = memo(function PatientRecord({ patient, onPatientUpd
 
       <SessionNotesList notes={notes} onChanged={refreshRecord} />
 
-      <AppointmentList patient={current} appointments={record?.appointments || []} onChanged={refreshRecord} />
+      <AppointmentList
+        patient={current}
+        appointments={record?.appointments || []}
+        onChanged={refreshRecord}
+      />
 
       <section className="card">
         <div className="form-header">

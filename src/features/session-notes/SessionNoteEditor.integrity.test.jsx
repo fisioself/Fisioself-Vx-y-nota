@@ -44,11 +44,11 @@ describe('SessionNoteEditor Integrity', () => {
 
     const textarea = screen.getByLabelText(/nota de sesion/i);
     fireEvent.change(textarea, { target: { value: 'Contenido modificado por el usuario' } });
-    
+
     expect(textarea.value).toBe('Contenido modificado por el usuario');
 
     // Simulamos un re-render del padre con una nueva referencia de objeto pero mismo ID
-    const updatedNoteReference = { ...initialNote }; 
+    const updatedNoteReference = { ...initialNote };
     rerender(
       <ToastProvider>
         <SessionNoteEditor patientId="patient-1" sessionNumber={1} note={updatedNoteReference} />
@@ -56,16 +56,18 @@ describe('SessionNoteEditor Integrity', () => {
     );
 
     // El contenido NO debe haberse reseteado al original
-    expect(screen.getByLabelText(/nota de sesion/i).value).toBe('Contenido modificado por el usuario');
+    expect(screen.getByLabelText(/nota de sesion/i).value).toBe(
+      'Contenido modificado por el usuario'
+    );
   });
 
   it('marks the note as dirty when changes are made', () => {
     renderWithToast(<SessionNoteEditor patientId="patient-1" sessionNumber={1} />);
-    
+
     expect(screen.queryByText(/borrador local con cambios/i)).not.toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText(/nota de sesion/i), { target: { value: 'C' } });
-    
+
     expect(screen.getByText(/borrador local con cambios/i)).toBeInTheDocument();
   });
 });

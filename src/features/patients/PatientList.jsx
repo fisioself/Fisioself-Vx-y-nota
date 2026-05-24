@@ -5,7 +5,11 @@ import { clinicalApi } from '../../services/clinicalApi.js';
 export function PatientList({ selectedId, onSelect }) {
   const [query, setQuery] = useState('');
 
-  const { data: patients = [], isLoading, error } = useQuery({
+  const {
+    data: patients = [],
+    isLoading,
+    error
+  } = useQuery({
     queryKey: ['patients'],
     queryFn: () => clinicalApi.listPatients()
   });
