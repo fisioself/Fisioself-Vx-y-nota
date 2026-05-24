@@ -155,7 +155,6 @@ export function SessionNoteEditor({
     }
 
     notify({ tone: 'success', message: 'Consulta IA guardada en expediente.' });
-    // onSaved?.(); // Eliminamos el refresco automático para evitar que el padre destruya el estado local mientras se edita
   };
 
   const discardDraft = () => {
@@ -170,7 +169,7 @@ export function SessionNoteEditor({
     handleTextChange(rawText.trim() ? `${rawText.trim()}\n\n---\n${SOAP_TEMPLATE}` : SOAP_TEMPLATE);
   };
 
-  const save = async () => {
+  const submit = async () => {
     const payload = {
       patient_id: patientId,
       therapist_id: therapistId || null,
@@ -188,53 +187,25 @@ export function SessionNoteEditor({
       return;
     }
 
+    const successMessage = isEditing ? 'Nota actualizada.' : 'Nota guardada en expediente.';
+    const failureFallback = isEditing
+      ? 'No se pudo actualizar la nota.'
+      : 'No se pudo guardar la nota.';
+
     setSaving(true);
     setError('');
     try {
-      const saved = await clinicalApi.addSessionNote(payload);
+      const saved = isEditing
+        ? await clinicalApi.updateSessionNote(note.id, payload)
+        : await clinicalApi.addSessionNote(payload);
       draftStorage.remove(draftKey);
       setIsDirty(false);
-      notify({ tone: 'success', message: 'Nota guardada en expediente.' });
+      notify({ tone: 'success', message: successMessage });
       onSaved?.(saved);
     } catch (err) {
-      setError(err.message || 'No se pudo guardar la nota.');
-      notify({ tone: 'error', message: err.message || 'No se pudo guardar la nota.' });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const update = async () => {
-    if (!note?.id) return;
-
-    const payload = {
-      patient_id: patientId,
-      therapist_id: therapistId || null,
-      session_number: sessionNumber,
-      session_date: sessionDate,
-      eva: eva === '' ? null : Number(eva),
-      raw_text: rawText
-    };
-
-    const validation = validateSessionNote(payload);
-    if (hasErrors(validation)) {
-      const message = Object.values(validation)[0];
+      const message = err.message || failureFallback;
       setError(message);
-      notify({ tone: 'warning', message });
-      return;
-    }
-
-    setSaving(true);
-    setError('');
-    try {
-      const saved = await clinicalApi.updateSessionNote(note.id, payload);
-      draftStorage.remove(draftKey);
-      setIsDirty(false);
-      notify({ tone: 'success', message: 'Nota actualizada.' });
-      onSaved?.(saved);
-    } catch (err) {
-      setError(err.message || 'No se pudo actualizar la nota.');
-      notify({ tone: 'error', message: err.message || 'No se pudo actualizar la nota.' });
+      notify({ tone: 'error', message });
     } finally {
       setSaving(false);
     }
@@ -349,7 +320,7 @@ Notas adicionales: cualquier detalle relevante.`}
             {isEditing ? 'Limpiar cambios' : 'Descartar borrador'}
           </button>
         )}
-        <button type="button" onClick={isEditing ? update : save} disabled={saving}>
+        <button type="button" onClick={submit} disabled={saving}>
           {saving
             ? 'Guardando...'
             : isEditing

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { calendarService, isGoogleCalendarConfigured } from '../../services/calendarService.js';
 import { AppointmentForm } from './AppointmentForm.jsx';
 import { CalendarConfig } from './CalendarConfig.jsx';
@@ -35,8 +35,9 @@ export function AppointmentList({ patient, appointments = [], onChanged }) {
     }
   };
 
-  const sorted = [...appointments].sort(
-    (a, b) => new Date(b.starts_at) - new Date(a.starts_at)
+  const sorted = useMemo(
+    () => [...appointments].sort((a, b) => new Date(b.starts_at) - new Date(a.starts_at)),
+    [appointments]
   );
 
   return (
