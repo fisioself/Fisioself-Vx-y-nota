@@ -8,14 +8,19 @@ const LoginScreen = lazy(() =>
   import('./features/auth/LoginScreen.jsx').then((module) => ({ default: module.LoginScreen }))
 );
 const PatientForm = lazy(() =>
-  import('./features/patients/PatientForm.jsx').then((module) => ({ default: module.PatientForm }))
+  import('./features/patients/PatientForm.jsx').then((module) => ({ default: module.PatientForm })) 
 );
 const PatientList = lazy(() =>
-  import('./features/patients/PatientList.jsx').then((module) => ({ default: module.PatientList }))
+  import('./features/patients/PatientList.jsx').then((module) => ({ default: module.PatientList })) 
 );
 const PatientRecord = lazy(() =>
   import('./features/patients/PatientRecord.jsx').then((module) => ({
     default: module.PatientRecord
+  }))
+);
+const AgendaView = lazy(() =>
+  import('./features/appointments/AgendaView.jsx').then((module) => ({
+    default: module.AgendaView
   }))
 );
 
@@ -31,6 +36,7 @@ export function App() {
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [showNewPatient, setShowNewPatient] = useState(false);
+  const [showAgenda, setShowAgenda] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -62,6 +68,7 @@ export function App() {
     await authService.signOut();
     draftStorage.clearAll();
     setSelectedPatient(null);
+    setShowAgenda(false);
     setSession(null);
   };
 
@@ -71,7 +78,7 @@ export function App() {
         <section className="card warning">
           <p className="eyebrow">Configuracion pendiente</p>
           <h1>Falta conectar Supabase</h1>
-          <p>Configura VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY en el deploy de esta app.</p>
+          <p>Configura VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY en el deploy de esta app.</p>     
         </section>
       </main>
     );
@@ -111,8 +118,21 @@ export function App() {
 
       <aside className="left-pane">
         <div className="actions split-actions">
-          <button type="button" onClick={() => setShowNewPatient((value) => !value)}>
+          <button type="button" onClick={() => {
+            setShowAgenda(false);
+            setShowNewPatient((value) => !value);
+          }}>
             {showNewPatient ? 'Cerrar formulario' : 'Nuevo paciente'}
+          </button>
+          <button 
+            type="button" 
+            className={showAgenda ? '' : 'secondary'} 
+            onClick={() => {
+              setShowAgenda(true);
+              setSelectedPatient(null);
+            }}
+          >
+            Mi Agenda
           </button>
         </div>
 
@@ -122,6 +142,7 @@ export function App() {
               onCancel={() => setShowNewPatient(false)}
               onCreated={(patient) => {
                 setSelectedPatient(patient);
+                setShowAgenda(false);
                 setShowNewPatient(false);
                 queryClient.invalidateQueries({ queryKey: ['patients'] });
               }}
@@ -130,24 +151,31 @@ export function App() {
 
           <PatientList
             selectedId={selectedPatient?.id}
-            onSelect={setSelectedPatient}
+            onSelect={(patient) => {
+              setSelectedPatient(patient);
+              setShowAgenda(false);
+            }}
           />
         </Suspense>
       </aside>
 
       <section className="right-pane">
-        <Suspense fallback={<LoadingCard>Cargando expediente...</LoadingCard>}>
-          <PatientRecord
-            patient={selectedPatient}
-            onPatientUpdated={(updatedPatient) => {
-              setSelectedPatient(updatedPatient);
-              queryClient.invalidateQueries({ queryKey: ['patients'] });
-            }}
-            onPatientDeleted={() => {
-              setSelectedPatient(null);
-              queryClient.invalidateQueries({ queryKey: ['patients'] });
-            }}
-          />
+        <Suspense fallback={<LoadingCard>Cargando datos...</LoadingCard>}>
+          {showAgenda ? (
+            <AgendaView />
+          ) : (
+            <PatientRecord
+              patient={selectedPatient}
+              onPatientUpdated={(updatedPatient) => {
+                setSelectedPatient(updatedPatient);
+                queryClient.invalidateQueries({ queryKey: ['patients'] });
+              }}
+              onPatientDeleted={() => {
+                setSelectedPatient(null);
+                queryClient.invalidateQueries({ queryKey: ['patients'] });
+              }}
+            />
+          )}
         </Suspense>
       </section>
     </main>
