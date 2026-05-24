@@ -1,33 +1,28 @@
+import { calendarService } from '../../services/calendarService.js';
+
 export function AgendaView() {
+  const handleConnect = async () => {
+    try {
+      await calendarService.startGoogleConnection();
+    } catch (err) {
+      alert(err.message || 'Error al conectar Google Calendar.');
+    }
+  };
+
   return (
-    <section className="card" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <section className="card">
       <div className="form-header">
         <div>
           <p className="eyebrow">Mi Agenda</p>
-          <h2>Google Calendar</h2>
+          <h2>Google Calendar Interactivo</h2>
         </div>
-        <a 
-          href="https://calendar.google.com/calendar/u/0/r/week" 
-          target="_blank" 
-          rel="noopener noreferrer" 
-          className="button secondary"
-          style={{ textDecoration: 'none', padding: '0.5rem 1rem', borderRadius: '4px', border: '1px solid var(--border)', color: 'var(--text)' }}
-        >
-          Abrir en ventana nueva
-        </a>
       </div>
       <p className="muted" style={{ marginBottom: '1rem' }}>
-        Agenda tus citas directamente aquí. (Si el calendario no carga, verifica tener iniciada tu sesión de Google en el navegador).
+        Estamos configurando la sincronización bidireccional completa. Para gestionar tus citas directamente desde aquí, asegúrate de haber autorizado los permisos de edición en tu cuenta de Google.
       </p>
-      <div style={{ flex: 1, minHeight: '600px', background: '#fff', borderRadius: '8px', overflow: 'hidden' }}>
-        <iframe 
-          src="https://calendar.google.com/calendar/embed?src=primary&mode=WEEK&showTitle=0&showPrint=0" 
-          style={{ border: 0, width: '100%', height: '100%' }} 
-          frameBorder="0" 
-          scrolling="no"
-          title="Google Calendar"
-        ></iframe>
-      </div>
+      <button type="button" className="secondary" onClick={handleConnect}>
+        Gestionar conexión con Google Calendar
+      </button>
     </section>
   );
 }
