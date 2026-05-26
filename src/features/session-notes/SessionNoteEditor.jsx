@@ -9,6 +9,7 @@ import { hasErrors, validateSessionNote } from '../../shared/clinicalValidation.
 import { consent, CONSENT_KEYS } from '../../shared/consent.js';
 import { draftStorage, getDraftKey } from '../../shared/draftStorage.js';
 import { useDraftAutosave } from '../../shared/useDraftAutosave.js';
+import { useShortcuts } from '../../shared/useShortcuts.js';
 import { AiConsultModal } from './AiConsultModal.jsx';
 import { ConsentGate } from './ConsentGate.jsx';
 import { useDictation } from './useDictation.js';
@@ -203,6 +204,29 @@ export function SessionNoteEditor({
     draftStorage.remove(draftKey);
     notify({ tone: 'success', message: 'Borrador descartado.' });
   };
+
+  useShortcuts([
+    {
+      key: 's',
+      ctrl: true,
+      shift: false,
+      action: () => {
+        if (!saving && isDirty) {
+          isEditing ? update() : save();
+        }
+      }
+    },
+    {
+      key: 'd',
+      ctrl: true,
+      shift: false,
+      action: () => {
+        if (dictation.supported && !aiBusy) {
+          dictation.toggle();
+        }
+      }
+    }
+  ]);
 
   const insertSoapTemplate = () => {
     handleTextChange(rawText.trim() ? `${rawText.trim()}\n\n---\n${SOAP_TEMPLATE}` : SOAP_TEMPLATE);

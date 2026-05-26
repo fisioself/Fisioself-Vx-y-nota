@@ -1,5 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
+/* global process */
+
 /**
  * @see https://playwright.dev/docs/test-configuration
  */

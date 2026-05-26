@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { calendarService } from '../../services/calendarService.js';
+import { usePushNotifications } from '../../shared/usePushNotifications.js';
 
 const linkButton = {
   display: 'inline-flex',
@@ -17,6 +18,8 @@ export function AgendaView() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const pollRef = useRef(null);
+
+  const { subscribed, subscribe, loading: pushLoading } = usePushNotifications();
 
   const refreshStatus = useCallback(async () => {
     try {
@@ -110,6 +113,11 @@ export function AgendaView() {
             <button type="button" className="secondary" onClick={handleConnect} disabled={busy}>
               {busy ? 'Reconectando…' : 'Reconectar'}
             </button>
+            {!pushLoading && !subscribed && (
+              <button type="button" className="secondary" onClick={subscribe}>
+                Activar notificaciones de citas
+              </button>
+            )}
           </div>
         </>
       ) : (

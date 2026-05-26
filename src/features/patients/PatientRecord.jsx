@@ -11,7 +11,10 @@ import { AppointmentList } from '../appointments/AppointmentList.jsx';
 import { ClinicalTimeline } from './ClinicalTimeline.jsx';
 import { PatientEditForm } from './PatientEditForm.jsx';
 import { ClinicalSummary } from './ClinicalSummary.jsx';
+import { useRole } from '../../shared/useRole.js';
 import { EvaluationSummary } from '../evaluations/EvaluationSummary.jsx';
+import { ImageUploader } from '../../components/ImageUploader.jsx';
+import { ClinicalFilesList } from '../../components/ClinicalFilesList.jsx';
 
 export const getNextSessionNumber = (notes = []) => {
   const maxSession = notes.reduce((max, note) => {
@@ -89,6 +92,9 @@ export const PatientRecord = memo(function PatientRecord({ patient, onPatientUpd
 
   const timeline = useMemo(() => clinicalApi.buildTimeline(record), [record]);
   const summary = useMemo(() => buildPatientSummary({ notes, evaluations }), [notes, evaluations]);
+
+  const { data: role } = useRole();
+  const isAdmin = role === 'admin';
 
   if (!patient) {
     return (
@@ -270,6 +276,17 @@ export const PatientRecord = memo(function PatientRecord({ patient, onPatientUpd
       <SessionNotesList notes={notes} onChanged={refreshRecord} />
 
       <AppointmentList patient={current} appointments={record?.appointments || []} onChanged={refreshRecord} />
+
+      <section className="card">
+        <div className="form-header">
+          <div>
+            <p className="eyebrow">Documentos</p>
+            <h2>Archivos clinicos</h2>
+          </div>
+          <ImageUploader patientId={current.id} onUploadComplete={refreshRecord} />
+        </div>
+        <ClinicalFilesList patientId={current.id} refreshTrigger={record?.id} />
+      </section>
 
       <section className="card">
         <div className="form-header">
