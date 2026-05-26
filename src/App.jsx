@@ -103,10 +103,26 @@ export function App() {
   return (
     <main className="shell app-grid">
       <header className="hero app-hero">
-        <div>
-          <p className="eyebrow">FISIOSELF App Notas VX</p>
-          <h1>Expediente clinico</h1>
-          <p>Pacientes, notas, dictado por voz e IA trazable con Supabase.</p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <img
+            src="/logo.jpg"
+            alt="FISIOSELF"
+            width="56"
+            height="56"
+            style={{
+              width: 56,
+              height: 56,
+              borderRadius: 14,
+              objectFit: 'cover',
+              background: '#0b0f0e',
+              flexShrink: 0
+            }}
+          />
+          <div>
+            <p className="eyebrow">FISIOSELF App Notas VX</p>
+            <h1>Expediente clinico</h1>
+            <p>Pacientes, notas, dictado por voz e IA trazable con Supabase.</p>
+          </div>
         </div>
         <div className="hero-actions">
           <span className="pill">{session.user?.email}</span>
