@@ -11,6 +11,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
+    "test:e2e": "playwright test",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "lint": "eslint .",
@@ -22,12 +23,15 @@
     "@sentry/react": "^10.53.1",
     "@supabase/supabase-js": "^2.106.0",
     "@tanstack/react-query": "^5.100.13",
+    "@tanstack/react-query-persist-client": "^5.100.14",
+    "idb-keyval": "^6.2.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-markdown": "^9.0.1",
     "remark-gfm": "^4.0.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@tanstack/eslint-plugin-query": "^5.100.13",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.1.0",

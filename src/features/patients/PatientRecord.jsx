@@ -2,8 +2,6 @@ import { useMemo, useState, memo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { clinicalApi } from '../../services/clinicalApi.js';
 import {
-  buildClinicalRecordText,
-  downloadTextFile,
   printClinicalRecord
 } from '../../shared/exportClinicalRecord.js';
 import { EvaluationForm } from '../evaluations/EvaluationForm.jsx';
@@ -104,11 +102,6 @@ export const PatientRecord = memo(function PatientRecord({ patient, onPatientUpd
   const current = record || patient;
   const nextSession = getNextSessionNumber(notes);
   const refreshRecord = () => queryClient.invalidateQueries({ queryKey: ['patient', patient.id] });
-  const exportRecord = () =>
-    downloadTextFile({
-      filename: `expediente-${current.full_name || current.id}.txt`,
-      text: buildClinicalRecordText(current)
-    });
   const deletePatient = async () => {
     const name = current.full_name || 'este paciente';
     const confirmed = window.confirm(
@@ -164,9 +157,11 @@ export const PatientRecord = memo(function PatientRecord({ patient, onPatientUpd
           >
             {showEdit ? 'Cerrar edicion' : 'Editar'}
           </button>
-          <button type="button" className="danger" disabled={deleting} onClick={deletePatient}>
-            {deleting ? 'Eliminando...' : 'Eliminar paciente'}
-          </button>
+          {isAdmin && (
+            <button type="button" className="danger" disabled={deleting} onClick={deletePatient}>
+              {deleting ? 'Eliminando...' : 'Eliminar paciente'}
+            </button>
+          )}
         </div>
       </article>
 

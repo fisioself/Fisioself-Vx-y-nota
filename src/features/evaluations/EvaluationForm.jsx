@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { clinicalApi } from '../../services/clinicalApi.js';
 import { getLocalISODate } from '../../shared/dateUtils.js';
 import { draftStorage, getEvaluationDraftKey } from '../../shared/draftStorage.js';

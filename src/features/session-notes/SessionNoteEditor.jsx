@@ -104,29 +104,45 @@ export function SessionNoteEditor({
   const executeAi = async (type) => {
     setAiBusy(true);
     setError('');
-    try {
-      const output = await aiService.transform({ text: rawText, type: type.id });
+    
+    const startText = rawText;
+    const prefix = type.id === 'soap' ? '' : `${startText}\n\n---\n## ${type.label}\n`;
 
-      if (type.traceable) {
-        setPendingConsult({
-          type: type.id,
-          label: type.label,
-          input: rawText,
-          output
-        });
-        return;
-      }
-
-      setRawText((current) => {
-        const result =
-          type.id === 'soap' ? output : `${current}\n\n---\n## ${type.label}\n${output}`;
-        setIsDirty(true);
-        return result;
+    if (type.traceable) {
+      setPendingConsult({
+        type: type.id,
+        label: type.label,
+        input: rawText,
+        output: ''
       });
-      notify({ tone: 'success', message: `${type.label} aplicado.` });
+    } else {
+      setRawText(prefix);
+      setIsDirty(true);
+    }
+
+    try {
+      await aiService.transform({
+        text: startText,
+        type: type.id,
+        onChunk: (accumulatedText) => {
+          if (type.traceable) {
+            setPendingConsult((current) => current ? { ...current, output: accumulatedText } : current);
+          } else {
+            setRawText(prefix + accumulatedText);
+            setIsDirty(true);
+          }
+        }
+      });
+
+      if (!type.traceable) {
+        notify({ tone: 'success', message: `${type.label} aplicado.` });
+      }
     } catch (err) {
       setError(err.message || 'No se pudo usar IA.');
       notify({ tone: 'error', message: err.message || 'No se pudo usar IA.' });
+      if (type.traceable) {
+        setPendingConsult(null);
+      }
     } finally {
       setAiBusy(false);
     }

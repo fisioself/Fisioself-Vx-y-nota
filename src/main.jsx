@@ -1,26 +1,35 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient } from '@tanstack/react-query';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { AppRoot } from './app/AppRoot.jsx';
 import { ErrorBoundary } from './app/ErrorBoundary.jsx';
 import { registerServiceWorker } from './app/registerServiceWorker.js';
 import { ToastProvider } from './app/ToastProvider.jsx';
 import { initSentry } from './lib/sentry.js';
+import { createIDBPersister } from './lib/offlineSync.js';
 import './styles.css';
 import './app/toasts.css';
 
 initSentry();
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      gcTime: 1000 * 60 * 60 * 24, // 24 hours
+    },
+  },
+});
+const persister = createIDBPersister();
 
 createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
+      <PersistQueryClientProvider client={queryClient} persistOptions={{ persister }}>
         <ToastProvider>
           <AppRoot />
         </ToastProvider>
-      </QueryClientProvider>
+      </PersistQueryClientProvider>
     </ErrorBoundary>
   </React.StrictMode>
 );
