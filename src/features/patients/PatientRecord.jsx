@@ -2,7 +2,7 @@ import { useMemo, useState, memo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { clinicalApi } from '../../services/clinicalApi';
 import {
-  printClinicalRecord
+  exportToPdf
 } from '../../shared/exportClinicalRecord.js';
 import { EvaluationForm } from '../evaluations/EvaluationForm.jsx';
 import { SessionNoteEditor } from '../session-notes/SessionNoteEditor.jsx';
@@ -10,7 +10,7 @@ import { SessionNotesList } from '../session-notes/SessionNotesList.jsx';
 import { AppointmentList } from '../appointments/AppointmentList.jsx';
 import { ClinicalTimeline } from './ClinicalTimeline.jsx';
 import { PatientEditForm } from './PatientEditForm.jsx';
-import { ClinicalSummary } from './ClinicalSummary.jsx';
+import { ClinicalSummary } from './ClinicalSummary';
 import { useRole } from '../../shared/useRole.js';
 import { EvaluationSummary } from '../evaluations/EvaluationSummary.jsx';
 import { ImageUploader } from '../../components/ImageUploader.jsx';
@@ -153,7 +153,7 @@ export const PatientRecord = memo(function PatientRecord({ patient, onPatientUpd
           >
             {showSessionNote ? 'Cerrar nota' : `Nota de sesion #${nextSession}`}
           </button>
-          <button type="button" className="secondary" onClick={() => printClinicalRecord(current)}>
+          <button type="button" className="secondary" onClick={() => exportToPdf(current)}>
             Exportar PDF
           </button>
           <button

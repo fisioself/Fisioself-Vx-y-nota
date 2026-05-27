@@ -109,20 +109,31 @@ self.addEventListener('sync', (event) => {
             if (response.ok) {
               await store.delete(reqData.id);
             } else if (response.status === 401) {
-              // Hallazgo #5: Notify client about expired token
+              // Notificar error de autenticación
               const clients = await self.clients.matchAll();
               clients.forEach(client => {
                 client.postMessage({
-                  type: 'SYNC_AUTH_ERROR',
-                  message: 'Sesion caducada. Por favor, abre la app para sincronizar tus notas.'
+                  type: 'SYNC_ERROR',
+                  status: 401,
+                  message: 'Sesion caducada. Inicia sesion para sincronizar tus notas.'
                 });
               });
-              // Stop processing this queue for now
-              break;
+              break; 
+            } else if (response.status === 409) {
+              // Conflicto de datos: el registro cambió en el servidor
+              const clients = await self.clients.matchAll();
+              clients.forEach(client => {
+                client.postMessage({
+                  type: 'SYNC_CONFLICT',
+                  id: reqData.id,
+                  message: 'Conflicto detectado en una nota. Por favor revisa tus borradores.'
+                });
+              });
+              // Keep in queue but mark as conflict
+              await store.put({ ...reqData, conflict: true });
             }
           } catch (err) {
             console.error('Background sync failed for req', reqData.id, err);
-            // Will retry on next sync event
           }
         }
       })()

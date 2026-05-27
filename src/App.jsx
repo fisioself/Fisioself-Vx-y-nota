@@ -207,7 +207,11 @@ export function App() {
           {showDashboard ? (
             <ClinicDashboard />
           ) : showAgenda ? (
-            <AgendaView />
+            <AgendaView onPatientSelect={(patientId) => {
+              setSelectedPatient({ id: patientId });
+              setShowAgenda(false);
+              setShowDashboard(false);
+            }} />
           ) : (
             <PatientRecord
               patient={selectedPatient}

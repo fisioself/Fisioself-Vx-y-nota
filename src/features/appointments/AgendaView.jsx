@@ -1,19 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { calendarService } from '../../services/calendarService.js';
 import { usePushNotifications } from '../../shared/usePushNotifications.js';
+import { NativeCalendar } from '../../components/calendar/NativeCalendar';
 
-const linkButton = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  background: '#12372a',
-  color: 'white',
-  padding: '12px 16px',
-  borderRadius: 14,
-  fontWeight: 800,
-  textDecoration: 'none'
-};
-
-export function AgendaView() {
+export function AgendaView({ onPatientSelect }) {
   const [status, setStatus] = useState({ loading: true, connected: false, email: null });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -44,7 +34,6 @@ export function AgendaView() {
     setBusy(true);
     try {
       await calendarService.startGoogleConnection();
-      // Mientras el usuario autoriza en la otra pestaña, sondeamos el estado.
       let elapsed = 0;
       if (pollRef.current) clearInterval(pollRef.current);
       pollRef.current = setInterval(async () => {
@@ -63,11 +52,11 @@ export function AgendaView() {
   }, [refreshStatus]);
 
   return (
-    <section className="card">
-      <div className="form-header">
+    <section>
+      <div className="form-header" style={{ marginBottom: 16 }}>
         <div>
           <p className="eyebrow">Mi Agenda</p>
-          <h2>Google Calendar</h2>
+          <h2>Calendario Integrado</h2>
         </div>
         {!status.loading && (
           <span
@@ -87,7 +76,7 @@ export function AgendaView() {
                 background: status.connected ? '#1f9d57' : '#c08a1e'
               }}
             />
-            {status.connected ? 'Conectado' : 'Sin conectar'}
+            {status.connected ? 'Conectado a Google' : 'Sin conectar'}
           </span>
         )}
       </div>
@@ -96,41 +85,10 @@ export function AgendaView() {
         <p className="muted">Comprobando conexión…</p>
       ) : status.connected ? (
         <>
-          <div className="ai-box" style={{ display: 'grid', gap: 4 }}>
-            <p style={{ margin: 0 }}>Tus citas se sincronizan automáticamente</p>
-            <span className="muted" style={{ fontWeight: 600 }}>
-              {status.email ? `Cuenta vinculada: ${status.email}` : 'Cuenta de Google vinculada'}
-            </span>
-          </div>
-          
-          <div className="actions" style={{ justifyContent: 'flex-start', gap: 10, flexWrap: 'wrap', marginBottom: '1rem' }}>
-            <a href="https://calendar.google.com" target="_blank" rel="noopener noreferrer" style={linkButton}>
-              Abrir en Google Calendar
-            </a>
-            <button type="button" className="secondary" onClick={handleConnect} disabled={busy}>
-              {busy ? 'Reconectando…' : 'Cambiar cuenta'}
-            </button>
-            {!pushLoading && !subscribed && (
-              <button type="button" className="secondary" onClick={subscribe}>
-                Activar notificaciones
-              </button>
-            )}
-          </div>
-
-          {status.email && (
-            <div style={{ marginTop: '1rem', width: '100%', overflow: 'hidden', borderRadius: '16px', border: '1px solid rgba(18, 55, 42, 0.14)' }}>
-              <iframe
-                src={`https://calendar.google.com/calendar/embed?src=${encodeURIComponent(status.email)}&ctz=${Intl.DateTimeFormat().resolvedOptions().timeZone}&showTitle=0&showPrint=0&showCalendars=0&showTz=0`}
-                style={{ border: 0, width: '100%', height: '600px', display: 'block' }}
-                frameBorder="0"
-                scrolling="no"
-                title="Google Calendar Integrado"
-              ></iframe>
-            </div>
-          )}
+          <NativeCalendar onEventClick={onPatientSelect} />
         </>
       ) : (
-        <>
+        <div className="card">
           <p className="muted" style={{ marginBottom: '1rem' }}>
             Conecta tu cuenta de Google y tus citas se sincronizarán automáticamente con tu calendario.
           </p>
@@ -142,7 +100,7 @@ export function AgendaView() {
               Se abrió una pestaña de Google. Autoriza el acceso y vuelve aquí.
             </p>
           )}
-        </>
+        </div>
       )}
 
       {error && (

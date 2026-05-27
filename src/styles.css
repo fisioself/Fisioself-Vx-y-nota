@@ -86,7 +86,7 @@ select:focus-visible,
 details:focus-visible summary {
   outline: 3px solid var(--primary);
   outline-offset: 2px;
-  border-radius: 4px; /* O el radius específico del elemento */
+  border-radius: 4px;
 }
 
 .shell {
@@ -216,7 +216,7 @@ details:focus-visible summary {
   gap: 16px;
 }
 .card {
-  background: rgba(255, 255, 255, 0.88);
+  background: var(--bg-card);
   border: 1px solid rgba(18, 55, 42, 0.14);
   border-radius: 22px;
   padding: 20px;
@@ -301,6 +301,10 @@ textarea {
   font-weight: 800;
   white-space: nowrap;
 }
+.pill.active {
+  background: var(--primary);
+  color: white;
+}
 .error,
 .field-error {
   color: var(--danger);
@@ -314,6 +318,14 @@ textarea {
   display: grid;
   gap: 14px;
 }
+.filter-group {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.filters {
+  gap: 8px;
+}
 .list-stack {
   display: grid;
   gap: 10px;
@@ -323,16 +335,18 @@ textarea {
   gap: 4px;
   text-align: left;
   width: 100%;
-  background: #f2eadb;
+  background: var(--bg-sunken);
   color: var(--primary);
   border: 1px solid transparent;
+  padding: 14px;
+  border-radius: 16px;
 }
 .patient-row.active {
   border-color: var(--primary);
   background: var(--secondary);
 }
 .patient-row small {
-  color: rgba(18, 55, 42, 0.66);
+  color: var(--muted);
 }
 
 .record-header {
@@ -510,5 +524,20 @@ pre {
   .actions button,
   .row > button {
     width: 100%;
+  }
+}
+
+/* --- Print Styles for Clinical Reports (Point 2) --- */
+@media print {
+  nav, button, .patient-list, .editor, .ai-box, .filters, .modal-backdrop, .hero-actions {
+    display: none !important;
+  }
+  body { background: white !important; color: black !important; font-size: 11pt; }
+  .shell { width: 100% !important; max-width: none !important; padding: 0 !important; }
+  .card { border: none !important; box-shadow: none !important; background: transparent !important; }
+  .record-header::before {
+    content: "INFORME CLÍNICO DE FISIOTERAPIA";
+    display: block; text-align: center; font-size: 18pt; font-weight: bold;
+    margin-bottom: 0.5cm; border-bottom: 2px solid black; padding-bottom: 10px;
   }
 }
