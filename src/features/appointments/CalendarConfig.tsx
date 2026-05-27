@@ -5,7 +5,7 @@ export function CalendarConfig() {
     try {
       await calendarService.startGoogleConnection();
     } catch (err) {
-      alert(err.message || 'Error al conectar Google Calendar.');
+      alert(err instanceof Error ? err.message : 'Error al conectar Google Calendar.');
     }
   };
 

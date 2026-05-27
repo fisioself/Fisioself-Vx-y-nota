@@ -1,27 +1,34 @@
 import { useState } from 'react';
 import { calendarService } from '../../services/calendarService.js';
-import { clinicalApi } from '../../services/clinicalApi.js';
-import { AppointmentForm } from './AppointmentForm.jsx';
+import { clinicalApi } from '../../services/clinicalApi';
+import type { Appointment, Patient } from '../../types/clinical';
+import { AppointmentForm } from './AppointmentForm';
 import './appointments.css';
 
-export function AppointmentList({ patient, appointments = [], onChanged }) {
-  const [showForm, setShowForm] = useState(false);
-  const [syncing, setSyncing] = useState(null);
-  const [cancelling, setCancelling] = useState(null);
+interface AppointmentListProps {
+  patient: Patient;
+  appointments?: Appointment[];
+  onChanged?: () => void;
+}
 
-  const syncAppointment = async (id) => {
+export function AppointmentList({ patient, appointments = [], onChanged }: AppointmentListProps) {
+  const [showForm, setShowForm] = useState(false);
+  const [syncing, setSyncing] = useState<string | null>(null);
+  const [cancelling, setCancelling] = useState<string | null>(null);
+
+  const syncAppointment = async (id: string) => {
     setSyncing(id);
     try {
       await calendarService.syncAppointment(id);
       onChanged?.();
     } catch (err) {
-      alert(err.message);
+      alert(err instanceof Error ? err.message : String(err));
     } finally {
       setSyncing(null);
     }
   };
 
-  const cancelAppointment = async (id) => {
+  const cancelAppointment = async (id: string) => {
     if (
       !window.confirm(
         '¿Cancelar esta cita? Si estaba sincronizada, también se eliminará el evento de tu Google Calendar.'
@@ -33,7 +40,7 @@ export function AppointmentList({ patient, appointments = [], onChanged }) {
       await clinicalApi.updateAppointment(id, { status: 'cancelled' });
       onChanged?.();
     } catch (err) {
-      alert(err.message || 'No se pudo cancelar la cita.');
+      alert(err instanceof Error ? err.message : 'No se pudo cancelar la cita.');
     } finally {
       setCancelling(null);
     }
@@ -74,7 +81,12 @@ export function AppointmentList({ patient, appointments = [], onChanged }) {
               <div className="form-header">
                 <strong>{appointment.title || 'Cita sin titulo'}</strong>
                 <div
-                  style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}
+                  style={{
+                    display: 'flex',
+                    gap: '0.5rem',
+                    alignItems: 'center',
+                    flexWrap: 'wrap'
+                  }}
                 >
                   {isCancelled ? (
                     <span className="pill" style={{ background: '#f3d9d6', color: '#7a241c' }}>

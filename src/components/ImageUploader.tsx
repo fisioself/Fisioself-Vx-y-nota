@@ -1,17 +1,27 @@
-import { useState } from 'react';
-import { supabase } from '../lib/supabaseClient.js';
-import { useToast } from '../app/ToastProvider.jsx';
+import { useState, type ChangeEvent } from 'react';
+import { supabase } from '../lib/supabaseClient';
+import { useToast } from '../app/ToastProvider';
 
-export function ImageUploader({ patientId, onUploadComplete }) {
+interface ImageUploaderProps {
+  patientId: string;
+  onUploadComplete?: (filePath: string) => void;
+}
+
+export function ImageUploader({ patientId, onUploadComplete }: ImageUploaderProps) {
   const [uploading, setUploading] = useState(false);
   const { notify } = useToast();
 
-  const handleFileChange = async (event) => {
+  const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     if (file.size > 10 * 1024 * 1024) {
       notify({ tone: 'error', message: 'El archivo excede el limite de 10MB.' });
+      return;
+    }
+
+    if (!supabase) {
+      notify({ tone: 'error', message: 'Supabase no esta configurado.' });
       return;
     }
 
@@ -30,10 +40,13 @@ export function ImageUploader({ patientId, onUploadComplete }) {
       notify({ tone: 'success', message: 'Archivo subido correctamente.' });
       onUploadComplete?.(filePath);
     } catch (error) {
-      notify({ tone: 'error', message: error.message || 'Error al subir el archivo.' });
+      notify({
+        tone: 'error',
+        message: error instanceof Error ? error.message : 'Error al subir el archivo.'
+      });
     } finally {
       setUploading(false);
-      event.target.value = ''; // Reset input
+      event.target.value = '';
     }
   };
 

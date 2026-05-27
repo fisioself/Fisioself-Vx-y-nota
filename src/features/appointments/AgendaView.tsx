@@ -1,8 +1,14 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
 import { calendarService } from '../../services/calendarService.js';
 import { usePushNotifications } from '../../shared/usePushNotifications.js';
 
-const linkButton = {
+interface CalendarStatus {
+  loading: boolean;
+  connected: boolean;
+  email: string | null;
+}
+
+const linkButton: CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
   background: '#12372a',
@@ -14,14 +20,18 @@ const linkButton = {
 };
 
 export function AgendaView() {
-  const [status, setStatus] = useState({ loading: true, connected: false, email: null });
+  const [status, setStatus] = useState<CalendarStatus>({
+    loading: true,
+    connected: false,
+    email: null
+  });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const pollRef = useRef(null);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const { subscribed, subscribe, loading: pushLoading } = usePushNotifications();
 
-  const refreshStatus = useCallback(async () => {
+  const refreshStatus = useCallback(async (): Promise<boolean> => {
     try {
       const result = await calendarService.getConnectionStatus();
       setStatus({ loading: false, connected: result.connected, email: result.email });
@@ -44,20 +54,19 @@ export function AgendaView() {
     setBusy(true);
     try {
       await calendarService.startGoogleConnection();
-      // Mientras el usuario autoriza en la otra pestaña, sondeamos el estado.
       let elapsed = 0;
       if (pollRef.current) clearInterval(pollRef.current);
       pollRef.current = setInterval(async () => {
         elapsed += 2500;
         const connected = await refreshStatus();
         if (connected || elapsed > 120000) {
-          clearInterval(pollRef.current);
+          if (pollRef.current) clearInterval(pollRef.current);
           pollRef.current = null;
           setBusy(false);
         }
       }, 2500);
     } catch (err) {
-      setError(err.message || 'Error al conectar Google Calendar.');
+      setError(err instanceof Error ? err.message : 'Error al conectar Google Calendar.');
       setBusy(false);
     }
   }, [refreshStatus]);

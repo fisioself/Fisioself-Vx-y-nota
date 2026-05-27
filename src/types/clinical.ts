@@ -8,7 +8,10 @@ export interface Patient {
   email?: string | null;
   sex?: Sex | null;
   status?: PatientStatus | null;
+  birth_date?: string | null;
+  occupation?: string | null;
   medical_diagnosis?: string | null;
+  functional_diagnosis?: string | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -72,10 +75,13 @@ export interface Appointment {
   id: string;
   patient_id?: string | null;
   title?: string | null;
+  description?: string | null;
   starts_at: string;
   ends_at?: string | null;
   status?: string | null;
   sync_status?: string | null;
+  google_html_link?: string | null;
+  google_event_id?: string | null;
   created_at?: string;
 }
 

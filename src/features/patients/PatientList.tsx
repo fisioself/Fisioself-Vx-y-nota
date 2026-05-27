@@ -1,8 +1,14 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { clinicalApi } from '../../services/clinicalApi.js';
+import { clinicalApi } from '../../services/clinicalApi';
+import type { Patient } from '../../types/clinical';
 
-export function PatientList({ selectedId, onSelect }) {
+interface PatientListProps {
+  selectedId?: string | null;
+  onSelect?: (patient: Patient) => void;
+}
+
+export function PatientList({ selectedId, onSelect }: PatientListProps) {
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
 
@@ -17,7 +23,7 @@ export function PatientList({ selectedId, onSelect }) {
     data: patients = [],
     isLoading,
     error
-  } = useQuery({
+  } = useQuery<Patient[], Error>({
     queryKey: ['patients'],
     queryFn: () => clinicalApi.listPatients()
   });

@@ -1,15 +1,21 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabaseClient.js';
-import { useToast } from '../app/ToastProvider.jsx';
+import { useEffect, useState } from 'react';
+import type { FileObject } from '@supabase/storage-js';
+import { supabase } from '../lib/supabaseClient';
+import { useToast } from '../app/ToastProvider';
 
-export function ClinicalFilesList({ patientId, refreshTrigger }) {
-  const [files, setFiles] = useState([]);
+interface ClinicalFilesListProps {
+  patientId: string;
+  refreshTrigger?: number;
+}
+
+export function ClinicalFilesList({ patientId, refreshTrigger }: ClinicalFilesListProps) {
+  const [files, setFiles] = useState<FileObject[]>([]);
   const [loading, setLoading] = useState(true);
   const { notify } = useToast();
 
   useEffect(() => {
     async function loadFiles() {
-      if (!patientId) return;
+      if (!patientId || !supabase) return;
       setLoading(true);
       const { data, error } = await supabase.storage
         .from('clinical_files')
@@ -25,21 +31,22 @@ export function ClinicalFilesList({ patientId, refreshTrigger }) {
     loadFiles();
   }, [patientId, refreshTrigger, notify]);
 
-  const handleDownload = async (fileName) => {
+  const handleDownload = async (fileName: string) => {
+    if (!supabase) return;
     const { data, error } = await supabase.storage
       .from('clinical_files')
-      .createSignedUrl(`${patientId}/${fileName}`, 3600); // 1 hour
+      .createSignedUrl(`${patientId}/${fileName}`, 3600);
 
-    if (error) {
+    if (error || !data) {
       notify({ tone: 'error', message: 'Error al descargar el archivo' });
       return;
     }
 
-    // Open in new tab to download/view
     window.open(data.signedUrl, '_blank');
   };
 
-  const handleDelete = async (fileName) => {
+  const handleDelete = async (fileName: string) => {
+    if (!supabase) return;
     if (!window.confirm('¿Seguro que quieres eliminar este archivo?')) return;
 
     const { error } = await supabase.storage
@@ -66,8 +73,8 @@ export function ClinicalFilesList({ patientId, refreshTrigger }) {
           style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
         >
           <span>
-            {file.name.split('.').pop().toUpperCase()} -{' '}
-            {(file.metadata?.size / 1024 / 1024).toFixed(2)}MB
+            {file.name.split('.').pop()?.toUpperCase()} -{' '}
+            {(((file.metadata?.size as number | undefined) ?? 0) / 1024 / 1024).toFixed(2)}MB
           </span>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button type="button" className="secondary" onClick={() => handleDownload(file.name)}>

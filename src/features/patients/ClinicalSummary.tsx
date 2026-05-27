@@ -1,6 +1,22 @@
 import { memo } from 'react';
 
-export const ClinicalSummary = memo(function ClinicalSummary({ summary, nextSession }) {
+interface SummaryData {
+  sessionsCount: number;
+  latestEva: number | null;
+  evaChange: number | null;
+  diagnosis: string | null;
+  latestNotePreview: string | null;
+}
+
+interface ClinicalSummaryProps {
+  summary: SummaryData;
+  nextSession: number;
+}
+
+export const ClinicalSummary = memo(function ClinicalSummary({
+  summary,
+  nextSession
+}: ClinicalSummaryProps) {
   const evaTrend =
     summary.evaChange === null
       ? 'Sin tendencia'

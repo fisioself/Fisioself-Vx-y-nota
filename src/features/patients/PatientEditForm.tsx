@@ -1,12 +1,37 @@
-import { useEffect, useState } from 'react';
-import { clinicalApi } from '../../services/clinicalApi.js';
-import { PATIENT_STATUSES, validatePatient, hasErrors } from '../../shared/clinicalValidation.js';
+import { useEffect, useState, type FormEvent } from 'react';
+import { clinicalApi } from '../../services/clinicalApi';
+import {
+  PATIENT_STATUSES,
+  emptyStringsToNull,
+  hasErrors,
+  validatePatient
+} from '../../shared/clinicalValidation';
+import type { Patient, PatientStatus, Sex, ValidationErrors } from '../../types/clinical';
 
-const toEditablePatient = (patient) => ({
+interface PatientEditFormProps {
+  patient: Patient | null;
+  onUpdated?: (patient: Patient) => void;
+  onCancel?: () => void;
+}
+
+interface EditableValues {
+  full_name: string;
+  phone: string;
+  email: string;
+  sex: Sex;
+  birth_date: string;
+  occupation: string;
+  medical_diagnosis: string;
+  functional_diagnosis: string;
+  status: PatientStatus;
+  [key: string]: unknown;
+}
+
+const toEditablePatient = (patient: Patient | null): EditableValues => ({
   full_name: patient?.full_name || '',
   phone: patient?.phone || '',
   email: patient?.email || '',
-  sex: patient?.sex || '',
+  sex: (patient?.sex as Sex) || '',
   birth_date: patient?.birth_date || '',
   occupation: patient?.occupation || '',
   medical_diagnosis: patient?.medical_diagnosis || '',
@@ -14,9 +39,9 @@ const toEditablePatient = (patient) => ({
   status: patient?.status || 'En tratamiento'
 });
 
-export function PatientEditForm({ patient, onUpdated, onCancel }) {
-  const [values, setValues] = useState(() => toEditablePatient(patient));
-  const [errors, setErrors] = useState({});
+export function PatientEditForm({ patient, onUpdated, onCancel }: PatientEditFormProps) {
+  const [values, setValues] = useState<EditableValues>(() => toEditablePatient(patient));
+  const [errors, setErrors] = useState<ValidationErrors<Patient>>({});
   const [saving, setSaving] = useState(false);
   const [submitError, setSubmitError] = useState('');
 
@@ -24,14 +49,14 @@ export function PatientEditForm({ patient, onUpdated, onCancel }) {
     setValues(toEditablePatient(patient));
     setErrors({});
     setSubmitError('');
-  }, [patient?.id]);
+  }, [patient?.id, patient]);
 
-  const setField = (field, value) => {
+  const setField = <K extends keyof EditableValues>(field: K, value: EditableValues[K]) => {
     setValues((current) => ({ ...current, [field]: value }));
     setErrors((current) => ({ ...current, [field]: undefined }));
   };
 
-  const submit = async (event) => {
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!patient?.id) return;
 
@@ -42,13 +67,10 @@ export function PatientEditForm({ patient, onUpdated, onCancel }) {
     setSaving(true);
     setSubmitError('');
     try {
-      const payload = Object.fromEntries(
-        Object.entries(values).map(([key, value]) => [key, value === '' ? null : value])
-      );
-      const updated = await clinicalApi.updatePatient(patient.id, payload);
+      const updated = await clinicalApi.updatePatient(patient.id, emptyStringsToNull(values));
       onUpdated?.(updated);
     } catch (err) {
-      setSubmitError(err.message || 'No se pudo actualizar el paciente.');
+      setSubmitError(err instanceof Error ? err.message : 'No se pudo actualizar el paciente.');
     } finally {
       setSaving(false);
     }
@@ -82,7 +104,10 @@ export function PatientEditForm({ patient, onUpdated, onCancel }) {
 
       <label>
         Estado
-        <select value={values.status} onChange={(e) => setField('status', e.target.value)}>
+        <select
+          value={values.status}
+          onChange={(e) => setField('status', e.target.value as PatientStatus)}
+        >
           {PATIENT_STATUSES.map((status) => (
             <option key={status} value={status}>
               {status}
@@ -111,7 +136,7 @@ export function PatientEditForm({ patient, onUpdated, onCancel }) {
 
       <label>
         Sexo
-        <select value={values.sex} onChange={(e) => setField('sex', e.target.value)}>
+        <select value={values.sex} onChange={(e) => setField('sex', e.target.value as Sex)}>
           <option value="">No especificado</option>
           <option value="M">Masculino</option>
           <option value="F">Femenino</option>
@@ -138,7 +163,7 @@ export function PatientEditForm({ patient, onUpdated, onCancel }) {
         <textarea
           value={values.medical_diagnosis}
           onChange={(e) => setField('medical_diagnosis', e.target.value)}
-          rows="2"
+          rows={2}
         />
       </label>
 
@@ -147,7 +172,7 @@ export function PatientEditForm({ patient, onUpdated, onCancel }) {
         <textarea
           value={values.functional_diagnosis}
           onChange={(e) => setField('functional_diagnosis', e.target.value)}
-          rows="2"
+          rows={2}
         />
       </label>
 

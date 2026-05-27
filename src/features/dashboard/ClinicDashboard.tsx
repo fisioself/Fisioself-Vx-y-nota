@@ -1,12 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
-import { clinicalApi } from '../../services/clinicalApi.js';
+import { clinicalApi } from '../../services/clinicalApi';
+import type { ClinicStats } from '../../types/clinical';
 
 export function ClinicDashboard() {
   const {
     data: stats,
     isLoading,
     error
-  } = useQuery({
+  } = useQuery<ClinicStats, Error>({
     queryKey: ['clinic-stats'],
     queryFn: () => clinicalApi.getClinicStats(),
     refetchOnWindowFocus: true
@@ -18,8 +19,8 @@ export function ClinicDashboard() {
         Cargando estadisticas...
       </section>
     );
-  if (error)
-    return <section className="card error">Error al cargar datos: {error.message}</section>;
+  if (error || !stats)
+    return <section className="card error">Error al cargar datos: {error?.message || ''}</section>;
 
   return (
     <div className="record-stack">

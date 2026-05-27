@@ -1,14 +1,20 @@
 import { useState } from 'react';
+import type { TimelineEntry } from '../../types/clinical';
 import './ClinicalTimeline.css';
 
-const typeLabels = {
+const typeLabels: Record<TimelineEntry['type'], string> = {
   evaluation: 'Valoracion',
   session_note: 'Nota',
   ai_consult: 'IA',
-  follow_up: 'Seguimiento'
+  follow_up: 'Seguimiento',
+  appointment: 'Cita'
 };
 
-export function ClinicalTimeline({ items = [] }) {
+interface ClinicalTimelineProps {
+  items?: TimelineEntry[];
+}
+
+export function ClinicalTimeline({ items = [] }: ClinicalTimelineProps) {
   const [expanded, setExpanded] = useState(false);
 
   const visibleItems = expanded ? items : items.slice(0, 2);

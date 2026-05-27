@@ -1,7 +1,14 @@
-import { useState } from 'react';
-import { clinicalApi } from '../../services/clinicalApi.js';
+import { useState, type ChangeEvent, type FormEvent } from 'react';
+import { clinicalApi } from '../../services/clinicalApi';
+import type { Patient } from '../../types/clinical';
 
-export function AppointmentForm({ patient, onCancel, onCreated }) {
+interface AppointmentFormProps {
+  patient: Patient;
+  onCancel?: () => void;
+  onCreated?: () => void;
+}
+
+export function AppointmentForm({ patient, onCancel, onCreated }: AppointmentFormProps) {
   const [title, setTitle] = useState('');
   const [startsAt, setStartsAt] = useState('');
   const [endsAt, setEndsAt] = useState('');
@@ -9,20 +16,18 @@ export function AppointmentForm({ patient, onCancel, onCreated }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  const handleStartsAtChange = (e) => {
+  const handleStartsAtChange = (e: ChangeEvent<HTMLInputElement>) => {
     const newStartsAt = e.target.value;
     setStartsAt(newStartsAt);
 
-    // Automatically set ends_at to 1 hour later if not set
     if (newStartsAt && !endsAt) {
       const date = new Date(newStartsAt);
       date.setHours(date.getHours() + 1);
-      // Format back to YYYY-MM-DDThh:mm
       setEndsAt(date.toISOString().slice(0, 16));
     }
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!title || !startsAt || !endsAt) {
       setError('El titulo y las fechas son obligatorios.');
@@ -41,7 +46,7 @@ export function AppointmentForm({ patient, onCancel, onCreated }) {
       });
       onCreated?.();
     } catch (err) {
-      setError(err.message || 'No se pudo crear la cita.');
+      setError(err instanceof Error ? err.message : 'No se pudo crear la cita.');
     } finally {
       setSaving(false);
     }

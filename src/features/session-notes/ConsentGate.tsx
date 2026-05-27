@@ -1,6 +1,24 @@
 import { useEffect } from 'react';
 
-export function ConsentGate({ open, title, eyebrow, bullets, acceptLabel, onAccept, onCancel }) {
+interface ConsentGateProps {
+  open: boolean;
+  title: string;
+  eyebrow: string;
+  bullets: string[];
+  acceptLabel: string;
+  onAccept: () => void;
+  onCancel: () => void;
+}
+
+export function ConsentGate({
+  open,
+  title,
+  eyebrow,
+  bullets,
+  acceptLabel,
+  onAccept,
+  onCancel
+}: ConsentGateProps) {
   useEffect(() => {
     if (open) {
       document.body.style.overflow = 'hidden';
