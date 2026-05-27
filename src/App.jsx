@@ -123,7 +123,6 @@ export function App() {
               height: 56,
               borderRadius: 14,
               objectFit: 'cover',
-              background: '#0b0f0e',
               flexShrink: 0
             }}
           />

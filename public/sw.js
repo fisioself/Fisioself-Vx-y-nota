@@ -1,9 +1,6 @@
 import { openDB } from 'https://cdn.jsdelivr.net/npm/idb@8/build/index.js';
 
-// Hallazgo #4: Automated cache versioning via Vite define. 
-// If __BUILD_VERSION__ is not defined (dev), we use a static fallback.
-const BUILD_ID = typeof __BUILD_VERSION__ !== 'undefined' ? __BUILD_VERSION__ : 'dev';
-const CACHE_NAME = `fisioself-notas-vx-${BUILD_ID}`;
+const CACHE_NAME = 'fisioself-notas-vx-v3';
 const APP_SHELL = ['/', '/index.html', '/manifest.webmanifest'];
 
 const dbPromise = openDB('fisioself-sync-db', 1, {
