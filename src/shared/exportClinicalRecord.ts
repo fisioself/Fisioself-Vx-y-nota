@@ -1,5 +1,11 @@
-const safe = (value) => value || 'No registrado';
-const escapeHtml = (value) =>
+import type { ClinicalRecord, Evaluation, EvaluationSections } from '../types/clinical';
+
+type Unknownable = string | number | null | undefined;
+
+const safe = (value: Unknownable): string =>
+  value === null || value === undefined || value === '' ? 'No registrado' : String(value);
+
+const escapeHtml = (value: unknown): string =>
   String(value ?? '')
     .replaceAll('&', '&amp;')
     .replaceAll('<', '&lt;')
@@ -7,34 +13,51 @@ const escapeHtml = (value) =>
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#39;');
 
-const formatRows = (title, rows = [], valueKey) => [
+interface ExamRow {
+  joint?: string;
+  name?: string;
+  notes?: string;
+  [key: string]: unknown;
+}
+
+const formatRows = (title: string, rows: ExamRow[] = [], valueKey: string): string[] => [
   title,
   ...(rows.length
     ? rows.map(
         (row) =>
-          `- ${safe(row.joint || row.name)}: ${safe(row[valueKey])}${row.notes ? ` | ${row.notes}` : ''}`
+          `- ${safe(row.joint || row.name)}: ${safe(row[valueKey] as Unknownable)}${row.notes ? ` | ${row.notes}` : ''}`
       )
     : ['- No registrado'])
 ];
 
-const formatEvaluationSections = (sections = {}) => {
+const asString = (value: unknown): Unknownable =>
+  value === undefined || value === null ? null : (value as string | number);
+
+const formatEvaluationSections = (sections: EvaluationSections = {}): string[] => {
   const identity = sections.patient_identity || {};
-  const history = sections.history || {};
+  const identityRec = identity as Record<string, unknown>;
+  const history = (sections.history || {}) as Record<string, unknown>;
   const consultation = sections.consultation || {};
   const pain = sections.pain || {};
-  const exam = sections.physical_exam || {};
+  const exam = (sections.physical_exam || {}) as {
+    examination?: string;
+    general_inspection?: string;
+    movement_ranges?: ExamRow[];
+    muscle_strength?: ExamRow[];
+    special_tests?: ExamRow[];
+  };
 
   return [
-    `Edad: ${safe(identity.age)}`,
-    `Sexo: ${safe(identity.sex)}`,
-    `Ocupacion: ${safe(identity.occupation)}`,
-    `Fisioterapeuta: ${safe(identity.therapist_name)}`,
-    `Antecedentes personales: ${safe(history.personal_history)}`,
-    `Antecedentes quirurgicos: ${safe(history.surgical_history)}`,
-    `Medicamentos actuales: ${safe(history.current_medications)}`,
-    `Alergias conocidas: ${safe(history.known_allergies)}`,
-    `Uso de anticoagulantes: ${safe(history.anticoagulants)}`,
-    `Actividad fisica: ${safe(history.physical_activity)}`,
+    `Edad: ${safe(asString(identityRec.age))}`,
+    `Sexo: ${safe(asString(identityRec.sex))}`,
+    `Ocupacion: ${safe(asString(identityRec.occupation))}`,
+    `Fisioterapeuta: ${safe(asString(identityRec.therapist_name))}`,
+    `Antecedentes personales: ${safe(asString(history.personal_history))}`,
+    `Antecedentes quirurgicos: ${safe(asString(history.surgical_history))}`,
+    `Medicamentos actuales: ${safe(asString(history.current_medications))}`,
+    `Alergias conocidas: ${safe(asString(history.known_allergies))}`,
+    `Uso de anticoagulantes: ${safe(asString(history.anticoagulants))}`,
+    `Actividad fisica: ${safe(asString(history.physical_activity))}`,
     `Diagnostico medico: ${safe(consultation.medical_diagnosis)}`,
     `Motivo de consulta: ${safe(consultation.reason)}`,
     `Historia clinica: ${safe(consultation.clinical_history)}`,
@@ -51,13 +74,16 @@ const formatEvaluationSections = (sections = {}) => {
   ];
 };
 
-const latestEvaluation = (evaluations = []) =>
-  [...evaluations].sort((a, b) => new Date(b.evaluation_date) - new Date(a.evaluation_date))[0];
+const latestEvaluation = (evaluations: Evaluation[] = []): Evaluation | undefined =>
+  [...evaluations].sort(
+    (a, b) =>
+      new Date(b.evaluation_date || 0).getTime() - new Date(a.evaluation_date || 0).getTime()
+  )[0];
 
-const evaluationMedicalDiagnosis = (evaluation) =>
+const evaluationMedicalDiagnosis = (evaluation: Evaluation | undefined | null): string =>
   evaluation?.sections?.consultation?.medical_diagnosis || evaluation?.medical_diagnosis || '';
 
-export const buildClinicalRecordText = (record) => {
+export const buildClinicalRecordText = (record: ClinicalRecord | null | undefined): string => {
   const notes = record?.session_notes || [];
   const evaluations = record?.evaluations || [];
   const aiConsults = record?.ai_consults || [];
@@ -101,7 +127,7 @@ export const buildClinicalRecordText = (record) => {
   ].join('\n');
 };
 
-export const downloadTextFile = ({ filename, text }) => {
+export const downloadTextFile = ({ filename, text }: { filename: string; text: string }): void => {
   const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
@@ -113,10 +139,10 @@ export const downloadTextFile = ({ filename, text }) => {
   URL.revokeObjectURL(url);
 };
 
-const paragraph = (label, value) =>
+const paragraph = (label: string, value: Unknownable): string =>
   `<p><strong>${escapeHtml(label)}:</strong> ${escapeHtml(safe(value))}</p>`;
 
-const noteHtml = (item) => `
+const noteHtml = (item: import('../types/clinical').SessionNote): string => `
   <article class="entry">
     <h3>Sesion #${escapeHtml(item.session_number)} · ${escapeHtml(safe(item.session_date))}</h3>
     ${paragraph('EVA', item.eva ?? 'No registrada')}
@@ -124,7 +150,7 @@ const noteHtml = (item) => `
   </article>
 `;
 
-const evaluationHtml = (item) => `
+const evaluationHtml = (item: Evaluation): string => `
   <article class="entry">
     <h3>Valoracion · ${escapeHtml(safe(item.evaluation_date))}</h3>
     ${paragraph('EVA inicial', item.eva_initial ?? 'No registrada')}
@@ -134,7 +160,7 @@ const evaluationHtml = (item) => `
   </article>
 `;
 
-export const buildClinicalRecordHtml = (record) => {
+export const buildClinicalRecordHtml = (record: ClinicalRecord | null | undefined): string => {
   const notes = record?.session_notes || [];
   const evaluations = record?.evaluations || [];
   const aiConsults = record?.ai_consults || [];
@@ -197,7 +223,7 @@ export const buildClinicalRecordHtml = (record) => {
 </html>`;
 };
 
-export const printClinicalRecord = (record) => {
+export const printClinicalRecord = (record: ClinicalRecord | null | undefined): void => {
   const win = window.open('', '_blank', 'noopener,noreferrer');
   if (!win) throw new Error('No se pudo abrir ventana de impresion.');
   win.document.write(buildClinicalRecordHtml(record));
