@@ -352,8 +352,11 @@ export function SessionNoteEditor({
             type="button"
             className={dictation.listening ? 'danger' : 'secondary'}
             onClick={dictation.toggle}
+            disabled={dictation.processing}
           >
-            {dictation.listening ? 'Detener dictado' : 'Dictar por voz'}
+            {dictation.processing 
+              ? 'Transcribiendo...' 
+              : (dictation.listening ? 'Detener dictado' : 'Dictar por voz (Whisper)')}
           </button>
         )}
       </div>
@@ -424,21 +427,6 @@ Notas adicionales: cualquier detalle relevante.`}
         consult={pendingConsult}
         onClose={() => setPendingConsult(null)}
         onSave={savePendingConsult}
-      />
-
-      <ConsentGate
-        open={dictation.needsConsent}
-        eyebrow="Dictado por voz"
-        title="Tu voz se envia a Google para transcribir"
-        bullets={[
-          'El navegador transmite el audio a servidores de Google Speech.',
-          'No hay acuerdo de tratamiento de datos (BAA) entre tu app y Google para este flujo.',
-          'No dictes datos identificables del paciente sin su consentimiento explicito.',
-          'Puedes seguir escribiendo a mano si no quieres usar dictado.'
-        ]}
-        acceptLabel="Entendido, activar dictado"
-        onAccept={dictation.grantConsent}
-        onCancel={dictation.cancelConsent}
       />
 
       <ConsentGate

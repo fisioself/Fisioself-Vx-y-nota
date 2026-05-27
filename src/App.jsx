@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { authService } from './services/authService.js';
 import { isSupabaseConfigured } from './lib/supabaseClient.js';
 import { draftStorage } from './shared/draftStorage.js';
+import { useTheme } from './shared/useTheme.js';
 
 const LoginScreen = lazy(() =>
   import('./features/auth/LoginScreen.jsx').then((module) => ({ default: module.LoginScreen }))
@@ -37,6 +38,8 @@ export function App() {
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [showNewPatient, setShowNewPatient] = useState(false);
   const [showAgenda, setShowAgenda] = useState(false);
+  
+  const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
     let cancelled = false;
@@ -125,6 +128,9 @@ export function App() {
           </div>
         </div>
         <div className="hero-actions">
+          <button type="button" className="secondary" onClick={toggleTheme} title="Cambiar tema">
+            {theme === 'light' ? '🌙 Modo Oscuro' : '☀️ Modo Claro'}
+          </button>
           <span className="pill">{session.user?.email}</span>
           <button type="button" className="secondary" onClick={logout}>
             Salir
