@@ -39,6 +39,24 @@ export function AppointmentList({ patient, appointments = [], onChanged }) {
     }
   };
 
+  const sendWhatsAppReminder = (appointment) => {
+    if (!patient?.phone) {
+      alert('El paciente no tiene un número de teléfono registrado.');
+      return;
+    }
+
+    const date = new Date(appointment.starts_at).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+    const time = new Date(appointment.starts_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+    
+    // Formatting the phone number: remove spaces and special characters. Assuming a country code is needed, 
+    // it's best if the user stores it with the country code. If not, this might need adjustment per region.
+    const cleanPhone = patient.phone.replace(/\D/g, ''); 
+    const message = `Hola ${patient.full_name.split(' ')[0]}, te recordamos tu cita de Fisioterapia para el ${date} a las ${time}h. ¡Te esperamos!`;
+    const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
+    
+    window.open(url, '_blank');
+  };
+
   return (
     <section className="card">
       <div className="form-header">
@@ -91,14 +109,15 @@ export function AppointmentList({ patient, appointments = [], onChanged }) {
                               ? 'Error'
                               : appointment.sync_status}
                       </span>
-                      {appointment.google_html_link && (
-                        <a
-                          href={appointment.google_html_link}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                      {patient?.phone && (
+                        <button
+                          className="secondary"
+                          onClick={() => sendWhatsAppReminder(appointment)}
+                          style={{ background: '#25D366', color: 'white', border: 'none' }}
+                          title="Recordar por WhatsApp"
                         >
-                          Ver en Calendar
-                        </a>
+                          WhatsApp
+                        </button>
                       )}
                       {appointment.sync_status !== 'synced' && (
                         <button
