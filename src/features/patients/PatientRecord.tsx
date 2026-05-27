@@ -1,9 +1,7 @@
-import { useMemo, useState, memo } from 'react';
+import React, { useMemo, useState, memo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { clinicalApi } from '../../services/clinicalApi';
-import {
-  exportToPdf
-} from '../../shared/exportClinicalRecord.js';
+import { clinicalApi, Patient } from '../../services/clinicalApi';
+import { exportToPdf } from '../../shared/exportClinicalRecord.js';
 import { EvaluationForm } from '../evaluations/EvaluationForm.jsx';
 import { SessionNoteEditor } from '../session-notes/SessionNoteEditor.jsx';
 import { SessionNotesList } from '../session-notes/SessionNotesList.jsx';
@@ -16,7 +14,7 @@ import { EvaluationSummary } from '../evaluations/EvaluationSummary.jsx';
 import { ImageUploader } from '../../components/ImageUploader.jsx';
 import { ClinicalFilesList } from '../../components/ClinicalFilesList.jsx';
 
-export const getNextSessionNumber = (notes = []) => {
+export const getNextSessionNumber = (notes: any[] = []) => {
   const maxSession = notes.reduce((max, note) => {
     const value = Number(note.session_number);
     return Number.isFinite(value) && value > max ? value : max;
@@ -24,7 +22,7 @@ export const getNextSessionNumber = (notes = []) => {
   return maxSession + 1;
 };
 
-export const buildPatientSummary = ({ notes = [], evaluations = [] }) => {
+export const buildPatientSummary = ({ notes = [], evaluations = [] }: { notes?: any[]; evaluations?: any[] }) => {
   const sortedNotes = [...notes].sort(
     (a, b) => Number(a.session_number) - Number(b.session_number)
   );
@@ -33,7 +31,7 @@ export const buildPatientSummary = ({ notes = [], evaluations = [] }) => {
     .filter((value) => Number.isFinite(value));
   const latestNote = sortedNotes.at(-1);
   const latestEvaluation = [...evaluations].sort(
-    (a, b) => new Date(b.evaluation_date) - new Date(a.evaluation_date)
+    (a, b) => new Date(b.evaluation_date).getTime() - new Date(a.evaluation_date).getTime()
   )[0];
   const latestMedicalDiagnosis =
     latestEvaluation?.sections?.consultation?.medical_diagnosis ||
@@ -60,34 +58,44 @@ export const buildPatientSummary = ({ notes = [], evaluations = [] }) => {
   };
 };
 
-export const PatientRecord = memo(function PatientRecord({ patient, onPatientUpdated, onPatientDeleted }) {
+interface PatientRecordProps {
+  patient: Partial<Patient> | null;
+  onPatientUpdated?: (patient: Patient) => void;
+  onPatientDeleted?: (patient: Partial<Patient>) => void;
+}
+
+export const PatientRecord = memo(function PatientRecord({ 
+  patient, 
+  onPatientUpdated, 
+  onPatientDeleted 
+}: PatientRecordProps) {
   const queryClient = useQueryClient();
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
   const [showEdit, setShowEdit] = useState(false);
   const [showEvaluation, setShowEvaluation] = useState(false);
   const [showSessionNote, setShowSessionNote] = useState(false);
-  const [openEvaluationId, setOpenEvaluationId] = useState(null);
+  const [openEvaluationId, setOpenEvaluationId] = useState<string | null>(null);
 
   const { data: record, isLoading: loading, error } = useQuery({
     queryKey: ['patient', patient?.id],
-    queryFn: () => clinicalApi.getPatient(patient.id),
+    queryFn: () => clinicalApi.getPatient(patient!.id),
     enabled: !!patient?.id,
   });
 
   const notes = useMemo(() => {
     const rows = record?.session_notes || [];
-    return [...rows].sort((a, b) => Number(a.session_number) - Number(b.session_number));
+    return [...rows].sort((a: any, b: any) => Number(a.session_number) - Number(b.session_number));
   }, [record]);
 
   const aiConsults = useMemo(() => {
     const rows = record?.ai_consults || [];
-    return [...rows].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    return [...rows].sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   }, [record]);
 
   const evaluations = useMemo(() => {
     const rows = record?.evaluations || [];
-    return [...rows].sort((a, b) => new Date(b.evaluation_date) - new Date(a.evaluation_date));
+    return [...rows].sort((a: any, b: any) => new Date(b.evaluation_date).getTime() - new Date(a.evaluation_date).getTime());
   }, [record]);
 
   const timeline = useMemo(() => clinicalApi.buildTimeline(record), [record]);
@@ -125,7 +133,7 @@ export const PatientRecord = memo(function PatientRecord({ patient, onPatientUpd
     try {
       await clinicalApi.deletePatient(current.id);
       onPatientDeleted?.(current);
-    } catch (err) {
+    } catch (err: any) {
       setDeleteError(err.message || 'No se pudo eliminar el paciente.');
     } finally {
       setDeleting(false);
@@ -153,7 +161,7 @@ export const PatientRecord = memo(function PatientRecord({ patient, onPatientUpd
           >
             {showSessionNote ? 'Cerrar nota' : `Nota de sesion #${nextSession}`}
           </button>
-          <button type="button" className="secondary" onClick={() => exportToPdf(current)}>
+          <button type="button" className="secondary" onClick={() => exportToPdf(current, timeline)}>
             Exportar PDF
           </button>
           <button
@@ -175,7 +183,7 @@ export const PatientRecord = memo(function PatientRecord({ patient, onPatientUpd
         <PatientEditForm
           patient={current}
           onCancel={() => setShowEdit(false)}
-          onUpdated={(updated) => {
+          onUpdated={(updated: Patient) => {
             setShowEdit(false);
             onPatientUpdated?.(updated);
             refreshRecord();
@@ -208,7 +216,7 @@ export const PatientRecord = memo(function PatientRecord({ patient, onPatientUpd
       {loading && <p className="muted">Cargando expediente...</p>}
       {error && (
         <p className="error" role="alert">
-          {error.message || 'Error cargando expediente'}
+          {(error as Error).message || 'Error cargando expediente'}
         </p>
       )}
       {deleteError && (
@@ -241,7 +249,7 @@ export const PatientRecord = memo(function PatientRecord({ patient, onPatientUpd
           <span className="pill">{evaluations.length}</span>
         </div>
         <div className="list-stack">
-          {evaluations.map((evaluation) => {
+          {evaluations.map((evaluation: any) => {
             const isOpen = openEvaluationId === evaluation.id;
             return (
               <article key={evaluation.id} className="note-row">
@@ -297,7 +305,7 @@ export const PatientRecord = memo(function PatientRecord({ patient, onPatientUpd
           <span className="pill">{aiConsults.length}</span>
         </div>
         <div className="list-stack">
-          {aiConsults.map((consult) => (
+          {aiConsults.map((consult: any) => (
             <article key={consult.id} className="note-row">
               <div className="form-header">
                 <strong>{consult.type}</strong>

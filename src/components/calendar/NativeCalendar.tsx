@@ -5,6 +5,7 @@ import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabaseClient';
+import { calendarService } from '../../services/calendarService';
 import { useToast } from '../../app/ToastProvider';
 import './NativeCalendar.css';
 
@@ -109,12 +110,10 @@ export function NativeCalendar({ onEventClick }: NativeCalendarProps) {
       
       if (error) throw error;
       
-      // Optionally trigger an edge function to push this back to Google Calendar.
-      // For now, we update local Supabase, and if we run the sync again, 
-      // wait, Google is the source of truth if we don't push. 
-      // The requirement says: "Si una cita cambia dentro de la app: -> actualizar Google Calendar automáticamente."
-      // We can call `calendarService.syncAppointment(apptId)` if it exists.
-      notify({ tone: 'success', message: 'Cita movida.' });
+      // Sincronización bidireccional (Punto 1): Empujar el cambio de vuelta a Google Calendar
+      await calendarService.syncAppointment(apptId);
+      
+      notify({ tone: 'success', message: 'Cita movida y sincronizada con Google.' });
     } catch (err: any) {
       dropInfo.revert();
       notify({ tone: 'error', message: 'No se pudo mover la cita.' });
