@@ -205,7 +205,11 @@ export function App() {
       <section className="right-pane">
         <Suspense fallback={<LoadingCard>Cargando datos...</LoadingCard>}>
           {showDashboard ? (
-            <ClinicDashboard />
+            <ClinicDashboard onPatientSelect={(patientId) => {
+              setSelectedPatient({ id: patientId });
+              setShowAgenda(false);
+              setShowDashboard(false);
+            }} />
           ) : showAgenda ? (
             <AgendaView onPatientSelect={(patientId) => {
               setSelectedPatient({ id: patientId });
