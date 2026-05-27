@@ -3,6 +3,7 @@ import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
+import esLocale from '@fullcalendar/core/locales/es';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../lib/supabaseClient';
 import { calendarService } from '../../services/calendarService';
@@ -161,6 +162,7 @@ export function NativeCalendar({ onEventClick }: NativeCalendarProps) {
             slotMinTime="06:00:00"
             slotMaxTime="22:00:00"
             allDaySlot={false}
+            locales={[esLocale]}
             locale="es"
             buttonText={{
               today: 'Hoy',
