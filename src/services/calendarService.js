@@ -47,11 +47,19 @@ export const calendarService = {
 
   async getConnectionStatus() {
     if (!isSupabaseConfigured || !supabase) return { connected: false, email: null };
-    const { data, error } = await supabase.rpc('my_calendar_connection');
+    
+    // We query the table directly. RLS ensures we only see our own connection.
+    const { data, error } = await supabase
+      .from('calendar_connections')
+      .select('provider_account_email')
+      .eq('provider', 'google')
+      .limit(1);
+
     if (error) throw new Error(error.message || 'No se pudo consultar el estado de Google Calendar.');
-    const row = Array.isArray(data) ? data[0] : data;
-    return row && row.connected
-      ? { connected: true, email: row.email ?? null }
+    
+    const row = data?.[0];
+    return row
+      ? { connected: true, email: row.provider_account_email ?? null }
       : { connected: false, email: null };
   }
 };
