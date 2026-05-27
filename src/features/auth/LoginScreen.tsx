@@ -1,13 +1,18 @@
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
+import type { Session } from '@supabase/supabase-js';
 import { authService } from '../../services/authService.js';
 
-export function LoginScreen({ onLogin }) {
+interface LoginScreenProps {
+  onLogin?: (session: Session) => void;
+}
+
+export function LoginScreen({ onLogin }: LoginScreenProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
-  const submit = async (event) => {
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setBusy(true);
     setError('');
@@ -15,7 +20,7 @@ export function LoginScreen({ onLogin }) {
       const session = await authService.signInWithPassword({ email: email.trim(), password });
       onLogin?.(session);
     } catch (err) {
-      setError(err.message || 'No se pudo iniciar sesion.');
+      setError(err instanceof Error ? err.message : 'No se pudo iniciar sesion.');
     } finally {
       setBusy(false);
     }

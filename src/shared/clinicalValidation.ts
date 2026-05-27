@@ -3,7 +3,13 @@ import type { Patient, SessionNote, ValidationErrors } from '../types/clinical';
 export const PATIENT_STATUSES = ['En tratamiento', 'Alta', 'Seguimiento', 'Inactivo'] as const;
 export const SEX_OPTIONS = ['', 'M', 'F', 'Otro'] as const;
 
-type PatientInput = Partial<Patient> & Record<string, unknown>;
+type PatientInput = {
+  full_name?: string | null;
+  email?: string | null;
+  sex?: string | null;
+  status?: string | null;
+  [key: string]: unknown;
+};
 type SessionNoteInput = {
   raw_text?: string | null;
   eva?: number | string | null;
@@ -54,9 +60,7 @@ export const validateSessionNote = ({
 export const hasErrors = (errors: Record<string, unknown>): boolean =>
   Object.keys(errors).length > 0;
 
-export const emptyStringsToNull = <T extends Record<string, unknown>>(
-  values: T
-): { [K in keyof T]: T[K] | null } =>
+export const emptyStringsToNull = <T extends object>(values: T): { [K in keyof T]: T[K] | null } =>
   Object.fromEntries(
     Object.entries(values).map(([key, value]) => [key, value === '' ? null : value])
   ) as { [K in keyof T]: T[K] | null };

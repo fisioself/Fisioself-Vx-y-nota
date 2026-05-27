@@ -1,26 +1,40 @@
-import { useState } from 'react';
-import { clinicalApi } from '../../services/clinicalApi.js';
-import { validatePatient, hasErrors } from '../../shared/clinicalValidation.js';
+import { useState, type FormEvent } from 'react';
+import { clinicalApi } from '../../services/clinicalApi';
+import { emptyStringsToNull, hasErrors, validatePatient } from '../../shared/clinicalValidation';
+import type { Patient, PatientStatus, ValidationErrors } from '../../types/clinical';
 
-const emptyPatient = {
+interface PatientFormProps {
+  onCreated?: (patient: Patient) => void;
+  onCancel?: () => void;
+}
+
+interface PatientFormValues {
+  full_name: string;
+  phone: string;
+  medical_diagnosis: string;
+  status: PatientStatus;
+  [key: string]: unknown;
+}
+
+const emptyPatient: PatientFormValues = {
   full_name: '',
   phone: '',
   medical_diagnosis: '',
   status: 'En tratamiento'
 };
 
-export function PatientForm({ onCreated, onCancel }) {
-  const [values, setValues] = useState(emptyPatient);
-  const [errors, setErrors] = useState({});
+export function PatientForm({ onCreated, onCancel }: PatientFormProps) {
+  const [values, setValues] = useState<PatientFormValues>(emptyPatient);
+  const [errors, setErrors] = useState<ValidationErrors<Patient>>({});
   const [saving, setSaving] = useState(false);
   const [submitError, setSubmitError] = useState('');
 
-  const setField = (field, value) => {
+  const setField = <K extends keyof PatientFormValues>(field: K, value: PatientFormValues[K]) => {
     setValues((current) => ({ ...current, [field]: value }));
     setErrors((current) => ({ ...current, [field]: undefined }));
   };
 
-  const submit = async (event) => {
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const validation = validatePatient(values);
     setErrors(validation);
@@ -29,14 +43,11 @@ export function PatientForm({ onCreated, onCancel }) {
     setSaving(true);
     setSubmitError('');
     try {
-      const payload = Object.fromEntries(
-        Object.entries(values).map(([key, value]) => [key, value === '' ? null : value])
-      );
-      const patient = await clinicalApi.createPatient(payload);
+      const patient = await clinicalApi.createPatient(emptyStringsToNull(values));
       setValues(emptyPatient);
       onCreated?.(patient);
     } catch (err) {
-      setSubmitError(err.message || 'No se pudo crear el paciente.');
+      setSubmitError(err instanceof Error ? err.message : 'No se pudo crear el paciente.');
     } finally {
       setSaving(false);
     }
@@ -64,7 +75,7 @@ export function PatientForm({ onCreated, onCancel }) {
           onBlur={() => {
             const validation = validatePatient(values);
             if (validation.full_name)
-              setErrors((curr) => ({ ...curr, full_name: validation.full_name }));
+              setErrors((current) => ({ ...current, full_name: validation.full_name }));
           }}
           required
           aria-invalid={!!errors.full_name}

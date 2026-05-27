@@ -3,11 +3,12 @@ export type Sex = '' | 'M' | 'F' | 'Otro';
 
 export interface Patient {
   id: string;
-  full_name: string;
+  full_name: string | null;
   phone?: string | null;
   email?: string | null;
   sex?: Sex | null;
   status?: PatientStatus | null;
+  medical_diagnosis?: string | null;
   created_at?: string;
   updated_at?: string;
 }

@@ -2,10 +2,10 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { QueryClient } from '@tanstack/react-query';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
-import { AppRoot } from './app/AppRoot.jsx';
-import { ErrorBoundary } from './app/ErrorBoundary.jsx';
+import { AppRoot } from './app/AppRoot';
+import { ErrorBoundary } from './app/ErrorBoundary';
 import { registerServiceWorker } from './app/registerServiceWorker.js';
-import { ToastProvider } from './app/ToastProvider.jsx';
+import { ToastProvider } from './app/ToastProvider';
 import { initSentry } from './lib/sentry.js';
 import { createIDBPersister } from './lib/offlineSync.js';
 import './styles.css';
@@ -22,7 +22,10 @@ const queryClient = new QueryClient({
 });
 const persister = createIDBPersister();
 
-createRoot(document.getElementById('root')).render(
+const rootElement = document.getElementById('root');
+if (!rootElement) throw new Error('Root element #root not found in document.');
+
+createRoot(rootElement).render(
   <React.StrictMode>
     <ErrorBoundary>
       <PersistQueryClientProvider client={queryClient} persistOptions={{ persister }}>

@@ -1,18 +1,39 @@
-import { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 
-const ToastContext = createContext({ notify: () => {} });
+export type ToastTone = 'info' | 'success' | 'error' | 'warning';
 
-export function ToastProvider({ children }) {
-  const [toasts, setToasts] = useState([]);
+export interface ToastInput {
+  message: string;
+  tone?: ToastTone;
+  duration?: number;
+}
 
-  const dismiss = useCallback((id) => {
+interface Toast extends ToastInput {
+  id: string;
+  tone: ToastTone;
+}
+
+interface ToastContextValue {
+  notify: (toast: ToastInput) => string;
+  dismiss: (id: string) => void;
+}
+
+const ToastContext = createContext<ToastContextValue>({
+  notify: () => '',
+  dismiss: () => {}
+});
+
+export function ToastProvider({ children }: { children: ReactNode }) {
+  const [toasts, setToasts] = useState<Toast[]>([]);
+
+  const dismiss = useCallback((id: string) => {
     setToasts((current) => current.filter((toast) => toast.id !== id));
   }, []);
 
   const notify = useCallback(
-    (toast) => {
+    (toast: ToastInput): string => {
       const id = crypto.randomUUID?.() || String(Date.now());
-      const next = { id, tone: 'info', ...toast };
+      const next: Toast = { id, tone: 'info', ...toast };
       setToasts((current) => [...current, next]);
       window.setTimeout(() => dismiss(id), toast.duration || 4200);
       return id;
@@ -20,7 +41,7 @@ export function ToastProvider({ children }) {
     [dismiss]
   );
 
-  const value = useMemo(() => ({ notify, dismiss }), [notify, dismiss]);
+  const value = useMemo<ToastContextValue>(() => ({ notify, dismiss }), [notify, dismiss]);
 
   return (
     <ToastContext.Provider value={value}>

@@ -1,36 +1,55 @@
-import { Suspense, lazy, useEffect, useState } from 'react';
+import { Suspense, lazy, useEffect, useState, type ComponentType, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import type { Session } from '@supabase/supabase-js';
 import { authService } from './services/authService.js';
-import { isSupabaseConfigured } from './lib/supabaseClient.js';
-import { draftStorage } from './shared/draftStorage.js';
+import { isSupabaseConfigured } from './lib/supabaseClient';
+import { draftStorage } from './shared/draftStorage';
 import { useTheme } from './shared/useTheme.js';
+import type { Patient } from './types/clinical';
+
+interface LoginScreenProps {
+  onLogin: (session: Session) => void;
+}
+interface PatientFormProps {
+  onCreated: (patient: Patient) => void;
+  onCancel: () => void;
+}
+interface PatientListProps {
+  selectedId?: string | null;
+  onSelect: (patient: Patient) => void;
+}
+interface PatientRecordProps {
+  patient: Patient | null;
+  onPatientUpdated: (patient: Patient) => void;
+  onPatientDeleted: () => void;
+}
 
 const LoginScreen = lazy(() =>
   import('./features/auth/LoginScreen.jsx').then((module) => ({ default: module.LoginScreen }))
-);
+) as ComponentType<LoginScreenProps>;
 const PatientForm = lazy(() =>
   import('./features/patients/PatientForm.jsx').then((module) => ({ default: module.PatientForm }))
-);
+) as ComponentType<PatientFormProps>;
 const PatientList = lazy(() =>
   import('./features/patients/PatientList.jsx').then((module) => ({ default: module.PatientList }))
-);
+) as ComponentType<PatientListProps>;
 const PatientRecord = lazy(() =>
   import('./features/patients/PatientRecord.jsx').then((module) => ({
     default: module.PatientRecord
   }))
-);
+) as ComponentType<PatientRecordProps>;
 const AgendaView = lazy(() =>
   import('./features/appointments/AgendaView.jsx').then((module) => ({
     default: module.AgendaView
   }))
-);
+) as ComponentType;
 const ClinicDashboard = lazy(() =>
   import('./features/dashboard/ClinicDashboard.jsx').then((module) => ({
     default: module.ClinicDashboard
   }))
-);
+) as ComponentType;
 
-const LoadingCard = ({ children = 'Cargando...' }) => (
+const LoadingCard = ({ children = 'Cargando...' }: { children?: ReactNode }) => (
   <section className="card" aria-busy="true">
     {children}
   </section>
@@ -38,9 +57,9 @@ const LoadingCard = ({ children = 'Cargando...' }) => (
 
 export function App() {
   const queryClient = useQueryClient();
-  const [session, setSession] = useState(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
-  const [selectedPatient, setSelectedPatient] = useState(null);
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [showNewPatient, setShowNewPatient] = useState(false);
   const [showAgenda, setShowAgenda] = useState(false);
   const [showDashboard, setShowDashboard] = useState(true);

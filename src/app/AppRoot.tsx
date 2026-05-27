@@ -1,5 +1,5 @@
-import { OnlineStatus } from './OnlineStatus.jsx';
-import { App } from '../App.jsx';
+import { OnlineStatus } from './OnlineStatus';
+import { App } from '../App';
 import './offline.css';
 
 export function AppRoot() {
