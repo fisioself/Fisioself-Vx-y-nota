@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient.js';
 
 export const useDictation = (onText, onError) => {
@@ -80,6 +80,14 @@ export const useDictation = (onText, onError) => {
       setProcessing(false);
     }
   };
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    };
+  }, []);
 
   const toggle = () => {
     if (listening) {
