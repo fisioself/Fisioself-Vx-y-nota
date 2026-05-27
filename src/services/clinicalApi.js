@@ -140,6 +140,48 @@ export const clinicalApi = {
     );
   },
 
+  async getClinicStats() {
+    assertReady();
+    
+    // 1. Total Patients
+    const { count: totalPatients, error: pError } = await supabase
+      .from('patients')
+      .select('*', { count: 'exact', head: true });
+    if (pError) throw pError;
+
+    // 2. Sessions in last 30 days
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const { count: recentSessions, error: sError } = await supabase
+      .from('session_notes')
+      .select('*', { count: 'exact', head: true })
+      .gte('session_date', thirtyDaysAgo.toISOString().split('T')[0]);
+    if (sError) throw sError;
+
+    // 3. Upcoming Appointments
+    const { count: upcomingAppointments, error: aError } = await supabase
+      .from('appointments')
+      .select('*', { count: 'exact', head: true })
+      .gte('starts_at', new Date().toISOString())
+      .eq('status', 'scheduled');
+    if (aError) throw aError;
+
+    // 4. Latest activity (last 5 notes)
+    const { data: latestNotes, error: lnError } = await supabase
+      .from('session_notes')
+      .select('id, session_number, session_date, patients(full_name)')
+      .order('created_at', { ascending: false })
+      .limit(5);
+    if (lnError) throw lnError;
+
+    return {
+      totalPatients: totalPatients || 0,
+      recentSessions: recentSessions || 0,
+      upcomingAppointments: upcomingAppointments || 0,
+      latestActivity: latestNotes || []
+    };
+  },
+
   buildTimeline(record) {
     const evaluations = (record?.evaluations || []).map((item) => ({
       id: item.id,

@@ -24,6 +24,11 @@ const AgendaView = lazy(() =>
     default: module.AgendaView
   }))
 );
+const ClinicDashboard = lazy(() =>
+  import('./features/dashboard/ClinicDashboard.jsx').then((module) => ({
+    default: module.ClinicDashboard
+  }))
+);
 
 const LoadingCard = ({ children = 'Cargando...' }) => (
   <section className="card" aria-busy="true">
@@ -38,6 +43,7 @@ export function App() {
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [showNewPatient, setShowNewPatient] = useState(false);
   const [showAgenda, setShowAgenda] = useState(false);
+  const [showDashboard, setShowDashboard] = useState(true);
   
   const { theme, toggleTheme } = useTheme();
 
@@ -139,22 +145,35 @@ export function App() {
       </header>
 
       <aside className="left-pane">
-        <div className="actions split-actions">
-          <button type="button" onClick={() => {
-            setShowAgenda(false);
-            setShowNewPatient((value) => !value);
-          }}>
-            {showNewPatient ? 'Cerrar formulario' : 'Nuevo paciente'}
+        <div className="actions split-actions" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+          <button 
+            type="button" 
+            className={showDashboard ? '' : 'secondary'} 
+            onClick={() => {
+              setShowDashboard(true);
+              setShowAgenda(false);
+              setSelectedPatient(null);
+            }}
+          >
+            Panel
           </button>
           <button 
             type="button" 
             className={showAgenda ? '' : 'secondary'} 
             onClick={() => {
               setShowAgenda(true);
+              setShowDashboard(false);
               setSelectedPatient(null);
             }}
           >
-            Mi Agenda
+            Agenda
+          </button>
+          <button type="button" className="secondary" onClick={() => {
+            setShowAgenda(false);
+            setShowDashboard(false);
+            setShowNewPatient((value) => !value);
+          }}>
+            {showNewPatient ? 'Cerrar' : '+ Paciente'}
           </button>
         </div>
 
@@ -165,6 +184,7 @@ export function App() {
               onCreated={(patient) => {
                 setSelectedPatient(patient);
                 setShowAgenda(false);
+                setShowDashboard(false);
                 setShowNewPatient(false);
                 queryClient.invalidateQueries({ queryKey: ['patients'] });
               }}
@@ -176,6 +196,7 @@ export function App() {
             onSelect={(patient) => {
               setSelectedPatient(patient);
               setShowAgenda(false);
+              setShowDashboard(false);
             }}
           />
         </Suspense>
@@ -183,7 +204,9 @@ export function App() {
 
       <section className="right-pane">
         <Suspense fallback={<LoadingCard>Cargando datos...</LoadingCard>}>
-          {showAgenda ? (
+          {showDashboard ? (
+            <ClinicDashboard />
+          ) : showAgenda ? (
             <AgendaView />
           ) : (
             <PatientRecord
@@ -194,6 +217,7 @@ export function App() {
               }}
               onPatientDeleted={() => {
                 setSelectedPatient(null);
+                setShowDashboard(true);
                 queryClient.invalidateQueries({ queryKey: ['patients'] });
               }}
             />
