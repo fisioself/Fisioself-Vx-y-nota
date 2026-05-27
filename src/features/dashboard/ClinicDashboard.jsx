@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { clinicalApi } from '../../services/clinicalApi';
+import { NativeCalendar } from '../../components/calendar/NativeCalendar';
 
-export function ClinicDashboard() {
+export function ClinicDashboard({ onPatientSelect }) {
   const { data: stats, isLoading, error } = useQuery({
     queryKey: ['clinic-stats'],
     queryFn: () => clinicalApi.getClinicStats(),
@@ -14,8 +15,13 @@ export function ClinicDashboard() {
   return (
     <div className="record-stack">
       <header className="hero" style={{ padding: '24px', borderRadius: '22px' }}>
-        <p className="eyebrow">Panel de control</p>
-        <h1 style={{ fontSize: '32px' }}>Estadisticas de la Clinica</h1>
+        <p className="eyebrow" style={{ color: 'rgba(255,255,255,0.7)' }}>Agenda y Control</p>
+        <h1 style={{ fontSize: '32px', color: 'white', marginBottom: '1.5rem' }}>Visión General</h1>
+        
+        {/* The NativeCalendar inherits the dark background nicely or can be overridden via css if needed */}
+        <div style={{ background: 'white', borderRadius: '18px', padding: '4px' }}>
+          <NativeCalendar onEventClick={onPatientSelect} />
+        </div>
       </header>
 
       <div className="summary-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
@@ -55,14 +61,6 @@ export function ClinicDashboard() {
             <p className="muted">No hay actividad reciente registrada.</p>
           )}
         </ul>
-      </section>
-
-      <section className="card warning">
-        <p className="eyebrow">Recordatorio de seguridad</p>
-        <p style={{ margin: '8px 0 0', fontSize: '0.9rem' }}>
-          Toda la informacion mostrada aqui cumple con las politicas de privacidad y RLS activas. 
-          Solo personal autorizado puede ver estos agregados.
-        </p>
       </section>
     </div>
   );

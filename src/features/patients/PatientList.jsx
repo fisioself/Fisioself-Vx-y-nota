@@ -85,19 +85,6 @@ export function PatientList({ selectedId, onSelect }) {
           aria-label="Buscar pacientes"
           className="search-input"
         />
-        
-        <div className="row wrap filters">
-          {['Todos', ...PATIENT_STATUSES].map(status => (
-            <button
-              key={status}
-              type="button"
-              className={statusFilter === status ? 'pill active' : 'pill secondary'}
-              onClick={() => setStatusFilter(status)}
-            >
-              {status}
-            </button>
-          ))}
-        </div>
       </div>
 
       {isLoading && <p className="muted">Cargando pacientes...</p>}
