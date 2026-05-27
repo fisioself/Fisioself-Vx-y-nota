@@ -7,9 +7,11 @@ const STORAGE_PREFIX = 'fisioself.consent.';
 export const CONSENT_KEYS = Object.freeze({
   DICTATION: 'dictation.v1',
   AI: 'ai.v1'
-});
+} as const);
 
-const safeStorage = () => {
+export type ConsentKey = (typeof CONSENT_KEYS)[keyof typeof CONSENT_KEYS];
+
+const safeStorage = (): Storage | null => {
   try {
     return window.localStorage;
   } catch {
@@ -18,7 +20,7 @@ const safeStorage = () => {
 };
 
 export const consent = {
-  has(key) {
+  has(key: ConsentKey | string): boolean {
     const storage = safeStorage();
     if (!storage) return false;
     try {
@@ -28,7 +30,7 @@ export const consent = {
     }
   },
 
-  grant(key) {
+  grant(key: ConsentKey | string): void {
     const storage = safeStorage();
     if (!storage) return;
     try {
@@ -38,7 +40,7 @@ export const consent = {
     }
   },
 
-  revoke(key) {
+  revoke(key: ConsentKey | string): void {
     const storage = safeStorage();
     if (!storage) return;
     try {

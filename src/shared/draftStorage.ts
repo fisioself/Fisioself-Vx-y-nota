@@ -1,12 +1,19 @@
 const PREFIX = 'fisioself.notas-vx.draft';
 
-export const getDraftKey = ({ patientId, sessionNumber, noteId }) =>
+interface DraftKeyParams {
+  patientId?: string | null;
+  sessionNumber?: number | string | null;
+  noteId?: string | null;
+}
+
+export const getDraftKey = ({ patientId, sessionNumber, noteId }: DraftKeyParams): string =>
   `${PREFIX}.${patientId || 'no-patient'}.${noteId || 'new'}.${sessionNumber || '0'}`;
 
-export const getEvaluationDraftKey = (patientId) => `${PREFIX}.evaluation.${patientId || 'new'}`;
+export const getEvaluationDraftKey = (patientId?: string | null): string =>
+  `${PREFIX}.evaluation.${patientId || 'new'}`;
 
 export const draftStorage = {
-  get(key) {
+  get(key: string): string {
     try {
       return window.localStorage.getItem(key) || '';
     } catch {
@@ -14,7 +21,7 @@ export const draftStorage = {
     }
   },
 
-  set(key, value) {
+  set(key: string, value: string): void {
     try {
       if (!value) {
         window.localStorage.removeItem(key);
@@ -26,7 +33,7 @@ export const draftStorage = {
     }
   },
 
-  remove(key) {
+  remove(key: string): void {
     try {
       window.localStorage.removeItem(key);
     } catch {
@@ -34,10 +41,10 @@ export const draftStorage = {
     }
   },
 
-  clearAll() {
+  clearAll(): void {
     try {
       const storage = window.localStorage;
-      const toRemove = [];
+      const toRemove: string[] = [];
       for (let i = 0; i < storage.length; i += 1) {
         const key = storage.key(i);
         if (key && key.startsWith(`${PREFIX}.`)) toRemove.push(key);

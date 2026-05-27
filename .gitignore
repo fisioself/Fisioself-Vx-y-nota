@@ -10,3 +10,6 @@ Thumbs.db
 .vercel/
 .netlify/
 .vercel
+playwright-report/
+test-results/
+playwright/.cache/
