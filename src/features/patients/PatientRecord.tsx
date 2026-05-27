@@ -1,18 +1,19 @@
 import { memo, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { clinicalApi } from '../../services/clinicalApi';
-import { printClinicalRecord } from '../../shared/exportClinicalRecord.js';
-import { EvaluationForm } from '../evaluations/EvaluationForm.jsx';
-import { SessionNoteEditor } from '../session-notes/SessionNoteEditor.jsx';
-import { SessionNotesList } from '../session-notes/SessionNotesList.jsx';
+import { printClinicalRecord } from '../../shared/exportClinicalRecord';
+import { EvaluationForm } from '../evaluations/EvaluationForm';
+import { SessionNoteEditor } from '../session-notes/SessionNoteEditor';
+import { SessionNotesList } from '../session-notes/SessionNotesList';
 import { AppointmentList } from '../appointments/AppointmentList';
 import { ClinicalTimeline } from './ClinicalTimeline';
 import { PatientEditForm } from './PatientEditForm';
 import { ClinicalSummary } from './ClinicalSummary';
-import { useRole } from '../../shared/useRole.js';
-import { EvaluationSummary } from '../evaluations/EvaluationSummary.jsx';
+import { useRole } from '../../shared/useRole';
+import { EvaluationSummary } from '../evaluations/EvaluationSummary';
 import { ImageUploader } from '../../components/ImageUploader';
 import { ClinicalFilesList } from '../../components/ClinicalFilesList';
+import { getErrorMessage } from '../../shared/errors';
 import type { ClinicalRecord, Evaluation, Patient, SessionNote } from '../../types/clinical';
 
 export const getNextSessionNumber = (notes: SessionNote[] = []): number => {
@@ -143,7 +144,7 @@ export const PatientRecord = memo(function PatientRecord({
     );
   }
 
-  const current: Patient = (record as Patient | undefined) || patient;
+  const current: Patient = record || patient;
   const nextSession = getNextSessionNumber(notes);
   const refreshRecord = () => queryClient.invalidateQueries({ queryKey: ['patient', patient.id] });
 
@@ -165,7 +166,7 @@ export const PatientRecord = memo(function PatientRecord({
       await clinicalApi.deletePatient(current.id);
       onPatientDeleted?.(current);
     } catch (err) {
-      setDeleteError(err instanceof Error ? err.message : 'No se pudo eliminar el paciente.');
+      setDeleteError(getErrorMessage(err, 'No se pudo eliminar el paciente.'));
     } finally {
       setDeleting(false);
     }

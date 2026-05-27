@@ -1,5 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
-import { reportError } from '../lib/sentry.js';
+import { reportError } from '../lib/sentry';
 
 interface ErrorBoundaryProps {
   children: ReactNode;

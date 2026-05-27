@@ -19,6 +19,7 @@ export interface Patient {
 export interface SessionNote {
   id: string;
   patient_id: string;
+  therapist_id?: string | null;
   session_number: number;
   session_date?: string | null;
   raw_text: string;
@@ -27,22 +28,27 @@ export interface SessionNote {
 }
 
 export interface EvaluationSections {
-  patient_identity?: Record<string, unknown>;
-  history?: Record<string, unknown>;
-  consultation?: { medical_diagnosis?: string; reason?: string; clinical_history?: string };
+  patient_identity?: Record<string, unknown> | null;
+  history?: Record<string, unknown> | null;
+  consultation?: {
+    medical_diagnosis?: string | null;
+    reason?: string | null;
+    clinical_history?: string | null;
+  } | null;
   pain?: {
-    location?: string;
-    type?: string;
-    intensity?: number;
-    aggravating_factors?: string;
-    easing_factors?: string;
-  };
-  physical_exam?: Record<string, unknown>;
+    location?: string | null;
+    type?: string | null;
+    intensity?: number | null;
+    aggravating_factors?: string | null;
+    easing_factors?: string | null;
+  } | null;
+  physical_exam?: Record<string, unknown> | null;
 }
 
 export interface Evaluation {
   id: string;
   patient_id: string;
+  therapist_id?: string | null;
   evaluation_date?: string | null;
   eva_initial?: number | null;
   red_flags?: string | null;
@@ -55,7 +61,9 @@ export interface Evaluation {
 export interface AiConsult {
   id: string;
   patient_id: string;
+  therapist_id?: string | null;
   type: string;
+  input_text?: string | null;
   output_text?: string | null;
   validated?: boolean;
   validation_notes?: string | null;
@@ -104,14 +112,16 @@ export interface TimelineEntry {
 
 export type ValidationErrors<T> = Partial<Record<keyof T | string, string>>;
 
+export interface ClinicStatsActivityItem {
+  id: string;
+  session_number: number;
+  session_date: string | null;
+  patients?: { full_name: string | null } | null;
+}
+
 export interface ClinicStats {
   totalPatients: number;
   recentSessions: number;
   upcomingAppointments: number;
-  latestActivity: Array<{
-    id: string;
-    session_number: number;
-    session_date: string | null;
-    patients: { full_name: string } | null;
-  }>;
+  latestActivity: ClinicStatsActivityItem[];
 }

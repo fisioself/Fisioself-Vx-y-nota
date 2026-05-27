@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useToast } from '../../app/ToastProvider';
 import { clinicalApi } from '../../services/clinicalApi';
-import { SessionNoteEditor } from './SessionNoteEditor.jsx';
+import { getErrorMessage } from '../../shared/errors';
+import { SessionNoteEditor } from './SessionNoteEditor';
 import type { SessionNote } from '../../types/clinical';
 
 interface SessionNotesListProps {
@@ -52,10 +53,7 @@ export function SessionNotesList({ notes = [], onChanged }: SessionNotesListProp
       notify({ tone: 'success', message: `Sesion #${note.session_number} eliminada.` });
       onChanged?.();
     } catch (err) {
-      notify({
-        tone: 'error',
-        message: err instanceof Error ? err.message : 'No se pudo eliminar la nota.'
-      });
+      notify({ tone: 'error', message: getErrorMessage(err, 'No se pudo eliminar la nota.') });
     } finally {
       setDeletingId(null);
     }
@@ -113,9 +111,7 @@ export function SessionNotesList({ notes = [], onChanged }: SessionNotesListProp
               {isEditing && (
                 <SessionNoteEditor
                   patientId={note.patient_id}
-                  therapistId={
-                    (note as SessionNote & { therapist_id?: string | null }).therapist_id
-                  }
+                  therapistId={note.therapist_id}
                   sessionNumber={note.session_number}
                   note={note}
                   onCancel={() => setEditingId(null)}

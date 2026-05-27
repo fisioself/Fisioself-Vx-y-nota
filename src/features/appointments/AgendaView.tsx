@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
-import { calendarService } from '../../services/calendarService.js';
-import { usePushNotifications } from '../../shared/usePushNotifications.js';
+import { calendarService } from '../../services/calendarService';
+import { usePushNotifications } from '../../shared/usePushNotifications';
+import { getErrorMessage } from '../../shared/errors';
 
 interface CalendarStatus {
   loading: boolean;
@@ -66,7 +67,7 @@ export function AgendaView() {
         }
       }, 2500);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al conectar Google Calendar.');
+      setError(getErrorMessage(err, 'Error al conectar Google Calendar.'));
       setBusy(false);
     }
   }, [refreshStatus]);

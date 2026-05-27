@@ -1,5 +1,6 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react';
 import { clinicalApi } from '../../services/clinicalApi';
+import { getErrorMessage } from '../../shared/errors';
 import type { Patient } from '../../types/clinical';
 
 interface AppointmentFormProps {
@@ -46,7 +47,7 @@ export function AppointmentForm({ patient, onCancel, onCreated }: AppointmentFor
       });
       onCreated?.();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo crear la cita.');
+      setError(getErrorMessage(err, 'No se pudo crear la cita.'));
     } finally {
       setSaving(false);
     }

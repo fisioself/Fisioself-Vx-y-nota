@@ -6,6 +6,7 @@ import {
   hasErrors,
   validatePatient
 } from '../../shared/clinicalValidation';
+import { getErrorMessage } from '../../shared/errors';
 import type { Patient, PatientStatus, Sex, ValidationErrors } from '../../types/clinical';
 
 interface PatientEditFormProps {
@@ -70,7 +71,7 @@ export function PatientEditForm({ patient, onUpdated, onCancel }: PatientEditFor
       const updated = await clinicalApi.updatePatient(patient.id, emptyStringsToNull(values));
       onUpdated?.(updated);
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : 'No se pudo actualizar el paciente.');
+      setSubmitError(getErrorMessage(err, 'No se pudo actualizar el paciente.'));
     } finally {
       setSaving(false);
     }

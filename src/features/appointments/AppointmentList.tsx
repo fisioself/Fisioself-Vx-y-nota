@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { calendarService } from '../../services/calendarService.js';
+import { calendarService } from '../../services/calendarService';
 import { clinicalApi } from '../../services/clinicalApi';
+import { getErrorMessage } from '../../shared/errors';
 import type { Appointment, Patient } from '../../types/clinical';
 import { AppointmentForm } from './AppointmentForm';
 import './appointments.css';
@@ -22,7 +23,7 @@ export function AppointmentList({ patient, appointments = [], onChanged }: Appoi
       await calendarService.syncAppointment(id);
       onChanged?.();
     } catch (err) {
-      alert(err instanceof Error ? err.message : String(err));
+      alert(getErrorMessage(err, 'No se pudo sincronizar la cita.'));
     } finally {
       setSyncing(null);
     }
@@ -40,7 +41,7 @@ export function AppointmentList({ patient, appointments = [], onChanged }: Appoi
       await clinicalApi.updateAppointment(id, { status: 'cancelled' });
       onChanged?.();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'No se pudo cancelar la cita.');
+      alert(getErrorMessage(err, 'No se pudo cancelar la cita.'));
     } finally {
       setCancelling(null);
     }

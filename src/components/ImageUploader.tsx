@@ -1,6 +1,7 @@
 import { useState, type ChangeEvent } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { useToast } from '../app/ToastProvider';
+import { getErrorMessage } from '../shared/errors';
 
 interface ImageUploaderProps {
   patientId: string;
@@ -40,10 +41,7 @@ export function ImageUploader({ patientId, onUploadComplete }: ImageUploaderProp
       notify({ tone: 'success', message: 'Archivo subido correctamente.' });
       onUploadComplete?.(filePath);
     } catch (error) {
-      notify({
-        tone: 'error',
-        message: error instanceof Error ? error.message : 'Error al subir el archivo.'
-      });
+      notify({ tone: 'error', message: getErrorMessage(error, 'Error al subir el archivo.') });
     } finally {
       setUploading(false);
       event.target.value = '';

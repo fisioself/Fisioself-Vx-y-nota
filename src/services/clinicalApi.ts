@@ -160,7 +160,9 @@ export const clinicalApi = {
       totalPatients: totalPatients || 0,
       recentSessions: recentSessions || 0,
       upcomingAppointments: upcomingAppointments || 0,
-      latestActivity: (latestNotes as unknown as ClinicStats['latestActivity']) || []
+      // Supabase types the nested patients join as an array even for many-to-one
+      // relations; we coerce to the runtime shape we actually return.
+      latestActivity: (latestNotes ?? []) as unknown as ClinicStats['latestActivity']
     };
   },
 

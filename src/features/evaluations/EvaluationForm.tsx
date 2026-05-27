@@ -1,25 +1,12 @@
 import { useState, type FormEvent } from 'react';
 import { clinicalApi } from '../../services/clinicalApi';
-import { getLocalISODate } from '../../shared/dateUtils.js';
+import { getLocalISODate } from '../../shared/dateUtils';
 import { draftStorage, getEvaluationDraftKey } from '../../shared/draftStorage';
 import { useDraftAutosave } from '../../shared/useDraftAutosave';
-import type { Evaluation, Patient } from '../../types/clinical';
+import { getErrorMessage } from '../../shared/errors';
+import type { JointRow, StrengthRow, SpecialTestRow } from './types';
+import type { Evaluation, EvaluationSections, Patient } from '../../types/clinical';
 
-interface JointRow {
-  joint: string;
-  range: string;
-  notes: string;
-}
-interface StrengthRow {
-  joint: string;
-  strength: string;
-  notes: string;
-}
-interface SpecialTestRow {
-  name: string;
-  result: string;
-  notes: string;
-}
 interface EvaluationFormValues {
   full_name: string;
   age: string;
@@ -101,12 +88,12 @@ const movementRangeOptions = ['', 'Limitado', 'Funcional', 'Completo'];
 const strengthOptions = ['', 'Debil', 'Funcional', 'Fuerte'];
 const testResultOptions = ['', 'Positivo', 'Negativo', 'No valorado'];
 
-const toNullable = (value: unknown): string | null | unknown => {
-  const trimmed = typeof value === 'string' ? value.trim() : value;
+const toNullable = (value: string | null | undefined): string | null => {
+  const trimmed = (value ?? '').trim();
   return trimmed === '' ? null : trimmed;
 };
 
-const cleanRows = (rows: ReadonlyArray<object>): Record<string, unknown>[] =>
+const cleanRows = <T extends object>(rows: ReadonlyArray<T>): Record<string, unknown>[] =>
   rows
     .map((row) =>
       Object.fromEntries(Object.entries(row).map(([key, value]) => [key, toNullable(value)]))
@@ -155,31 +142,23 @@ export function EvaluationForm({
 
   useDraftAutosave(draftKey, values);
 
-  const setRow = (field: RowField, index: number, key: string, value: string) => {
-    setValues((current) => ({
-      ...current,
-      [field]: (current[field] as unknown as Record<string, unknown>[]).map((row, rowIndex) =>
-        rowIndex === index ? { ...row, [key]: value } : row
-      )
-    }));
+  const updateRows = (field: RowField, updater: (rows: object[]) => object[]) => {
+    setValues((current) => ({ ...current, [field]: updater(current[field] as object[]) }));
     setError('');
   };
 
+  const setRow = (field: RowField, index: number, key: string, value: string) => {
+    updateRows(field, (rows) =>
+      rows.map((row, rowIndex) => (rowIndex === index ? { ...row, [key]: value } : row))
+    );
+  };
+
   const addRow = <R extends object>(field: RowField, emptyRow: R) => {
-    setValues((current) => ({
-      ...current,
-      [field]: [...(current[field] as R[]), { ...emptyRow }]
-    }));
+    updateRows(field, (rows) => [...rows, { ...emptyRow }]);
   };
 
   const removeRow = (field: RowField, index: number) => {
-    setValues((current) => ({
-      ...current,
-      [field]:
-        (current[field] as unknown[]).length === 1
-          ? current[field]
-          : (current[field] as unknown[]).filter((_, i) => i !== index)
-    }));
+    updateRows(field, (rows) => (rows.length === 1 ? rows : rows.filter((_, i) => i !== index)));
   };
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
@@ -201,7 +180,7 @@ export function EvaluationForm({
     setSaving(true);
     setError('');
     try {
-      const sections = {
+      const sections: EvaluationSections = {
         patient_identity: {
           full_name: toNullable(values.full_name),
           age: toNullable(values.age),
@@ -242,17 +221,18 @@ export function EvaluationForm({
 
       const evaluation = await clinicalApi.addEvaluation({
         patient_id: resolvedPatientId,
+        therapist_id: therapistId || null,
         evaluation_date: values.admission_date || today(),
         eva_initial: painIntensity,
         red_flags: values.red_flags.trim() || null,
         prognosis: values.prognosis.trim() || null,
         sections
-      } as Parameters<typeof clinicalApi.addEvaluation>[0] & { therapist_id?: string | null });
+      });
       draftStorage.remove(draftKey);
       setValues(emptyEvaluation);
       onCreated?.(evaluation);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo guardar la valoracion.');
+      setError(getErrorMessage(err, 'No se pudo guardar la valoracion.'));
     } finally {
       setSaving(false);
     }

@@ -1,13 +1,19 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabaseClient.js';
-import { useToast } from '../app/ToastProvider.jsx';
+import { supabase } from '../lib/supabaseClient';
+import { useToast } from '../app/ToastProvider';
 
-export function usePushNotifications() {
+interface UsePushNotificationsResult {
+  subscribed: boolean;
+  loading: boolean;
+  subscribe: () => Promise<void>;
+}
+
+export function usePushNotifications(): UsePushNotificationsResult {
   const [subscribed, setSubscribed] = useState(false);
   const [loading, setLoading] = useState(true);
   const { notify } = useToast();
 
-  const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY; // Requires setting up in .env
+  const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined;
 
   useEffect(() => {
     async function checkSubscription() {
@@ -29,9 +35,13 @@ export function usePushNotifications() {
     checkSubscription();
   }, []);
 
-  const subscribe = async () => {
+  const subscribe = async (): Promise<void> => {
     if (!VAPID_PUBLIC_KEY) {
       notify({ tone: 'error', message: 'VAPID public key no configurada' });
+      return;
+    }
+    if (!supabase) {
+      notify({ tone: 'error', message: 'Supabase no esta configurado.' });
       return;
     }
 
@@ -51,11 +61,10 @@ export function usePushNotifications() {
       });
 
       const subJSON = subscription.toJSON();
-
       const { data: sessionData } = await supabase.auth.getSession();
       const userId = sessionData?.session?.user?.id;
-
       if (!userId) throw new Error('Usuario no autenticado');
+      if (!subJSON.endpoint || !subJSON.keys) throw new Error('Subscripcion push invalida');
 
       const { error } = await supabase.from('push_subscriptions').upsert(
         {

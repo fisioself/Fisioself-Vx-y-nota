@@ -1,14 +1,17 @@
 import { useEffect } from 'react';
 
-/**
- * Hook para manejar atajos de teclado globales.
- * @param {Array<{ key: string, ctrl: boolean, shift: boolean, action: Function }>} shortcuts
- */
-export function useShortcuts(shortcuts) {
+export interface Shortcut {
+  key: string;
+  ctrl: boolean;
+  shift: boolean;
+  action: (event: KeyboardEvent) => void;
+}
+
+export function useShortcuts(shortcuts: Shortcut[]): void {
   useEffect(() => {
-    const handleKeyDown = (event) => {
-      // Ignorar si estamos escribiendo en un input/textarea genérico a menos que requiera ctrl/cmd
-      const targetTag = event.target.tagName.toLowerCase();
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const targetTag = target?.tagName.toLowerCase() ?? '';
       const isInput = targetTag === 'input' || targetTag === 'textarea';
 
       shortcuts.forEach((shortcut) => {
@@ -19,11 +22,9 @@ export function useShortcuts(shortcuts) {
         const shiftMatch = shortcut.shift ? event.shiftKey : !event.shiftKey;
 
         if (keyMatch && ctrlMatch && shiftMatch) {
-          // Si requiere ctrl/cmd, normalmente queremos prevenir el comportamiento por defecto (ej. Ctrl+S)
           if (shortcut.ctrl) {
             event.preventDefault();
           } else if (isInput) {
-            // Si no requiere modificador y estamos en un input, no hacemos nada
             return;
           }
 

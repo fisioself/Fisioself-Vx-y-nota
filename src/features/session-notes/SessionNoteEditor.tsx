@@ -3,40 +3,19 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useToast } from '../../app/ToastProvider';
 import { clinicalApi } from '../../services/clinicalApi';
-import { aiService, AI_TYPES } from '../../services/aiService.js';
-import { getLocalISODate } from '../../shared/dateUtils.js';
+import { aiService, AI_TYPES } from '../../services/aiService';
+import { getLocalISODate } from '../../shared/dateUtils';
 import { hasErrors, validateSessionNote } from '../../shared/clinicalValidation';
 import { consent, CONSENT_KEYS } from '../../shared/consent';
 import { draftStorage, getDraftKey } from '../../shared/draftStorage';
 import { useDraftAutosave } from '../../shared/useDraftAutosave';
-import { useShortcuts } from '../../shared/useShortcuts.js';
-import { AiConsultModal } from './AiConsultModal.jsx';
+import { useShortcuts } from '../../shared/useShortcuts';
+import { getErrorMessage } from '../../shared/errors';
+import { AiConsultModal } from './AiConsultModal';
 import { ConsentGate } from './ConsentGate';
-import { useDictation } from './useDictation.js';
+import { useDictation } from './useDictation';
+import type { AiType, AiConsultSavePayload, PendingConsult } from './types';
 import type { SessionNote } from '../../types/clinical';
-
-interface AiType {
-  id: string;
-  label: string;
-  traceable?: boolean;
-}
-
-interface PendingConsult {
-  type: string;
-  label: string;
-  input: string;
-  output: string;
-}
-
-interface PendingConsultSavePayload {
-  type: string;
-  input: string;
-  output: string;
-  validated: boolean;
-  validationNotes: string | null;
-  alsoInsert: boolean;
-  label?: string;
-}
 
 interface SessionNoteEditorProps {
   patientId: string;
@@ -177,7 +156,7 @@ export function SessionNoteEditor({
         notify({ tone: 'success', message: `${type.label} aplicado.` });
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'No se pudo usar IA.';
+      const message = getErrorMessage(err, 'No se pudo usar IA.');
       setError(message);
       notify({ tone: 'error', message });
       if (type.traceable) {
@@ -215,7 +194,7 @@ export function SessionNoteEditor({
     validationNotes,
     alsoInsert,
     label
-  }: PendingConsultSavePayload) => {
+  }: AiConsultSavePayload) => {
     if (!patientId) throw new Error('Selecciona un paciente antes de guardar IA.');
 
     await clinicalApi.addAiConsult({
@@ -226,7 +205,7 @@ export function SessionNoteEditor({
       output_text: output,
       validated,
       validation_notes: validationNotes
-    } as Parameters<typeof clinicalApi.addAiConsult>[0]);
+    });
 
     if (alsoInsert) {
       handleTextChange(`${rawText}\n\n---\n## ${label || type}\n${output}`);
@@ -303,7 +282,7 @@ export function SessionNoteEditor({
       notify({ tone: 'success', message: successMessage });
       onSaved?.(saved);
     } catch (err) {
-      const message = err instanceof Error ? err.message : failureFallback;
+      const message = getErrorMessage(err, failureFallback);
       setError(message);
       notify({ tone: 'error', message });
     } finally {

@@ -1,10 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '../lib/supabaseClient.js';
+import { supabase } from '../lib/supabaseClient';
+
+export type Role = 'admin' | 'therapist' | 'reception' | string;
 
 export function useRole() {
-  return useQuery({
+  return useQuery<Role | null, Error>({
     queryKey: ['user-role'],
     queryFn: async () => {
+      if (!supabase) return null;
       const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
       if (sessionError || !sessionData.session) return null;
 
@@ -19,8 +22,8 @@ export function useRole() {
         console.error('Error fetching role:', error);
         return null;
       }
-      return data?.role || null;
+      return (data?.role as Role | undefined) ?? null;
     },
-    staleTime: Infinity // Role rarely changes during a session
+    staleTime: Infinity
   });
 }

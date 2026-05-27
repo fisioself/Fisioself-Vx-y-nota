@@ -1,18 +1,7 @@
 import { useState } from 'react';
+import { getErrorMessage } from '../../shared/errors';
+import type { AiConsultSavePayload, PendingConsult } from './types';
 import './AiConsultModal.css';
-
-interface PendingConsult {
-  type: string;
-  label: string;
-  input: string;
-  output: string;
-}
-
-interface AiConsultSavePayload extends PendingConsult {
-  validated: boolean;
-  alsoInsert: boolean;
-  validationNotes: string | null;
-}
 
 interface AiConsultModalProps {
   consult: PendingConsult | null;
@@ -46,7 +35,7 @@ export function AiConsultModal({ consult, onClose, onSave }: AiConsultModalProps
       });
       onClose?.();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo guardar la consulta IA.');
+      setError(getErrorMessage(err, 'No se pudo guardar la consulta IA.'));
     } finally {
       setSaving(false);
     }

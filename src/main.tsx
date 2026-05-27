@@ -4,10 +4,10 @@ import { QueryClient } from '@tanstack/react-query';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { AppRoot } from './app/AppRoot';
 import { ErrorBoundary } from './app/ErrorBoundary';
-import { registerServiceWorker } from './app/registerServiceWorker.js';
+import { registerServiceWorker } from './app/registerServiceWorker';
 import { ToastProvider } from './app/ToastProvider';
-import { initSentry } from './lib/sentry.js';
-import { createIDBPersister } from './lib/offlineSync.js';
+import { initSentry } from './lib/sentry';
+import { createIDBPersister } from './lib/offlineSync';
 import './styles.css';
 import './app/toasts.css';
 

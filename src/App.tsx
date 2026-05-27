@@ -1,14 +1,14 @@
 import { Suspense, lazy, useEffect, useState, type ComponentType, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Session } from '@supabase/supabase-js';
-import { authService } from './services/authService.js';
+import { authService } from './services/authService';
 import { isSupabaseConfigured } from './lib/supabaseClient';
 import { draftStorage } from './shared/draftStorage';
-import { useTheme } from './shared/useTheme.js';
+import { useTheme } from './shared/useTheme';
 import type { Patient } from './types/clinical';
 
 interface LoginScreenProps {
-  onLogin: (session: Session) => void;
+  onLogin: (session: Session | null) => void;
 }
 interface PatientFormProps {
   onCreated: (patient: Patient) => void;
@@ -25,26 +25,26 @@ interface PatientRecordProps {
 }
 
 const LoginScreen = lazy(() =>
-  import('./features/auth/LoginScreen.jsx').then((module) => ({ default: module.LoginScreen }))
+  import('./features/auth/LoginScreen').then((module) => ({ default: module.LoginScreen }))
 ) as ComponentType<LoginScreenProps>;
 const PatientForm = lazy(() =>
-  import('./features/patients/PatientForm.jsx').then((module) => ({ default: module.PatientForm }))
+  import('./features/patients/PatientForm').then((module) => ({ default: module.PatientForm }))
 ) as ComponentType<PatientFormProps>;
 const PatientList = lazy(() =>
-  import('./features/patients/PatientList.jsx').then((module) => ({ default: module.PatientList }))
+  import('./features/patients/PatientList').then((module) => ({ default: module.PatientList }))
 ) as ComponentType<PatientListProps>;
 const PatientRecord = lazy(() =>
-  import('./features/patients/PatientRecord.jsx').then((module) => ({
+  import('./features/patients/PatientRecord').then((module) => ({
     default: module.PatientRecord
   }))
 ) as ComponentType<PatientRecordProps>;
 const AgendaView = lazy(() =>
-  import('./features/appointments/AgendaView.jsx').then((module) => ({
+  import('./features/appointments/AgendaView').then((module) => ({
     default: module.AgendaView
   }))
 ) as ComponentType;
 const ClinicDashboard = lazy(() =>
-  import('./features/dashboard/ClinicDashboard.jsx').then((module) => ({
+  import('./features/dashboard/ClinicDashboard').then((module) => ({
     default: module.ClinicDashboard
   }))
 ) as ComponentType;

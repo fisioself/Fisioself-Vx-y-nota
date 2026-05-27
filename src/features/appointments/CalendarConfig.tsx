@@ -1,11 +1,12 @@
-import { calendarService } from '../../services/calendarService.js';
+import { calendarService } from '../../services/calendarService';
+import { getErrorMessage } from '../../shared/errors';
 
 export function CalendarConfig() {
   const handleConnect = async () => {
     try {
       await calendarService.startGoogleConnection();
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Error al conectar Google Calendar.');
+      alert(getErrorMessage(err, 'Error al conectar Google Calendar.'));
     }
   };
 
