@@ -9,10 +9,10 @@ export const registerServiceWorker = () => {
       })
       .catch((err) => {
         console.warn('[SW] Registro fallido:', err.message);
-        // Hallazgo #11: Logging to Sentry
+        // Hallazgo #11: Logging to Sentry via reportError helper
         import('../lib/sentry.js')
-          .then(({ captureException }) => {
-            if (captureException) captureException(err);
+          .then(({ reportError }) => {
+            if (reportError) reportError(err, { context: 'service_worker_registration' });
           })
           .catch(() => {});
       });
