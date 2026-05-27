@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ToastProvider } from '../../app/ToastProvider.jsx';
 import { SessionNoteEditor } from './SessionNoteEditor.jsx';
 
-vi.mock('../../services/clinicalApi.js', () => ({
+vi.mock('../../services/clinicalApi', () => ({
   clinicalApi: {
     addSessionNote: vi.fn(),
     updateSessionNote: vi.fn(),

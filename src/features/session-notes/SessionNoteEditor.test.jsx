@@ -2,10 +2,10 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ToastProvider } from '../../app/ToastProvider.jsx';
-import { clinicalApi } from '../../services/clinicalApi.js';
+import { clinicalApi } from '../../services/clinicalApi';
 import { SessionNoteEditor } from './SessionNoteEditor.jsx';
 
-vi.mock('../../services/clinicalApi.js', () => ({
+vi.mock('../../services/clinicalApi', () => ({
   clinicalApi: {
     addSessionNote: vi.fn(),
     updateSessionNote: vi.fn(),

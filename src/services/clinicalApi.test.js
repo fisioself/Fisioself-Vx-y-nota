@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clinicalApi } from './clinicalApi.js';
+import { clinicalApi } from './clinicalApi';
 
 describe('clinicalApi.buildTimeline', () => {
   it('combines clinical events and sorts newest first', () => {

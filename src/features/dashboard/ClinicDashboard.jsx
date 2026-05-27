@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { clinicalApi } from '../../services/clinicalApi.js';
+import { clinicalApi } from '../../services/clinicalApi';
 
 export function ClinicDashboard() {
   const { data: stats, isLoading, error } = useQuery({

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { clinicalApi } from '../../services/clinicalApi.js';
+import { clinicalApi } from '../../services/clinicalApi';
 
 export function AppointmentForm({ patient, onCancel, onCreated }) {
   const [title, setTitle] = useState('');

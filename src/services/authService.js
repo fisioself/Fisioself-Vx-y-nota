@@ -27,6 +27,13 @@ export const authService = {
 
   async signOut() {
     assertReady();
+    try {
+      // Hallazgo #6: Clean PHI drafts before logout
+      const { draftStorage } = await import('../shared/draftStorage.js');
+      if (draftStorage?.clearAll) draftStorage.clearAll();
+    } catch (err) {
+      console.warn('Error clearing drafts on logout:', err);
+    }
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
   }

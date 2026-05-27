@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { calendarService } from '../../services/calendarService.js';
-import { clinicalApi } from '../../services/clinicalApi.js';
+import { clinicalApi } from '../../services/clinicalApi';
 import { AppointmentForm } from './AppointmentForm.jsx';
 import './appointments.css';
 

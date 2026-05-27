@@ -1,34 +1,59 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabaseClient.js';
 
+export interface Patient {
+  id: string;
+  full_name: string;
+  email?: string;
+  phone?: string;
+  birth_date?: string;
+  sex?: string;
+  status: string;
+  medical_diagnosis?: string;
+  functional_diagnosis?: string;
+  updated_at: string;
+}
+
+export interface SessionNote {
+  id: string;
+  patient_id: string;
+  therapist_id?: string;
+  session_number: number;
+  session_date: string;
+  eva?: number;
+  raw_text: string;
+  created_at: string;
+}
+
 const assertReady = () => {
   if (!isSupabaseConfigured || !supabase) throw new Error('Supabase no esta configurado.');
 };
 
-const unwrap = ({ data, error }) => {
+const unwrap = ({ data, error }: { data: any; error: any }) => {
   if (error) throw error;
   return data;
 };
 
-const sortByDateDesc = (a, b) => new Date(b.date) - new Date(a.date);
+const sortByDateDesc = (a: any, b: any) => 
+  new Date(b.date).getTime() - new Date(a.date).getTime();
 
 export const clinicalApi = {
-  async listPatients() {
+  async listPatients(): Promise<Patient[]> {
     assertReady();
     return unwrap(
-      await supabase.from('patients').select('*').order('updated_at', { ascending: false })
+      await (supabase as any).from('patients').select('*').order('updated_at', { ascending: false })
     );
   },
 
-  async createPatient(payload) {
+  async createPatient(payload: Partial<Patient>): Promise<Patient> {
     assertReady();
-    const patient = unwrap(await supabase.from('patients').insert(payload).select('*').single());
+    const patient = unwrap(await (supabase as any).from('patients').insert(payload).select('*').single());
     return patient;
   },
 
-  async updatePatient(id, payload) {
+  async updatePatient(id: string, payload: Partial<Patient>): Promise<Patient> {
     assertReady();
     return unwrap(
-      await supabase
+      await (supabase as any)
         .from('patients')
         .update(payload)
         .eq('id', id)
@@ -37,15 +62,15 @@ export const clinicalApi = {
     );
   },
 
-  async deletePatient(id) {
+  async deletePatient(id: string): Promise<void> {
     assertReady();
-    return unwrap(await supabase.from('patients').delete().eq('id', id));
+    return unwrap(await (supabase as any).from('patients').delete().eq('id', id));
   },
 
-  async getPatient(id) {
+  async getPatient(id: string) {
     assertReady();
     return unwrap(
-      await supabase
+      await (supabase as any)
         .from('patients')
         .select(
           '*, session_notes(*), evaluations(*), ai_consults(*), follow_ups(*), appointments(*)'
@@ -55,18 +80,18 @@ export const clinicalApi = {
     );
   },
 
-  async addEvaluation(payload) {
+  async addEvaluation(payload: any) {
     assertReady();
     const evaluation = unwrap(
-      await supabase.from('evaluations').insert(payload).select('*').single()
+      await (supabase as any).from('evaluations').insert(payload).select('*').single()
     );
     return evaluation;
   },
 
-  async updateEvaluation(id, payload) {
+  async updateEvaluation(id: string, payload: any) {
     assertReady();
     return unwrap(
-      await supabase
+      await (supabase as any)
         .from('evaluations')
         .update(payload)
         .eq('id', id)
@@ -75,9 +100,9 @@ export const clinicalApi = {
     );
   },
 
-  async addSessionNote(payload) {
+  async addSessionNote(payload: Partial<SessionNote>): Promise<SessionNote> {
     assertReady();
-    const response = await supabase
+    const response = await (supabase as any)
       .from('session_notes')
       .insert(payload)
       .select('*')
@@ -91,9 +116,9 @@ export const clinicalApi = {
     return note;
   },
 
-  async updateSessionNote(id, payload) {
+  async updateSessionNote(id: string, payload: Partial<SessionNote>): Promise<SessionNote> {
     assertReady();
-    const response = await supabase
+    const response = await (supabase as any)
       .from('session_notes')
       .update(payload)
       .eq('id', id)
@@ -109,29 +134,29 @@ export const clinicalApi = {
     return unwrap(response);
   },
 
-  async deleteSessionNote(id) {
+  async deleteSessionNote(id: string): Promise<void> {
     assertReady();
-    return unwrap(await supabase.from('session_notes').delete().eq('id', id));
+    return unwrap(await (supabase as any).from('session_notes').delete().eq('id', id));
   },
 
-  async addAiConsult(payload) {
+  async addAiConsult(payload: any) {
     assertReady();
-    const consult = unwrap(await supabase.from('ai_consults').insert(payload).select('*').single());
+    const consult = unwrap(await (supabase as any).from('ai_consults').insert(payload).select('*').single());
     return consult;
   },
 
-  async addAppointment(payload) {
+  async addAppointment(payload: any) {
     assertReady();
     const appointment = unwrap(
-      await supabase.from('appointments').insert(payload).select('*').single()
+      await (supabase as any).from('appointments').insert(payload).select('*').single()
     );
     return appointment;
   },
 
-  async updateAppointment(id, payload) {
+  async updateAppointment(id: string, payload: any) {
     assertReady();
     return unwrap(
-      await supabase
+      await (supabase as any)
         .from('appointments')
         .update(payload)
         .eq('id', id)
@@ -144,7 +169,7 @@ export const clinicalApi = {
     assertReady();
     
     // 1. Total Patients
-    const { count: totalPatients, error: pError } = await supabase
+    const { count: totalPatients, error: pError } = await (supabase as any)
       .from('patients')
       .select('*', { count: 'exact', head: true });
     if (pError) throw pError;
@@ -152,14 +177,14 @@ export const clinicalApi = {
     // 2. Sessions in last 30 days
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const { count: recentSessions, error: sError } = await supabase
+    const { count: recentSessions, error: sError } = await (supabase as any)
       .from('session_notes')
       .select('*', { count: 'exact', head: true })
       .gte('session_date', thirtyDaysAgo.toISOString().split('T')[0]);
     if (sError) throw sError;
 
     // 3. Upcoming Appointments
-    const { count: upcomingAppointments, error: aError } = await supabase
+    const { count: upcomingAppointments, error: aError } = await (supabase as any)
       .from('appointments')
       .select('*', { count: 'exact', head: true })
       .gte('starts_at', new Date().toISOString())
@@ -167,7 +192,7 @@ export const clinicalApi = {
     if (aError) throw aError;
 
     // 4. Latest activity (last 5 notes)
-    const { data: latestNotes, error: lnError } = await supabase
+    const { data: latestNotes, error: lnError } = await (supabase as any)
       .from('session_notes')
       .select('id, session_number, session_date, patients(full_name)')
       .order('created_at', { ascending: false })
@@ -182,8 +207,8 @@ export const clinicalApi = {
     };
   },
 
-  buildTimeline(record) {
-    const evaluations = (record?.evaluations || []).map((item) => ({
+  buildTimeline(record: any) {
+    const evaluations = (record?.evaluations || []).map((item: any) => ({
       id: item.id,
       type: 'evaluation',
       label: 'Valoracion inicial',
@@ -192,7 +217,7 @@ export const clinicalApi = {
       payload: item
     }));
 
-    const notes = (record?.session_notes || []).map((item) => ({
+    const notes = (record?.session_notes || []).map((item: any) => ({
       id: item.id,
       type: 'session_note',
       label: `Sesion #${item.session_number}`,
@@ -202,7 +227,7 @@ export const clinicalApi = {
       payload: item
     }));
 
-    const consults = (record?.ai_consults || []).map((item) => ({
+    const consults = (record?.ai_consults || []).map((item: any) => ({
       id: item.id,
       type: 'ai_consult',
       label: `IA: ${item.type}`,
@@ -211,7 +236,7 @@ export const clinicalApi = {
       payload: item
     }));
 
-    const followUps = (record?.follow_ups || []).map((item) => ({
+    const followUps = (record?.follow_ups || []).map((item: any) => ({
       id: item.id,
       type: 'follow_up',
       label: `Seguimiento dia ${item.day_number}`,
@@ -220,7 +245,7 @@ export const clinicalApi = {
       payload: item
     }));
 
-    const appointments = (record?.appointments || []).map((item) => ({
+    const appointments = (record?.appointments || []).map((item: any) => ({
       id: item.id,
       type: 'appointment',
       label: item.title || 'Cita clinica',

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { clinicalApi } from '../../services/clinicalApi.js';
+import { clinicalApi } from '../../services/clinicalApi';
 import { PATIENT_STATUSES, validatePatient, hasErrors } from '../../shared/clinicalValidation.js';
 
 const toEditablePatient = (patient) => ({

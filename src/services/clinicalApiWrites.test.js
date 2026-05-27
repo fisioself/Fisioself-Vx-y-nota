@@ -7,7 +7,7 @@ const loadClinicalApi = async (from) => {
     supabase: { from }
   }));
 
-  return import('./clinicalApi.js');
+  return import('./clinicalApi');
 };
 
 afterEach(() => {

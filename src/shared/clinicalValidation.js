@@ -18,14 +18,32 @@ export const validatePatient = (values) => {
   if (values.status && !PATIENT_STATUSES.includes(values.status))
     errors.status = 'Estado invalido.';
 
+  // Hallazgo #13: Birth date validation
+  if (values.birth_date && new Date(values.birth_date) > new Date()) {
+    errors.birth_date = 'La fecha de nacimiento no puede ser futura.';
+  }
+
+  // Hallazgo #13: Phone length
+  if (values.phone && (values.phone.trim().length < 7 || values.phone.trim().length > 20)) {
+    errors.phone = 'El telefono debe tener entre 7 y 20 caracteres.';
+  }
+
   return errors;
 };
 
-export const validateSessionNote = ({ raw_text, eva, patient_id }) => {
+export const validateSessionNote = ({ raw_text, eva, patient_id, session_date }) => {
   const errors = {};
   const text = raw_text?.trim() || '';
 
   if (!patient_id) errors.patient_id = 'Selecciona un paciente antes de guardar.';
+  
+  // Hallazgo #13: Session date validation
+  if (!session_date) {
+    errors.session_date = 'La fecha de la sesion es obligatoria.';
+  } else if (new Date(session_date) > new Date()) {
+    errors.session_date = 'La fecha de la sesion no puede ser futura.';
+  }
+
   if (text.length < 3) errors.raw_text = 'La nota debe tener contenido clinico.';
   if (text.length > 12000) errors.raw_text = 'La nota es demasiado larga.';
 

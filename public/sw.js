@@ -1,6 +1,6 @@
-import { openDB } from 'idb';
+import { openDB } from 'https://cdn.jsdelivr.net/npm/idb@8/build/index.js';
 
-const CACHE_NAME = 'fisioself-notas-vx-v1';
+const CACHE_NAME = 'fisioself-notas-vx-v2';
 const APP_SHELL = ['/', '/index.html', '/manifest.webmanifest'];
 
 const dbPromise = openDB('fisioself-sync-db', 1, {
@@ -97,12 +97,26 @@ self.addEventListener('sync', (event) => {
 
         for (const reqData of allReqs) {
           try {
-            await fetch(reqData.url, {
+            const response = await fetch(reqData.url, {
               method: reqData.method,
               headers: reqData.headers,
               body: reqData.body
             });
-            await store.delete(reqData.id);
+
+            if (response.ok) {
+              await store.delete(reqData.id);
+            } else if (response.status === 401) {
+              // Hallazgo #5: Notify client about expired token
+              const clients = await self.clients.matchAll();
+              clients.forEach(client => {
+                client.postMessage({
+                  type: 'SYNC_AUTH_ERROR',
+                  message: 'Sesion caducada. Por favor, abre la app para sincronizar tus notas.'
+                });
+              });
+              // Stop processing this queue for now
+              break;
+            }
           } catch (err) {
             console.error('Background sync failed for req', reqData.id, err);
             // Will retry on next sync event

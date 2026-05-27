@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useToast } from '../../app/ToastProvider.jsx';
-import { clinicalApi } from '../../services/clinicalApi.js';
+import { clinicalApi } from '../../services/clinicalApi';
 import { SessionNoteEditor } from './SessionNoteEditor.jsx';
 
 export function SessionNotesList({ notes = [], onChanged }) {

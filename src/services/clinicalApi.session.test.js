@@ -20,7 +20,7 @@ describe('clinicalApi.addSessionNote', () => {
       supabase: { from }
     }));
 
-    const { clinicalApi } = await import('./clinicalApi.js');
+    const { clinicalApi } = await import('./clinicalApi');
 
     await expect(
       clinicalApi.addSessionNote({

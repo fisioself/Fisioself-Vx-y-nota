@@ -1,6 +1,6 @@
 import { useMemo, useState, memo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { clinicalApi } from '../../services/clinicalApi.js';
+import { clinicalApi } from '../../services/clinicalApi';
 import {
   printClinicalRecord
 } from '../../shared/exportClinicalRecord.js';

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useToast } from '../../app/ToastProvider.jsx';
-import { clinicalApi } from '../../services/clinicalApi.js';
+import { clinicalApi } from '../../services/clinicalApi';
 import { aiService, AI_TYPES } from '../../services/aiService.js';
 import { getLocalISODate } from '../../shared/dateUtils.js';
 import { hasErrors, validateSessionNote } from '../../shared/clinicalValidation.js';
@@ -98,9 +98,14 @@ export function SessionNoteEditor({
     setIsDirty(true);
   };
 
-  const dictation = useDictation((chunk) => {
-    handleTextChange(rawText ? `${rawText} ${chunk}` : chunk);
-  });
+  const dictation = useDictation(
+    (chunk) => {
+      handleTextChange(rawText ? `${rawText} ${chunk}` : chunk);
+    },
+    (message) => {
+      notify({ tone: 'error', message });
+    }
+  );
 
   const executeAi = async (type) => {
     setAiBusy(true);
