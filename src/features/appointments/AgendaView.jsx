@@ -99,26 +99,35 @@ export function AgendaView() {
           <div className="ai-box" style={{ display: 'grid', gap: 4 }}>
             <p style={{ margin: 0 }}>Tus citas se sincronizan automáticamente</p>
             <span className="muted" style={{ fontWeight: 600 }}>
-              {status.email ? `Cuenta: ${status.email}` : 'Cuenta de Google vinculada'}
+              {status.email ? `Cuenta vinculada: ${status.email}` : 'Cuenta de Google vinculada'}
             </span>
           </div>
-          <p className="muted" style={{ marginBottom: '1rem' }}>
-            Cada cita que crees aparecerá en tu Google Calendar al instante. Si quieres usar otra cuenta,
-            puedes reconectar.
-          </p>
-          <div className="actions" style={{ justifyContent: 'flex-start', gap: 10, flexWrap: 'wrap' }}>
+          
+          <div className="actions" style={{ justifyContent: 'flex-start', gap: 10, flexWrap: 'wrap', marginBottom: '1rem' }}>
             <a href="https://calendar.google.com" target="_blank" rel="noopener noreferrer" style={linkButton}>
-              Abrir Google Calendar
+              Abrir en Google Calendar
             </a>
             <button type="button" className="secondary" onClick={handleConnect} disabled={busy}>
-              {busy ? 'Reconectando…' : 'Reconectar'}
+              {busy ? 'Reconectando…' : 'Cambiar cuenta'}
             </button>
             {!pushLoading && !subscribed && (
               <button type="button" className="secondary" onClick={subscribe}>
-                Activar notificaciones de citas
+                Activar notificaciones
               </button>
             )}
           </div>
+
+          {status.email && (
+            <div style={{ marginTop: '1rem', width: '100%', overflow: 'hidden', borderRadius: '16px', border: '1px solid rgba(18, 55, 42, 0.14)' }}>
+              <iframe
+                src={`https://calendar.google.com/calendar/embed?src=${encodeURIComponent(status.email)}&ctz=${Intl.DateTimeFormat().resolvedOptions().timeZone}&showTitle=0&showPrint=0&showCalendars=0&showTz=0`}
+                style={{ border: 0, width: '100%', height: '600px', display: 'block' }}
+                frameBorder="0"
+                scrolling="no"
+                title="Google Calendar Integrado"
+              ></iframe>
+            </div>
+          )}
         </>
       ) : (
         <>
