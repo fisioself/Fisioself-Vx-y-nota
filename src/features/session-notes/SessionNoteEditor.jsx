@@ -4,10 +4,12 @@ import remarkGfm from 'remark-gfm';
 import { useToast } from '../../app/ToastProvider.jsx';
 import { clinicalApi } from '../../services/clinicalApi.js';
 import { aiService, AI_TYPES } from '../../services/aiService.js';
+import { getLocalISODate } from '../../shared/dateUtils.js';
 import { hasErrors, validateSessionNote } from '../../shared/clinicalValidation.js';
 import { consent, CONSENT_KEYS } from '../../shared/consent.js';
 import { draftStorage, getDraftKey } from '../../shared/draftStorage.js';
 import { useDraftAutosave } from '../../shared/useDraftAutosave.js';
+import { useShortcuts } from '../../shared/useShortcuts.js';
 import { AiConsultModal } from './AiConsultModal.jsx';
 import { ConsentGate } from './ConsentGate.jsx';
 import { useDictation } from './useDictation.js';
@@ -52,23 +54,47 @@ export function SessionNoteEditor({
     [patientId, sessionNumber, note?.id]
   );
 
+  const draftValues = useMemo(
+    () => ({
+      sessionDate,
+      eva,
+      rawText
+    }),
+    [sessionDate, eva, rawText]
+  );
+
   // Inicialización única por ID de nota o sesión nueva
   useEffect(() => {
+    const savedDraft = draftStorage.get(draftKey);
+    let draftData = null;
+    if (savedDraft) {
+      try {
+        draftData = JSON.parse(savedDraft);
+      } catch {
+        // Fallback para borradores antiguos que eran solo string
+        draftData = { rawText: savedDraft };
+      }
+    }
+
     if (isEditing) {
-      setSessionDate(note?.session_date || new Date().toISOString().slice(0, 10));
-      setEva(note?.eva ?? '');
-      setRawText(note?.raw_text || '');
+      // Priorizar el borrador local incluso al editar, si existe y tiene contenido
+      setSessionDate(draftData?.sessionDate || note?.session_date || getLocalISODate());
+      setEva(draftData?.eva ?? note?.eva ?? '');
+      setRawText(draftData?.rawText || note?.raw_text || '');
+      // Si el borrador es diferente a la nota original, marcar como sucio
+      if (draftData && (draftData.rawText !== note?.raw_text || draftData.eva !== note?.eva)) {
+        setIsDirty(true);
+      }
     } else {
-      const savedDraft = draftStorage.get(draftKey);
-      setSessionDate(new Date().toISOString().slice(0, 10));
-      setEva('');
-      setRawText(savedDraft || '');
+      setSessionDate(draftData?.sessionDate || getLocalISODate());
+      setEva(draftData?.eva ?? '');
+      setRawText(draftData?.rawText || '');
     }
     setIsDirty(false);
   }, [note?.id, draftKey, isEditing]); // Dependemos del ID, no del objeto completo
 
   // Guardar borrador automáticamente (solo si hay cambios)
-  useDraftAutosave(isDirty ? draftKey : null, rawText);
+  useDraftAutosave(isDirty ? draftKey : null, draftValues);
 
   const handleTextChange = (val) => {
     setRawText(val);
@@ -82,29 +108,47 @@ export function SessionNoteEditor({
   const executeAi = async (type) => {
     setAiBusy(true);
     setError('');
-    try {
-      const output = await aiService.transform({ text: rawText, type: type.id });
 
-      if (type.traceable) {
-        setPendingConsult({
-          type: type.id,
-          label: type.label,
-          input: rawText,
-          output
-        });
-        return;
-      }
+    const startText = rawText;
+    const prefix = type.id === 'soap' ? '' : `${startText}\n\n---\n## ${type.label}\n`;
 
-      setRawText((current) => {
-        const result =
-          type.id === 'soap' ? output : `${current}\n\n---\n## ${type.label}\n${output}`;
-        setIsDirty(true);
-        return result;
+    if (type.traceable) {
+      setPendingConsult({
+        type: type.id,
+        label: type.label,
+        input: rawText,
+        output: ''
       });
-      notify({ tone: 'success', message: `${type.label} aplicado.` });
+    } else {
+      setRawText(prefix);
+      setIsDirty(true);
+    }
+
+    try {
+      await aiService.transform({
+        text: startText,
+        type: type.id,
+        onChunk: (accumulatedText) => {
+          if (type.traceable) {
+            setPendingConsult((current) =>
+              current ? { ...current, output: accumulatedText } : current
+            );
+          } else {
+            setRawText(prefix + accumulatedText);
+            setIsDirty(true);
+          }
+        }
+      });
+
+      if (!type.traceable) {
+        notify({ tone: 'success', message: `${type.label} aplicado.` });
+      }
     } catch (err) {
       setError(err.message || 'No se pudo usar IA.');
       notify({ tone: 'error', message: err.message || 'No se pudo usar IA.' });
+      if (type.traceable) {
+        setPendingConsult(null);
+      }
     } finally {
       setAiBusy(false);
     }
@@ -164,6 +208,27 @@ export function SessionNoteEditor({
     draftStorage.remove(draftKey);
     notify({ tone: 'success', message: 'Borrador descartado.' });
   };
+
+  useShortcuts([
+    {
+      key: 's',
+      ctrl: true,
+      shift: false,
+      action: () => {
+        if (!saving && isDirty) submit();
+      }
+    },
+    {
+      key: 'd',
+      ctrl: true,
+      shift: false,
+      action: () => {
+        if (dictation.supported && !aiBusy) {
+          dictation.toggle();
+        }
+      }
+    }
+  ]);
 
   const insertSoapTemplate = () => {
     handleTextChange(rawText.trim() ? `${rawText.trim()}\n\n---\n${SOAP_TEMPLATE}` : SOAP_TEMPLATE);
@@ -261,8 +326,13 @@ export function SessionNoteEditor({
             type="button"
             className={dictation.listening ? 'danger' : 'secondary'}
             onClick={dictation.toggle}
+            disabled={dictation.processing}
           >
-            {dictation.listening ? 'Detener dictado' : 'Dictar por voz'}
+            {dictation.processing
+              ? 'Transcribiendo...'
+              : dictation.listening
+                ? 'Detener dictado'
+                : 'Dictar por voz (Whisper)'}
           </button>
         )}
       </div>
@@ -333,21 +403,6 @@ Notas adicionales: cualquier detalle relevante.`}
         consult={pendingConsult}
         onClose={() => setPendingConsult(null)}
         onSave={savePendingConsult}
-      />
-
-      <ConsentGate
-        open={dictation.needsConsent}
-        eyebrow="Dictado por voz"
-        title="Tu voz se envia a Google para transcribir"
-        bullets={[
-          'El navegador transmite el audio a servidores de Google Speech.',
-          'No hay acuerdo de tratamiento de datos (BAA) entre tu app y Google para este flujo.',
-          'No dictes datos identificables del paciente sin su consentimiento explicito.',
-          'Puedes seguir escribiendo a mano si no quieres usar dictado.'
-        ]}
-        acceptLabel="Entendido, activar dictado"
-        onAccept={dictation.grantConsent}
-        onCancel={dictation.cancelConsent}
       />
 
       <ConsentGate

@@ -96,3 +96,15 @@ export interface TimelineEntry {
 }
 
 export type ValidationErrors<T> = Partial<Record<keyof T | string, string>>;
+
+export interface ClinicStats {
+  totalPatients: number;
+  recentSessions: number;
+  upcomingAppointments: number;
+  latestActivity: Array<{
+    id: string;
+    session_number: number;
+    session_date: string | null;
+    patients: { full_name: string } | null;
+  }>;
+}

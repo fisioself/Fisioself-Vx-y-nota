@@ -4,7 +4,16 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.js'],
-    exclude: ['node_modules/**', 'dist/**', 'e2e/**', 'playwright-report/**', 'test-results/**'],
+    exclude: [
+      'node_modules/**',
+      'dist/**',
+      '.idea/**',
+      '.git/**',
+      '.cache/**',
+      'e2e/**',
+      'playwright-report/**',
+      'test-results/**'
+    ],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],

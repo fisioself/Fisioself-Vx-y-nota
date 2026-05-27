@@ -43,5 +43,16 @@ export const calendarService = {
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || 'No se pudo sincronizar cita.');
     return data.appointment;
+  },
+
+  async getConnectionStatus() {
+    if (!isSupabaseConfigured || !supabase) return { connected: false, email: null };
+    const { data, error } = await supabase.rpc('my_calendar_connection');
+    if (error)
+      throw new Error(error.message || 'No se pudo consultar el estado de Google Calendar.');
+    const row = Array.isArray(data) ? data[0] : data;
+    return row && row.connected
+      ? { connected: true, email: row.email ?? null }
+      : { connected: false, email: null };
   }
 };

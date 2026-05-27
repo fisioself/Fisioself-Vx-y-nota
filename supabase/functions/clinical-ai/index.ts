@@ -137,6 +137,7 @@ Deno.serve(async (req) => {
         model,
         max_tokens: 1400,
         system: SYSTEM_PROMPT,
+        stream: true,
         messages: [
           {
             role: 'user',
@@ -146,9 +147,8 @@ Deno.serve(async (req) => {
       })
     });
 
-    const data = await response.json().catch(() => ({}));
-
     if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
       console.error('clinical_ai_upstream_failed', {
         status: response.status,
         code: data?.error?.type || 'unknown'
@@ -156,14 +156,12 @@ Deno.serve(async (req) => {
       return json(req, response.status, { error: GENERIC_AI_ERROR });
     }
 
-    const output = (data.content || [])
-      .map((item: { text?: string }) => item.text || '')
-      .join('\n')
-      .trim();
+    const headers = buildCorsHeaders(req);
+    headers.set('Content-Type', 'text/event-stream');
+    headers.set('Cache-Control', 'no-cache');
+    headers.set('Connection', 'keep-alive');
 
-    if (!output) return json(req, 502, { error: 'La IA no devolvio contenido.' });
-
-    return json(req, 200, { text: output });
+    return new Response(response.body, { headers });
   } catch (error) {
     console.error('clinical_ai_failed', {
       name: error instanceof Error ? error.name : 'UnknownError'

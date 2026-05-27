@@ -4,6 +4,7 @@ import type {
   AiConsult,
   Appointment,
   ClinicalRecord,
+  ClinicStats,
   Evaluation,
   Patient,
   SessionNote,
@@ -67,6 +68,11 @@ export const clinicalApi = {
     return unwrap(await db.from('evaluations').insert(payload).select('*').single());
   },
 
+  async updateEvaluation(id: string, payload: Partial<Evaluation>): Promise<Evaluation> {
+    const db = assertReady();
+    return unwrap(await db.from('evaluations').update(payload).eq('id', id).select('*').single());
+  },
+
   async addSessionNote(payload: Partial<SessionNote>): Promise<SessionNote> {
     const db = assertReady();
     const response = (await db
@@ -118,6 +124,44 @@ export const clinicalApi = {
   async updateAppointment(id: string, payload: Partial<Appointment>): Promise<Appointment> {
     const db = assertReady();
     return unwrap(await db.from('appointments').update(payload).eq('id', id).select('*').single());
+  },
+
+  async getClinicStats(): Promise<ClinicStats> {
+    const db = assertReady();
+
+    const { count: totalPatients, error: pError } = await db
+      .from('patients')
+      .select('*', { count: 'exact', head: true });
+    if (pError) throw pError;
+
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const { count: recentSessions, error: sError } = await db
+      .from('session_notes')
+      .select('*', { count: 'exact', head: true })
+      .gte('session_date', thirtyDaysAgo.toISOString().split('T')[0]);
+    if (sError) throw sError;
+
+    const { count: upcomingAppointments, error: aError } = await db
+      .from('appointments')
+      .select('*', { count: 'exact', head: true })
+      .gte('starts_at', new Date().toISOString())
+      .eq('status', 'scheduled');
+    if (aError) throw aError;
+
+    const { data: latestNotes, error: lnError } = await db
+      .from('session_notes')
+      .select('id, session_number, session_date, patients(full_name)')
+      .order('created_at', { ascending: false })
+      .limit(5);
+    if (lnError) throw lnError;
+
+    return {
+      totalPatients: totalPatients || 0,
+      recentSessions: recentSessions || 0,
+      upcomingAppointments: upcomingAppointments || 0,
+      latestActivity: (latestNotes as unknown as ClinicStats['latestActivity']) || []
+    };
   },
 
   buildTimeline(record: ClinicalRecord | null | undefined): TimelineEntry[] {

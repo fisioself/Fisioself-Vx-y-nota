@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ToastProvider } from '../../app/ToastProvider.jsx';
@@ -53,8 +53,10 @@ describe('SessionNotesList', () => {
 
     await userEvent.type(screen.getByPlaceholderText(/buscar/i), 'lumbar');
 
-    expect(screen.getByText(/sesion #1/i)).toBeInTheDocument();
-    expect(screen.queryByText(/sesion #2/i)).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText(/sesion #1/i)).toBeInTheDocument();
+      expect(screen.queryByText(/sesion #2/i)).not.toBeInTheDocument();
+    });
   });
 
   it('expands a note when clicked', async () => {
@@ -67,14 +69,16 @@ describe('SessionNotesList', () => {
 
   it('deletes a session note after confirmation', async () => {
     clinicalApi.deleteSessionNote.mockResolvedValueOnce(null);
-    vi.spyOn(window, 'confirm').mockReturnValueOnce(true);
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
     const onChanged = vi.fn();
 
     renderWithToast(<SessionNotesList notes={notes} onChanged={onChanged} />);
 
     await userEvent.click(screen.getAllByRole('button', { name: /eliminar/i })[0]);
 
-    expect(clinicalApi.deleteSessionNote).toHaveBeenCalledWith('2');
-    expect(onChanged).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(clinicalApi.deleteSessionNote).toHaveBeenCalledWith('2');
+      expect(onChanged).toHaveBeenCalled();
+    });
   });
 });

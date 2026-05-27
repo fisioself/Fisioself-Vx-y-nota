@@ -163,7 +163,7 @@ export const buildClinicalRecordHtml = (record) => {
   <body>
     <header>
       <h1>FISIOSELF</h1>
-      <p>Expediente clinico · ${escapeHtml(new Date().toLocaleDateString('es-MX'))}</p>
+      <p>Expediente clinico · ${escapeHtml(new Date().toLocaleDateString())}</p>
     </header>
     <section class="meta">
       ${paragraph('Paciente', record?.full_name)}

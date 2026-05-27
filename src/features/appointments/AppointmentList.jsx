@@ -1,44 +1,43 @@
-import { useMemo, useState } from 'react';
-import { calendarService, isGoogleCalendarConfigured } from '../../services/calendarService.js';
+import { useState } from 'react';
+import { calendarService } from '../../services/calendarService.js';
+import { clinicalApi } from '../../services/clinicalApi.js';
 import { AppointmentForm } from './AppointmentForm.jsx';
-import { CalendarConfig } from './CalendarConfig.jsx';
 import './appointments.css';
-
-const SYNC_LABELS = {
-  pending: 'Pendiente de sincronizar',
-  synced: 'Sincronizada con Google',
-  failed: 'Error al sincronizar',
-  disabled: 'Sincronizacion desactivada'
-};
-
-const formatDate = (value) => {
-  if (!value) return 'Sin fecha';
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? 'Fecha invalida' : date.toLocaleString();
-};
 
 export function AppointmentList({ patient, appointments = [], onChanged }) {
   const [showForm, setShowForm] = useState(false);
   const [syncing, setSyncing] = useState(null);
-  const [error, setError] = useState('');
+  const [cancelling, setCancelling] = useState(null);
 
   const syncAppointment = async (id) => {
     setSyncing(id);
-    setError('');
     try {
       await calendarService.syncAppointment(id);
       onChanged?.();
     } catch (err) {
-      setError(err.message || 'No se pudo sincronizar la cita.');
+      alert(err.message);
     } finally {
       setSyncing(null);
     }
   };
 
-  const sorted = useMemo(
-    () => [...appointments].sort((a, b) => new Date(b.starts_at) - new Date(a.starts_at)),
-    [appointments]
-  );
+  const cancelAppointment = async (id) => {
+    if (
+      !window.confirm(
+        '¿Cancelar esta cita? Si estaba sincronizada, también se eliminará el evento de tu Google Calendar.'
+      )
+    )
+      return;
+    setCancelling(id);
+    try {
+      await clinicalApi.updateAppointment(id, { status: 'cancelled' });
+      onChanged?.();
+    } catch (err) {
+      alert(err.message || 'No se pudo cancelar la cita.');
+    } finally {
+      setCancelling(null);
+    }
+  };
 
   return (
     <section className="card">
@@ -47,12 +46,10 @@ export function AppointmentList({ patient, appointments = [], onChanged }) {
           <p className="eyebrow">Agenda</p>
           <h2>Citas programadas</h2>
         </div>
-        <button type="button" className="secondary" onClick={() => setShowForm((value) => !value)}>
+        <button type="button" className="secondary" onClick={() => setShowForm(!showForm)}>
           {showForm ? 'Cancelar' : 'Nueva cita'}
         </button>
       </div>
-
-      {isGoogleCalendarConfigured && <CalendarConfig />}
 
       {showForm && (
         <AppointmentForm
@@ -65,42 +62,75 @@ export function AppointmentList({ patient, appointments = [], onChanged }) {
         />
       )}
 
-      {error && (
-        <p className="error" role="alert">
-          {error}
-        </p>
-      )}
-
-      <div className="appointments-stack">
-        {sorted.map((appointment) => (
-          <article key={appointment.id} className="note-row">
-            <div className="form-header">
-              <strong>{appointment.title || 'Cita sin titulo'}</strong>
-              <button
-                type="button"
-                className="secondary"
-                disabled={syncing === appointment.id || !isGoogleCalendarConfigured}
-                onClick={() => syncAppointment(appointment.id)}
-              >
-                {syncing === appointment.id ? 'Sincronizando...' : 'Sincronizar'}
-              </button>
-            </div>
-            <p className="muted">{formatDate(appointment.starts_at)}</p>
-            {appointment.location && <p className="muted">Lugar: {appointment.location}</p>}
-            <p>{appointment.description || 'Sin descripcion adicional'}</p>
-            <p className="pill">
-              {SYNC_LABELS[appointment.sync_status] || appointment.sync_status}
-            </p>
-            {appointment.google_html_link && (
-              <p>
-                <a href={appointment.google_html_link} target="_blank" rel="noopener noreferrer">
-                  Ver en Google Calendar
-                </a>
+      <div className="list-stack">
+        {appointments.map((appointment) => {
+          const isCancelled = appointment.status === 'cancelled';
+          return (
+            <article
+              key={appointment.id}
+              className="note-row"
+              style={isCancelled ? { opacity: 0.6 } : undefined}
+            >
+              <div className="form-header">
+                <strong>{appointment.title || 'Cita sin titulo'}</strong>
+                <div
+                  style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}
+                >
+                  {isCancelled ? (
+                    <span className="pill" style={{ background: '#f3d9d6', color: '#7a241c' }}>
+                      Cancelada
+                    </span>
+                  ) : (
+                    <>
+                      <span className="pill">
+                        {appointment.sync_status === 'synced'
+                          ? 'Sincronizada'
+                          : appointment.sync_status === 'pending'
+                            ? 'Pendiente'
+                            : appointment.sync_status === 'failed'
+                              ? 'Error'
+                              : appointment.sync_status}
+                      </span>
+                      {appointment.google_html_link && (
+                        <a
+                          href={appointment.google_html_link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          Ver en Calendar
+                        </a>
+                      )}
+                      {appointment.sync_status !== 'synced' && (
+                        <button
+                          className="secondary"
+                          disabled={syncing === appointment.id}
+                          onClick={() => syncAppointment(appointment.id)}
+                        >
+                          {syncing === appointment.id ? 'Sincronizando...' : 'Sincronizar'}
+                        </button>
+                      )}
+                      <button
+                        className="danger"
+                        disabled={cancelling === appointment.id}
+                        onClick={() => cancelAppointment(appointment.id)}
+                      >
+                        {cancelling === appointment.id ? 'Cancelando...' : 'Cancelar cita'}
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+              <p className="muted">
+                {new Date(appointment.starts_at).toLocaleString()}
+                {appointment.ends_at && ` - ${new Date(appointment.ends_at).toLocaleTimeString()}`}
               </p>
-            )}
-          </article>
-        ))}
-        {!sorted.length && <p className="muted">No hay citas programadas para este paciente.</p>}
+              <p>{appointment.description || 'Sin notas adicionales'}</p>
+            </article>
+          );
+        })}
+        {!appointments.length && (
+          <p className="muted">No hay citas programadas para este paciente.</p>
+        )}
       </div>
     </section>
   );

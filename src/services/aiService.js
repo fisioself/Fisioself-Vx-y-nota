@@ -4,9 +4,12 @@ const proxyUrl = import.meta.env.VITE_CLAUDE_PROXY_URL;
 
 export const AI_TYPES = [
   { id: 'soap', label: 'Formatear SOAP', traceable: false },
+  { id: 'summary', label: 'Resumir nota', traceable: false },
   { id: 'exercises', label: 'Sugerir ejercicios', traceable: false },
   { id: 'clinical_analysis', label: 'Analisis clinico', traceable: true },
-  { id: 'treatment_plan', label: 'Plan de tratamiento', traceable: true }
+  { id: 'treatment_plan', label: 'Plan de tratamiento', traceable: true },
+  { id: 'discharge_letter', label: 'Carta de alta', traceable: true },
+  { id: 'informed_consent', label: 'Consentimiento informado', traceable: true }
 ];
 
 export const isAiConfigured = Boolean(proxyUrl);
@@ -20,7 +23,7 @@ const buildAiConfigError = () => {
 };
 
 export const aiService = {
-  async transform({ text, type }) {
+  async transform({ text, type, onChunk }) {
     if (!text?.trim()) throw new Error('Escribe una nota primero.');
     if (!AI_TYPES.some((item) => item.id === type)) throw new Error('Tipo de IA invalido.');
     if (!proxyUrl) throw buildAiConfigError();
@@ -42,16 +45,39 @@ export const aiService = {
       throw new Error(`Error de red al conectar con IA: ${err.message}`);
     });
 
-    let data;
-    try {
-      data = await response.json();
-    } catch {
-      throw new Error(`Respuesta invalida del servidor de IA (Status: ${response.status})`);
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.error || `IA respondio ${response.status}`);
     }
 
-    if (!response.ok) throw new Error(data.error || `IA respondio ${response.status}`);
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder('utf-8');
+    let output = '';
 
-    const output = data.text || data.output || '';
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      const chunk = decoder.decode(value, { stream: true });
+      const lines = chunk.split('\n');
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const dataStr = line.slice(6);
+          if (dataStr === '[DONE]') continue;
+          try {
+            const data = JSON.parse(dataStr);
+            if (data.type === 'content_block_delta' && data.delta?.text) {
+              output += data.delta.text;
+              if (onChunk) onChunk(output);
+            }
+          } catch {
+            // Ignore parse errors for incomplete chunks
+          }
+        }
+      }
+    }
+
     if (!output.trim()) throw new Error('La IA no devolvio contenido.');
     return output;
   }

@@ -1,99 +1,87 @@
-import { useEffect, useRef, useState } from 'react';
-import { consent, CONSENT_KEYS } from '../../shared/consent.js';
+import { useRef, useState } from 'react';
+import { supabase } from '../../lib/supabaseClient.js';
 
 export const useDictation = (onText) => {
-  const recognitionRef = useRef(null);
-  const onTextRef = useRef(onText);
-  const [supported, setSupported] = useState(false);
   const [listening, setListening] = useState(false);
-  const [needsConsent, setNeedsConsent] = useState(false);
+  const [processing, setProcessing] = useState(false);
+  const mediaRecorderRef = useRef(null);
+  const chunksRef = useRef([]);
 
-  onTextRef.current = onText;
+  const supported = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
 
-  useEffect(() => {
-    const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!Speech) {
-      setSupported(false);
-      return undefined;
-    }
-
-    setSupported(true);
-    const recognition = new Speech();
-    recognition.lang = 'es-MX';
-    recognition.continuous = true;
-    recognition.interimResults = false;
-
-    recognition.onresult = (event) => {
-      let chunk = '';
-      for (let i = event.resultIndex; i < event.results.length; i += 1) {
-        if (event.results[i].isFinal) chunk += `${event.results[i][0].transcript} `;
-      }
-      if (chunk.trim()) onTextRef.current?.(chunk.trim());
-    };
-
-    recognition.onend = () => setListening(false);
-    recognition.onerror = () => setListening(false);
-    recognitionRef.current = recognition;
-
-    return () => {
-      try {
-        recognition.stop();
-      } catch {
-        /* noop */
-      }
-    };
-  }, []);
-
-  const startRecognition = () => {
-    const recognition = recognitionRef.current;
-    if (!recognition || listening) return;
+  const startRecording = async () => {
     try {
-      recognition.start();
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      chunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          chunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
+        await transcribeAudio(audioBlob);
+        // Stop all tracks to release the microphone
+        stream.getTracks().forEach((track) => track.stop());
+      };
+
+      mediaRecorder.start();
       setListening(true);
-    } catch (err) {
-      if (err.name === 'InvalidStateError') {
-        // Ya esta activo, simplemente actualizamos el estado visual
-        setListening(true);
-      } else {
-        setListening(false);
+    } catch (error) {
+      console.error('Error starting recording:', error);
+      alert('No se pudo acceder al microfono.');
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && listening) {
+      mediaRecorderRef.current.stop();
+      setListening(false);
+    }
+  };
+
+  const transcribeAudio = async (blob) => {
+    setProcessing(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', blob, 'recording.webm');
+
+      const { data, error } = await supabase.functions.invoke('whisper-transcribe', {
+        body: formData
+      });
+
+      if (error) throw error;
+      if (data?.text) {
+        onText(data.text);
       }
+    } catch (error) {
+      console.error('Transcription failed:', error);
+      alert('Error al procesar el dictado con Whisper.');
+    } finally {
+      setProcessing(false);
     }
   };
 
   const toggle = () => {
-    const recognition = recognitionRef.current;
-    if (!recognition) return;
-
     if (listening) {
-      try {
-        recognition.stop();
-      } catch {
-        /* noop */
-      }
-      setListening(false);
-      return;
+      stopRecording();
+    } else {
+      startRecording();
     }
-
-    // First-time gate. The Web Speech API in Chromium streams audio to Google
-    // for transcription; before we open that pipe with potential patient data
-    // in the audio, the fisio must acknowledge it once per device.
-    if (!consent.has(CONSENT_KEYS.DICTATION)) {
-      setNeedsConsent(true);
-      return;
-    }
-
-    startRecognition();
   };
 
-  const grantConsent = () => {
-    consent.grant(CONSENT_KEYS.DICTATION);
-    setNeedsConsent(false);
-    startRecognition();
+  // Compatibility with old API structure to avoid breaking UI
+  return {
+    supported,
+    listening,
+    processing, // New state
+    toggle,
+    needsConsent: false, // Whisper uses browser permission dialog
+    grantConsent: () => {},
+    cancelConsent: () => {}
   };
-
-  const cancelConsent = () => {
-    setNeedsConsent(false);
-  };
-
-  return { supported, listening, toggle, needsConsent, grantConsent, cancelConsent };
 };

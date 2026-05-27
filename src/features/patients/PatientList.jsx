@@ -1,9 +1,17 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { clinicalApi } from '../../services/clinicalApi.js';
 
 export function PatientList({ selectedId, onSelect }) {
   const [query, setQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedQuery(query);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [query]);
 
   const {
     data: patients = [],
@@ -15,14 +23,14 @@ export function PatientList({ selectedId, onSelect }) {
   });
 
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
+    const q = debouncedQuery.trim().toLowerCase();
     if (!q) return patients;
     return patients.filter((patient) =>
       [patient.full_name, patient.phone, patient.status]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(q))
     );
-  }, [patients, query]);
+  }, [patients, debouncedQuery]);
 
   return (
     <section className="card patient-list">
@@ -38,6 +46,7 @@ export function PatientList({ selectedId, onSelect }) {
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Buscar paciente o telefono..."
+        aria-label="Buscar pacientes por nombre, telefono o estado"
       />
 
       {isLoading && <p className="muted">Cargando pacientes...</p>}

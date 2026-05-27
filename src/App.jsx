@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { authService } from './services/authService.js';
 import { isSupabaseConfigured } from './lib/supabaseClient.js';
 import { draftStorage } from './shared/draftStorage.js';
+import { useTheme } from './shared/useTheme.js';
 
 const LoginScreen = lazy(() =>
   import('./features/auth/LoginScreen.jsx').then((module) => ({ default: module.LoginScreen }))
@@ -18,6 +19,16 @@ const PatientRecord = lazy(() =>
     default: module.PatientRecord
   }))
 );
+const AgendaView = lazy(() =>
+  import('./features/appointments/AgendaView.jsx').then((module) => ({
+    default: module.AgendaView
+  }))
+);
+const ClinicDashboard = lazy(() =>
+  import('./features/dashboard/ClinicDashboard.jsx').then((module) => ({
+    default: module.ClinicDashboard
+  }))
+);
 
 const LoadingCard = ({ children = 'Cargando...' }) => (
   <section className="card" aria-busy="true">
@@ -31,6 +42,10 @@ export function App() {
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [showNewPatient, setShowNewPatient] = useState(false);
+  const [showAgenda, setShowAgenda] = useState(false);
+  const [showDashboard, setShowDashboard] = useState(true);
+
+  const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
     let cancelled = false;
@@ -62,6 +77,7 @@ export function App() {
     await authService.signOut();
     draftStorage.clearAll();
     setSelectedPatient(null);
+    setShowAgenda(false);
     setSession(null);
   };
 
@@ -96,12 +112,31 @@ export function App() {
   return (
     <main className="shell app-grid">
       <header className="hero app-hero">
-        <div>
-          <p className="eyebrow">FISIOSELF App Notas VX</p>
-          <h1>Expediente clinico</h1>
-          <p>Pacientes, notas, dictado por voz e IA trazable con Supabase.</p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <img
+            src="/logo.jpg"
+            alt="FISIOSELF"
+            width="56"
+            height="56"
+            style={{
+              width: 56,
+              height: 56,
+              borderRadius: 14,
+              objectFit: 'cover',
+              background: '#0b0f0e',
+              flexShrink: 0
+            }}
+          />
+          <div>
+            <p className="eyebrow">FISIOSELF App Notas VX</p>
+            <h1>Expediente clinico</h1>
+            <p>Pacientes, notas, dictado por voz e IA trazable con Supabase.</p>
+          </div>
         </div>
         <div className="hero-actions">
+          <button type="button" className="secondary" onClick={toggleTheme} title="Cambiar tema">
+            {theme === 'light' ? '🌙 Modo Oscuro' : '☀️ Modo Claro'}
+          </button>
           <span className="pill">{session.user?.email}</span>
           <button type="button" className="secondary" onClick={logout}>
             Salir
@@ -110,9 +145,39 @@ export function App() {
       </header>
 
       <aside className="left-pane">
-        <div className="actions split-actions">
-          <button type="button" onClick={() => setShowNewPatient((value) => !value)}>
-            {showNewPatient ? 'Cerrar formulario' : 'Nuevo paciente'}
+        <div className="actions split-actions" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+          <button
+            type="button"
+            className={showDashboard ? '' : 'secondary'}
+            onClick={() => {
+              setShowDashboard(true);
+              setShowAgenda(false);
+              setSelectedPatient(null);
+            }}
+          >
+            Panel
+          </button>
+          <button
+            type="button"
+            className={showAgenda ? '' : 'secondary'}
+            onClick={() => {
+              setShowAgenda(true);
+              setShowDashboard(false);
+              setSelectedPatient(null);
+            }}
+          >
+            Agenda
+          </button>
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => {
+              setShowAgenda(false);
+              setShowDashboard(false);
+              setShowNewPatient((value) => !value);
+            }}
+          >
+            {showNewPatient ? 'Cerrar' : '+ Paciente'}
           </button>
         </div>
 
@@ -122,29 +187,45 @@ export function App() {
               onCancel={() => setShowNewPatient(false)}
               onCreated={(patient) => {
                 setSelectedPatient(patient);
+                setShowAgenda(false);
+                setShowDashboard(false);
                 setShowNewPatient(false);
                 queryClient.invalidateQueries({ queryKey: ['patients'] });
               }}
             />
           )}
 
-          <PatientList selectedId={selectedPatient?.id} onSelect={setSelectedPatient} />
+          <PatientList
+            selectedId={selectedPatient?.id}
+            onSelect={(patient) => {
+              setSelectedPatient(patient);
+              setShowAgenda(false);
+              setShowDashboard(false);
+            }}
+          />
         </Suspense>
       </aside>
 
       <section className="right-pane">
-        <Suspense fallback={<LoadingCard>Cargando expediente...</LoadingCard>}>
-          <PatientRecord
-            patient={selectedPatient}
-            onPatientUpdated={(updatedPatient) => {
-              setSelectedPatient(updatedPatient);
-              queryClient.invalidateQueries({ queryKey: ['patients'] });
-            }}
-            onPatientDeleted={() => {
-              setSelectedPatient(null);
-              queryClient.invalidateQueries({ queryKey: ['patients'] });
-            }}
-          />
+        <Suspense fallback={<LoadingCard>Cargando datos...</LoadingCard>}>
+          {showDashboard ? (
+            <ClinicDashboard />
+          ) : showAgenda ? (
+            <AgendaView />
+          ) : (
+            <PatientRecord
+              patient={selectedPatient}
+              onPatientUpdated={(updatedPatient) => {
+                setSelectedPatient(updatedPatient);
+                queryClient.invalidateQueries({ queryKey: ['patients'] });
+              }}
+              onPatientDeleted={() => {
+                setSelectedPatient(null);
+                setShowDashboard(true);
+                queryClient.invalidateQueries({ queryKey: ['patients'] });
+              }}
+            />
+          )}
         </Suspense>
       </section>
     </main>

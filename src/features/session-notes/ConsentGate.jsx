@@ -41,7 +41,7 @@ export function ConsentGate({ open, title, eyebrow, bullets, acceptLabel, onAcce
         </p>
 
         <div className="actions">
-          <button type="button" className="secondary" onClick={onCancel} autoFocus>
+          <button type="button" className="secondary" onClick={onCancel}>
             Cancelar
           </button>
           <button type="button" onClick={onAccept}>

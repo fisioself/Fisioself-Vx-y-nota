@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { clinicalApi } from '../../services/clinicalApi.js';
-import { emptyStringsToNull, hasErrors, validatePatient } from '../../shared/clinicalValidation.js';
+import { validatePatient, hasErrors } from '../../shared/clinicalValidation.js';
 
 const emptyPatient = {
   full_name: '',
   phone: '',
+  medical_diagnosis: '',
   status: 'En tratamiento'
 };
 
@@ -28,7 +29,10 @@ export function PatientForm({ onCreated, onCancel }) {
     setSaving(true);
     setSubmitError('');
     try {
-      const patient = await clinicalApi.createPatient(emptyStringsToNull(values));
+      const payload = Object.fromEntries(
+        Object.entries(values).map(([key, value]) => [key, value === '' ? null : value])
+      );
+      const patient = await clinicalApi.createPatient(payload);
       setValues(emptyPatient);
       onCreated?.(patient);
     } catch (err) {
@@ -60,7 +64,7 @@ export function PatientForm({ onCreated, onCancel }) {
           onBlur={() => {
             const validation = validatePatient(values);
             if (validation.full_name)
-              setErrors((current) => ({ ...current, full_name: validation.full_name }));
+              setErrors((curr) => ({ ...curr, full_name: validation.full_name }));
           }}
           required
           aria-invalid={!!errors.full_name}
@@ -73,12 +77,21 @@ export function PatientForm({ onCreated, onCancel }) {
         )}
       </label>
 
-      <label className="span-2">
+      <label>
         Telefono
         <input
           value={values.phone}
           onChange={(e) => setField('phone', e.target.value)}
           inputMode="tel"
+        />
+      </label>
+
+      <label>
+        Zona a tratar
+        <input
+          type="text"
+          value={values.medical_diagnosis}
+          onChange={(e) => setField('medical_diagnosis', e.target.value)}
         />
       </label>
 

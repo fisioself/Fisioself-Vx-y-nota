@@ -25,9 +25,20 @@ export function LoginScreen({ onLogin }) {
     <main className="auth-shell">
       <form className="card auth-card" onSubmit={submit}>
         <div className="brand-lockup">
-          <span className="brand-mark" aria-hidden="true">
-            F
-          </span>
+          <img
+            src="/logo.jpg"
+            alt="FISIOSELF"
+            width="56"
+            height="56"
+            style={{
+              width: 56,
+              height: 56,
+              borderRadius: 15,
+              objectFit: 'cover',
+              background: '#0b0f0e',
+              boxShadow: '0 14px 26px rgba(18, 55, 42, 0.2)'
+            }}
+          />
           <div>
             <p className="brand-name">FISIOSELF</p>
             <p className="brand-system">Sistema clinico</p>
