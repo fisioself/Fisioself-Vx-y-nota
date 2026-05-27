@@ -52,7 +52,7 @@ export function NativeCalendar({ onEventClick }: NativeCalendarProps) {
 
   const syncWithGoogle = useCallback(async () => {
     setSyncing(true);
-    notify({ tone: 'success', message: 'Sincronizando con Google Calendar...' });
+    // Don't show toast immediately to avoid spam on mount
     try {
       const { data, error } = await supabase.functions.invoke('google-calendar-fetch');
       if (error) throw error;
@@ -62,8 +62,9 @@ export function NativeCalendar({ onEventClick }: NativeCalendarProps) {
       queryClient.invalidateQueries({ queryKey: ['all_appointments'] });
       queryClient.invalidateQueries({ queryKey: ['patients'] });
     } catch (err: any) {
-      console.error(err);
-      notify({ tone: 'error', message: err.message || 'Error al sincronizar con Google Calendar.' });
+      console.warn('Google Calendar Sync Error (Non-fatal):', err);
+      // We don't throw a visible toast error on mount to prevent blocking the UI
+      // notify({ tone: 'error', message: err.message || 'Error al sincronizar con Google Calendar.' });
     } finally {
       setSyncing(false);
     }
