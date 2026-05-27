@@ -1,16 +1,71 @@
-import { useState } from 'react';
-import { clinicalApi } from '../../services/clinicalApi.js';
+import { useState, type FormEvent } from 'react';
+import { clinicalApi } from '../../services/clinicalApi';
 import { getLocalISODate } from '../../shared/dateUtils.js';
-import { draftStorage, getEvaluationDraftKey } from '../../shared/draftStorage.js';
-import { useDraftAutosave } from '../../shared/useDraftAutosave.js';
+import { draftStorage, getEvaluationDraftKey } from '../../shared/draftStorage';
+import { useDraftAutosave } from '../../shared/useDraftAutosave';
+import type { Evaluation, Patient } from '../../types/clinical';
 
-const today = () => getLocalISODate();
+interface JointRow {
+  joint: string;
+  range: string;
+  notes: string;
+}
+interface StrengthRow {
+  joint: string;
+  strength: string;
+  notes: string;
+}
+interface SpecialTestRow {
+  name: string;
+  result: string;
+  notes: string;
+}
+interface EvaluationFormValues {
+  full_name: string;
+  age: string;
+  sex: string;
+  admission_date: string;
+  occupation: string;
+  phone: string;
+  therapist_name: string;
+  personal_history: string;
+  surgical_history: string;
+  current_medications: string;
+  known_allergies: string;
+  anticoagulants: string;
+  physical_activity: string;
+  medical_diagnosis: string;
+  consultation_reason: string;
+  clinical_history: string;
+  pain_location: string;
+  pain_type: string;
+  pain_intensity: string;
+  aggravating_factors: string;
+  easing_factors: string;
+  physical_examination: string;
+  general_inspection: string;
+  red_flags: string;
+  prognosis: string;
+  movement_ranges: JointRow[];
+  muscle_strength: StrengthRow[];
+  special_tests: SpecialTestRow[];
+}
 
-const emptyJointRow = { joint: '', range: '', notes: '' };
-const emptyStrengthRow = { joint: '', strength: '', notes: '' };
-const emptySpecialTestRow = { name: '', result: '', notes: '' };
+interface EvaluationFormProps {
+  patient?: Patient | null;
+  patientId?: string;
+  therapistId?: string | null;
+  onCreated?: (evaluation: Evaluation) => void;
+  onCancel?: () => void;
+}
 
-const emptyEvaluation = {
+const today = (): string => getLocalISODate();
+
+const emptyJointRow: JointRow = { joint: '', range: '', notes: '' };
+const emptyStrengthRow: StrengthRow = { joint: '', strength: '', notes: '' };
+const emptySpecialTestRow: SpecialTestRow = { name: '', result: '', notes: '' };
+
+const emptyEvaluation: EvaluationFormValues = {
   full_name: '',
   age: '',
   sex: '',
@@ -46,27 +101,35 @@ const movementRangeOptions = ['', 'Limitado', 'Funcional', 'Completo'];
 const strengthOptions = ['', 'Debil', 'Funcional', 'Fuerte'];
 const testResultOptions = ['', 'Positivo', 'Negativo', 'No valorado'];
 
-const toNullable = (value) => {
+const toNullable = (value: unknown): string | null | unknown => {
   const trimmed = typeof value === 'string' ? value.trim() : value;
   return trimmed === '' ? null : trimmed;
 };
 
-const cleanRows = (rows) =>
+const cleanRows = (rows: ReadonlyArray<object>): Record<string, unknown>[] =>
   rows
     .map((row) =>
       Object.fromEntries(Object.entries(row).map(([key, value]) => [key, toNullable(value)]))
     )
     .filter((row) => Object.values(row).some(Boolean));
 
-export function EvaluationForm({ patient, patientId, therapistId, onCreated, onCancel }) {
+type RowField = 'movement_ranges' | 'muscle_strength' | 'special_tests';
+
+export function EvaluationForm({
+  patient,
+  patientId,
+  therapistId,
+  onCreated,
+  onCancel
+}: EvaluationFormProps) {
   const resolvedPatientId = patient?.id || patientId;
   const draftKey = getEvaluationDraftKey(resolvedPatientId);
 
-  const [values, setValues] = useState(() => {
+  const [values, setValues] = useState<EvaluationFormValues>(() => {
     const draft = draftStorage.get(draftKey);
     if (draft) {
       try {
-        return JSON.parse(draft);
+        return JSON.parse(draft) as EvaluationFormValues;
       } catch {
         // ignore
       }
@@ -82,36 +145,44 @@ export function EvaluationForm({ patient, patientId, therapistId, onCreated, onC
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  const setField = (field, value) => {
+  const setField = <K extends keyof EvaluationFormValues>(
+    field: K,
+    value: EvaluationFormValues[K]
+  ) => {
     setValues((current) => ({ ...current, [field]: value }));
     setError('');
   };
 
   useDraftAutosave(draftKey, values);
 
-  const setRow = (field, index, key, value) => {
+  const setRow = (field: RowField, index: number, key: string, value: string) => {
     setValues((current) => ({
       ...current,
-      [field]: current[field].map((row, rowIndex) =>
+      [field]: (current[field] as unknown as Record<string, unknown>[]).map((row, rowIndex) =>
         rowIndex === index ? { ...row, [key]: value } : row
       )
     }));
     setError('');
   };
 
-  const addRow = (field, emptyRow) => {
-    setValues((current) => ({ ...current, [field]: [...current[field], { ...emptyRow }] }));
-  };
-
-  const removeRow = (field, index) => {
+  const addRow = <R extends object>(field: RowField, emptyRow: R) => {
     setValues((current) => ({
       ...current,
-      [field]:
-        current[field].length === 1 ? current[field] : current[field].filter((_, i) => i !== index)
+      [field]: [...(current[field] as R[]), { ...emptyRow }]
     }));
   };
 
-  const submit = async (event) => {
+  const removeRow = (field: RowField, index: number) => {
+    setValues((current) => ({
+      ...current,
+      [field]:
+        (current[field] as unknown[]).length === 1
+          ? current[field]
+          : (current[field] as unknown[]).filter((_, i) => i !== index)
+    }));
+  };
+
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!resolvedPatientId) {
       setError('Selecciona un paciente antes de crear una valoracion.');
@@ -171,18 +242,17 @@ export function EvaluationForm({ patient, patientId, therapistId, onCreated, onC
 
       const evaluation = await clinicalApi.addEvaluation({
         patient_id: resolvedPatientId,
-        therapist_id: therapistId || null,
         evaluation_date: values.admission_date || today(),
         eva_initial: painIntensity,
         red_flags: values.red_flags.trim() || null,
         prognosis: values.prognosis.trim() || null,
         sections
-      });
+      } as Parameters<typeof clinicalApi.addEvaluation>[0] & { therapist_id?: string | null });
       draftStorage.remove(draftKey);
       setValues(emptyEvaluation);
       onCreated?.(evaluation);
     } catch (err) {
-      setError(err.message || 'No se pudo guardar la valoracion.');
+      setError(err instanceof Error ? err.message : 'No se pudo guardar la valoracion.');
     } finally {
       setSaving(false);
     }
@@ -269,7 +339,7 @@ export function EvaluationForm({ patient, patientId, therapistId, onCreated, onC
           <label className="span-2">
             Antecedentes personales
             <textarea
-              rows="3"
+              rows={3}
               value={values.personal_history}
               onChange={(e) => setField('personal_history', e.target.value)}
             />
@@ -277,7 +347,7 @@ export function EvaluationForm({ patient, patientId, therapistId, onCreated, onC
           <label className="span-2">
             Antecedentes quirurgicos
             <textarea
-              rows="3"
+              rows={3}
               value={values.surgical_history}
               onChange={(e) => setField('surgical_history', e.target.value)}
             />
@@ -285,7 +355,7 @@ export function EvaluationForm({ patient, patientId, therapistId, onCreated, onC
           <label>
             Medicamentos actuales
             <textarea
-              rows="3"
+              rows={3}
               value={values.current_medications}
               onChange={(e) => setField('current_medications', e.target.value)}
             />
@@ -293,7 +363,7 @@ export function EvaluationForm({ patient, patientId, therapistId, onCreated, onC
           <label>
             Alergias conocidas
             <textarea
-              rows="3"
+              rows={3}
               value={values.known_allergies}
               onChange={(e) => setField('known_allergies', e.target.value)}
             />
@@ -301,7 +371,7 @@ export function EvaluationForm({ patient, patientId, therapistId, onCreated, onC
           <label className="span-2">
             Uso de anticoagulantes
             <textarea
-              rows="2"
+              rows={2}
               value={values.anticoagulants}
               onChange={(e) => setField('anticoagulants', e.target.value)}
             />
@@ -309,7 +379,7 @@ export function EvaluationForm({ patient, patientId, therapistId, onCreated, onC
           <label className="span-2">
             Actividad fisica y estilo de vida
             <textarea
-              rows="3"
+              rows={3}
               placeholder="Nivel, tipo de actividad, frecuencia y limitaciones."
               value={values.physical_activity}
               onChange={(e) => setField('physical_activity', e.target.value)}
@@ -324,7 +394,7 @@ export function EvaluationForm({ patient, patientId, therapistId, onCreated, onC
           <label className="span-2">
             Motivo de consulta
             <textarea
-              rows="3"
+              rows={3}
               value={values.consultation_reason}
               onChange={(e) => setField('consultation_reason', e.target.value)}
             />
@@ -332,7 +402,7 @@ export function EvaluationForm({ patient, patientId, therapistId, onCreated, onC
           <label className="span-2">
             Historia clinica
             <textarea
-              rows="4"
+              rows={4}
               value={values.clinical_history}
               onChange={(e) => setField('clinical_history', e.target.value)}
             />
@@ -361,8 +431,8 @@ export function EvaluationForm({ patient, patientId, therapistId, onCreated, onC
             Intensidad 0-10
             <input
               type="number"
-              min="0"
-              max="10"
+              min={0}
+              max={10}
               value={values.pain_intensity}
               onChange={(e) => setField('pain_intensity', e.target.value)}
             />
@@ -390,7 +460,7 @@ export function EvaluationForm({ patient, patientId, therapistId, onCreated, onC
           <label className="span-2">
             Exploracion fisica
             <textarea
-              rows="4"
+              rows={4}
               value={values.physical_examination}
               onChange={(e) => setField('physical_examination', e.target.value)}
             />
@@ -398,7 +468,7 @@ export function EvaluationForm({ patient, patientId, therapistId, onCreated, onC
           <label className="span-2">
             Inspeccion general
             <textarea
-              rows="3"
+              rows={3}
               placeholder="Estado general, nivel de cooperacion, uso de aditamentos."
               value={values.general_inspection}
               onChange={(e) => setField('general_inspection', e.target.value)}
@@ -551,7 +621,7 @@ export function EvaluationForm({ patient, patientId, therapistId, onCreated, onC
       <label className="span-2">
         Banderas rojas / alertas
         <textarea
-          rows="2"
+          rows={2}
           value={values.red_flags}
           onChange={(e) => setField('red_flags', e.target.value)}
         />
@@ -560,7 +630,7 @@ export function EvaluationForm({ patient, patientId, therapistId, onCreated, onC
       <label className="span-2">
         Diagnostico fisioterapeutico
         <textarea
-          rows="3"
+          rows={3}
           value={values.prognosis}
           onChange={(e) => setField('prognosis', e.target.value)}
         />

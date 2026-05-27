@@ -1,7 +1,26 @@
 import { useState } from 'react';
 import './AiConsultModal.css';
 
-export function AiConsultModal({ consult, onClose, onSave }) {
+interface PendingConsult {
+  type: string;
+  label: string;
+  input: string;
+  output: string;
+}
+
+interface AiConsultSavePayload extends PendingConsult {
+  validated: boolean;
+  alsoInsert: boolean;
+  validationNotes: string | null;
+}
+
+interface AiConsultModalProps {
+  consult: PendingConsult | null;
+  onClose?: () => void;
+  onSave?: (payload: AiConsultSavePayload) => void | Promise<void>;
+}
+
+export function AiConsultModal({ consult, onClose, onSave }: AiConsultModalProps) {
   const [validated, setValidated] = useState(false);
   const [alsoInsert, setAlsoInsert] = useState(true);
   const [validationNotes, setValidationNotes] = useState('');
@@ -27,7 +46,7 @@ export function AiConsultModal({ consult, onClose, onSave }) {
       });
       onClose?.();
     } catch (err) {
-      setError(err.message || 'No se pudo guardar la consulta IA.');
+      setError(err instanceof Error ? err.message : 'No se pudo guardar la consulta IA.');
     } finally {
       setSaving(false);
     }
@@ -66,13 +85,13 @@ export function AiConsultModal({ consult, onClose, onSave }) {
 
         <label>
           Resultado IA
-          <textarea rows="10" value={consult.output} readOnly />
+          <textarea rows={10} value={consult.output} readOnly />
         </label>
 
         <label>
           Notas de validacion clinica
           <textarea
-            rows="3"
+            rows={3}
             value={validationNotes}
             onChange={(e) => setValidationNotes(e.target.value)}
             placeholder="Ej. contenido revisado y ajustado al caso clinico..."

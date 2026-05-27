@@ -1,20 +1,21 @@
-import { useMemo, useState, memo } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { clinicalApi } from '../../services/clinicalApi.js';
+import { clinicalApi } from '../../services/clinicalApi';
 import { printClinicalRecord } from '../../shared/exportClinicalRecord.js';
 import { EvaluationForm } from '../evaluations/EvaluationForm.jsx';
 import { SessionNoteEditor } from '../session-notes/SessionNoteEditor.jsx';
 import { SessionNotesList } from '../session-notes/SessionNotesList.jsx';
-import { AppointmentList } from '../appointments/AppointmentList.jsx';
-import { ClinicalTimeline } from './ClinicalTimeline.jsx';
-import { PatientEditForm } from './PatientEditForm.jsx';
-import { ClinicalSummary } from './ClinicalSummary.jsx';
+import { AppointmentList } from '../appointments/AppointmentList';
+import { ClinicalTimeline } from './ClinicalTimeline';
+import { PatientEditForm } from './PatientEditForm';
+import { ClinicalSummary } from './ClinicalSummary';
 import { useRole } from '../../shared/useRole.js';
 import { EvaluationSummary } from '../evaluations/EvaluationSummary.jsx';
-import { ImageUploader } from '../../components/ImageUploader.jsx';
-import { ClinicalFilesList } from '../../components/ClinicalFilesList.jsx';
+import { ImageUploader } from '../../components/ImageUploader';
+import { ClinicalFilesList } from '../../components/ClinicalFilesList';
+import type { ClinicalRecord, Evaluation, Patient, SessionNote } from '../../types/clinical';
 
-export const getNextSessionNumber = (notes = []) => {
+export const getNextSessionNumber = (notes: SessionNote[] = []): number => {
   const maxSession = notes.reduce((max, note) => {
     const value = Number(note.session_number);
     return Number.isFinite(value) && value > max ? value : max;
@@ -22,7 +23,25 @@ export const getNextSessionNumber = (notes = []) => {
   return maxSession + 1;
 };
 
-export const buildPatientSummary = ({ notes = [], evaluations = [] }) => {
+interface PatientSummary {
+  sessionsCount: number;
+  latestSessionNumber: number | null;
+  latestSessionDate: string | null;
+  latestEva: number | null;
+  initialEva: number | null;
+  evaChange: number | null;
+  diagnosis: string;
+  medicalDiagnosis: string;
+  latestNotePreview: string;
+}
+
+export const buildPatientSummary = ({
+  notes = [],
+  evaluations = []
+}: {
+  notes?: SessionNote[];
+  evaluations?: Evaluation[];
+}): PatientSummary => {
   const sortedNotes = [...notes].sort(
     (a, b) => Number(a.session_number) - Number(b.session_number)
   );
@@ -31,26 +50,28 @@ export const buildPatientSummary = ({ notes = [], evaluations = [] }) => {
     .filter((value) => Number.isFinite(value));
   const latestNote = sortedNotes.at(-1);
   const latestEvaluation = [...evaluations].sort(
-    (a, b) => new Date(b.evaluation_date) - new Date(a.evaluation_date)
+    (a, b) =>
+      new Date(b.evaluation_date || 0).getTime() - new Date(a.evaluation_date || 0).getTime()
   )[0];
   const latestMedicalDiagnosis =
     latestEvaluation?.sections?.consultation?.medical_diagnosis ||
     latestEvaluation?.medical_diagnosis ||
     '';
+  const initialEvaRaw = latestEvaluation?.eva_initial;
   const initialEva =
-    latestEvaluation?.eva_initial !== null && latestEvaluation?.eva_initial !== undefined
-      ? Number(latestEvaluation.eva_initial)
-      : evaValues[0];
+    initialEvaRaw !== null && initialEvaRaw !== undefined ? Number(initialEvaRaw) : evaValues[0];
   const latestEva = evaValues.at(-1);
   const evaChange =
-    Number.isFinite(initialEva) && Number.isFinite(latestEva) ? latestEva - initialEva : null;
+    Number.isFinite(initialEva) && Number.isFinite(latestEva)
+      ? (latestEva as number) - (initialEva as number)
+      : null;
 
   return {
     sessionsCount: sortedNotes.length,
-    latestSessionNumber: latestNote?.session_number || null,
-    latestSessionDate: latestNote?.session_date || null,
-    latestEva: Number.isFinite(latestEva) ? latestEva : null,
-    initialEva: Number.isFinite(initialEva) ? initialEva : null,
+    latestSessionNumber: latestNote?.session_number ?? null,
+    latestSessionDate: latestNote?.session_date ?? null,
+    latestEva: Number.isFinite(latestEva) ? (latestEva as number) : null,
+    initialEva: Number.isFinite(initialEva) ? (initialEva as number) : null,
     evaChange,
     diagnosis: latestEvaluation?.prognosis || '',
     medicalDiagnosis: latestMedicalDiagnosis,
@@ -58,42 +79,53 @@ export const buildPatientSummary = ({ notes = [], evaluations = [] }) => {
   };
 };
 
+interface PatientRecordProps {
+  patient: Patient | null;
+  onPatientUpdated?: (patient: Patient) => void;
+  onPatientDeleted?: (patient: Patient) => void;
+}
+
 export const PatientRecord = memo(function PatientRecord({
   patient,
   onPatientUpdated,
   onPatientDeleted
-}) {
+}: PatientRecordProps) {
   const queryClient = useQueryClient();
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
   const [showEdit, setShowEdit] = useState(false);
   const [showEvaluation, setShowEvaluation] = useState(false);
   const [showSessionNote, setShowSessionNote] = useState(false);
-  const [openEvaluationId, setOpenEvaluationId] = useState(null);
+  const [openEvaluationId, setOpenEvaluationId] = useState<string | null>(null);
 
   const {
     data: record,
     isLoading: loading,
     error
-  } = useQuery({
+  } = useQuery<ClinicalRecord, Error>({
     queryKey: ['patient', patient?.id],
-    queryFn: () => clinicalApi.getPatient(patient.id),
+    queryFn: () => clinicalApi.getPatient(patient!.id),
     enabled: !!patient?.id
   });
 
-  const notes = useMemo(() => {
+  const notes = useMemo<SessionNote[]>(() => {
     const rows = record?.session_notes || [];
     return [...rows].sort((a, b) => Number(a.session_number) - Number(b.session_number));
   }, [record]);
 
   const aiConsults = useMemo(() => {
     const rows = record?.ai_consults || [];
-    return [...rows].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    return [...rows].sort(
+      (a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+    );
   }, [record]);
 
-  const evaluations = useMemo(() => {
+  const evaluations = useMemo<Evaluation[]>(() => {
     const rows = record?.evaluations || [];
-    return [...rows].sort((a, b) => new Date(b.evaluation_date) - new Date(a.evaluation_date));
+    return [...rows].sort(
+      (a, b) =>
+        new Date(b.evaluation_date || 0).getTime() - new Date(a.evaluation_date || 0).getTime()
+    );
   }, [record]);
 
   const timeline = useMemo(() => clinicalApi.buildTimeline(record), [record]);
@@ -111,9 +143,10 @@ export const PatientRecord = memo(function PatientRecord({
     );
   }
 
-  const current = record || patient;
+  const current: Patient = (record as Patient | undefined) || patient;
   const nextSession = getNextSessionNumber(notes);
   const refreshRecord = () => queryClient.invalidateQueries({ queryKey: ['patient', patient.id] });
+
   const deletePatient = async () => {
     const name = current.full_name || 'este paciente';
     const confirmed = window.confirm(
@@ -132,7 +165,7 @@ export const PatientRecord = memo(function PatientRecord({
       await clinicalApi.deletePatient(current.id);
       onPatientDeleted?.(current);
     } catch (err) {
-      setDeleteError(err.message || 'No se pudo eliminar el paciente.');
+      setDeleteError(err instanceof Error ? err.message : 'No se pudo eliminar el paciente.');
     } finally {
       setDeleting(false);
     }
@@ -293,7 +326,7 @@ export const PatientRecord = memo(function PatientRecord({
           </div>
           <ImageUploader patientId={current.id} onUploadComplete={refreshRecord} />
         </div>
-        <ClinicalFilesList patientId={current.id} refreshTrigger={record?.id} />
+        <ClinicalFilesList patientId={current.id} refreshTrigger={record?.id ? 1 : 0} />
       </section>
 
       <section className="card">
@@ -309,7 +342,9 @@ export const PatientRecord = memo(function PatientRecord({
             <article key={consult.id} className="note-row">
               <div className="form-header">
                 <strong>{consult.type}</strong>
-                <span>{new Date(consult.created_at).toLocaleDateString()}</span>
+                <span>
+                  {consult.created_at ? new Date(consult.created_at).toLocaleDateString() : ''}
+                </span>
               </div>
               <p className="muted">Validada: {consult.validated ? 'si' : 'pendiente'}</p>
               <pre>{consult.output_text}</pre>

@@ -1,14 +1,20 @@
-import { useMemo, useState, useEffect } from 'react';
-import { useToast } from '../../app/ToastProvider.jsx';
-import { clinicalApi } from '../../services/clinicalApi.js';
+import { useEffect, useMemo, useState } from 'react';
+import { useToast } from '../../app/ToastProvider';
+import { clinicalApi } from '../../services/clinicalApi';
 import { SessionNoteEditor } from './SessionNoteEditor.jsx';
+import type { SessionNote } from '../../types/clinical';
 
-export function SessionNotesList({ notes = [], onChanged }) {
+interface SessionNotesListProps {
+  notes?: SessionNote[];
+  onChanged?: () => void;
+}
+
+export function SessionNotesList({ notes = [], onChanged }: SessionNotesListProps) {
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
-  const [openId, setOpenId] = useState(null);
-  const [editingId, setEditingId] = useState(null);
-  const [deletingId, setDeletingId] = useState(null);
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const { notify } = useToast();
 
   useEffect(() => {
@@ -29,7 +35,7 @@ export function SessionNotesList({ notes = [], onChanged }) {
     );
   }, [notes, debouncedQuery]);
 
-  const deleteNote = async (note) => {
+  const deleteNote = async (note: SessionNote) => {
     const confirmed = window.confirm(
       `¿Seguro que quieres eliminar la nota de la sesion #${note.session_number}?`
     );
@@ -46,7 +52,10 @@ export function SessionNotesList({ notes = [], onChanged }) {
       notify({ tone: 'success', message: `Sesion #${note.session_number} eliminada.` });
       onChanged?.();
     } catch (err) {
-      notify({ tone: 'error', message: err.message || 'No se pudo eliminar la nota.' });
+      notify({
+        tone: 'error',
+        message: err instanceof Error ? err.message : 'No se pudo eliminar la nota.'
+      });
     } finally {
       setDeletingId(null);
     }
@@ -104,7 +113,9 @@ export function SessionNotesList({ notes = [], onChanged }) {
               {isEditing && (
                 <SessionNoteEditor
                   patientId={note.patient_id}
-                  therapistId={note.therapist_id}
+                  therapistId={
+                    (note as SessionNote & { therapist_id?: string | null }).therapist_id
+                  }
                   sessionNumber={note.session_number}
                   note={note}
                   onCancel={() => setEditingId(null)}

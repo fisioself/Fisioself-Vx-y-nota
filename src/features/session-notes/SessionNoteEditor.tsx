@@ -1,18 +1,51 @@
 import { useEffect, useMemo, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { useToast } from '../../app/ToastProvider.jsx';
-import { clinicalApi } from '../../services/clinicalApi.js';
+import { useToast } from '../../app/ToastProvider';
+import { clinicalApi } from '../../services/clinicalApi';
 import { aiService, AI_TYPES } from '../../services/aiService.js';
 import { getLocalISODate } from '../../shared/dateUtils.js';
-import { hasErrors, validateSessionNote } from '../../shared/clinicalValidation.js';
-import { consent, CONSENT_KEYS } from '../../shared/consent.js';
-import { draftStorage, getDraftKey } from '../../shared/draftStorage.js';
-import { useDraftAutosave } from '../../shared/useDraftAutosave.js';
+import { hasErrors, validateSessionNote } from '../../shared/clinicalValidation';
+import { consent, CONSENT_KEYS } from '../../shared/consent';
+import { draftStorage, getDraftKey } from '../../shared/draftStorage';
+import { useDraftAutosave } from '../../shared/useDraftAutosave';
 import { useShortcuts } from '../../shared/useShortcuts.js';
 import { AiConsultModal } from './AiConsultModal.jsx';
-import { ConsentGate } from './ConsentGate.jsx';
+import { ConsentGate } from './ConsentGate';
 import { useDictation } from './useDictation.js';
+import type { SessionNote } from '../../types/clinical';
+
+interface AiType {
+  id: string;
+  label: string;
+  traceable?: boolean;
+}
+
+interface PendingConsult {
+  type: string;
+  label: string;
+  input: string;
+  output: string;
+}
+
+interface PendingConsultSavePayload {
+  type: string;
+  input: string;
+  output: string;
+  validated: boolean;
+  validationNotes: string | null;
+  alsoInsert: boolean;
+  label?: string;
+}
+
+interface SessionNoteEditorProps {
+  patientId: string;
+  therapistId?: string | null;
+  sessionNumber?: number;
+  note?: SessionNote | null;
+  onSaved?: (note: SessionNote) => void;
+  onCancel?: () => void;
+}
 
 const SOAP_TEMPLATE = `S - Subjetivo:
 Motivo de la sesion, sintomas reportados, cambios desde la ultima visita.
@@ -36,16 +69,16 @@ export function SessionNoteEditor({
   note,
   onSaved,
   onCancel
-}) {
+}: SessionNoteEditorProps) {
   const isEditing = Boolean(note?.id);
   const [sessionDate, setSessionDate] = useState('');
-  const [eva, setEva] = useState('');
+  const [eva, setEva] = useState<number | string>('');
   const [rawText, setRawText] = useState('');
   const [aiBusy, setAiBusy] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const [pendingConsult, setPendingConsult] = useState(null);
-  const [aiConsentRequest, setAiConsentRequest] = useState(null);
+  const [pendingConsult, setPendingConsult] = useState<PendingConsult | null>(null);
+  const [aiConsentRequest, setAiConsentRequest] = useState<AiType | null>(null);
   const [isDirty, setIsDirty] = useState(false);
   const { notify } = useToast();
 
@@ -96,16 +129,16 @@ export function SessionNoteEditor({
   // Guardar borrador automáticamente (solo si hay cambios)
   useDraftAutosave(isDirty ? draftKey : null, draftValues);
 
-  const handleTextChange = (val) => {
+  const handleTextChange = (val: string) => {
     setRawText(val);
     setIsDirty(true);
   };
 
-  const dictation = useDictation((chunk) => {
+  const dictation = useDictation((chunk: string) => {
     handleTextChange(rawText ? `${rawText} ${chunk}` : chunk);
   });
 
-  const executeAi = async (type) => {
+  const executeAi = async (type: AiType) => {
     setAiBusy(true);
     setError('');
 
@@ -128,7 +161,7 @@ export function SessionNoteEditor({
       await aiService.transform({
         text: startText,
         type: type.id,
-        onChunk: (accumulatedText) => {
+        onChunk: (accumulatedText: string) => {
           if (type.traceable) {
             setPendingConsult((current) =>
               current ? { ...current, output: accumulatedText } : current
@@ -144,8 +177,9 @@ export function SessionNoteEditor({
         notify({ tone: 'success', message: `${type.label} aplicado.` });
       }
     } catch (err) {
-      setError(err.message || 'No se pudo usar IA.');
-      notify({ tone: 'error', message: err.message || 'No se pudo usar IA.' });
+      const message = err instanceof Error ? err.message : 'No se pudo usar IA.';
+      setError(message);
+      notify({ tone: 'error', message });
       if (type.traceable) {
         setPendingConsult(null);
       }
@@ -156,7 +190,7 @@ export function SessionNoteEditor({
 
   // Gate: first AI use on this device shows a disclosure. The fisio confirms
   // they have patient consent before the note text leaves the browser.
-  const runAi = (type) => {
+  const runAi = (type: AiType) => {
     if (!consent.has(CONSENT_KEYS.AI)) {
       setAiConsentRequest(type);
       return;
@@ -181,7 +215,7 @@ export function SessionNoteEditor({
     validationNotes,
     alsoInsert,
     label
-  }) => {
+  }: PendingConsultSavePayload) => {
     if (!patientId) throw new Error('Selecciona un paciente antes de guardar IA.');
 
     await clinicalApi.addAiConsult({
@@ -192,7 +226,7 @@ export function SessionNoteEditor({
       output_text: output,
       validated,
       validation_notes: validationNotes
-    });
+    } as Parameters<typeof clinicalApi.addAiConsult>[0]);
 
     if (alsoInsert) {
       handleTextChange(`${rawText}\n\n---\n## ${label || type}\n${output}`);
@@ -202,8 +236,8 @@ export function SessionNoteEditor({
   };
 
   const discardDraft = () => {
-    setRawText(isEditing ? note.raw_text : '');
-    setEva(isEditing ? note.eva : '');
+    setRawText(isEditing && note ? note.raw_text : '');
+    setEva(isEditing && note?.eva != null ? note.eva : '');
     setIsDirty(false);
     draftStorage.remove(draftKey);
     notify({ tone: 'success', message: 'Borrador descartado.' });
@@ -246,7 +280,7 @@ export function SessionNoteEditor({
 
     const validation = validateSessionNote(payload);
     if (hasErrors(validation)) {
-      const message = Object.values(validation)[0];
+      const message = Object.values(validation)[0] || 'Datos invalidos.';
       setError(message);
       notify({ tone: 'warning', message });
       return;
@@ -260,15 +294,16 @@ export function SessionNoteEditor({
     setSaving(true);
     setError('');
     try {
-      const saved = isEditing
-        ? await clinicalApi.updateSessionNote(note.id, payload)
-        : await clinicalApi.addSessionNote(payload);
+      const saved =
+        isEditing && note
+          ? await clinicalApi.updateSessionNote(note.id, payload)
+          : await clinicalApi.addSessionNote(payload);
       draftStorage.remove(draftKey);
       setIsDirty(false);
       notify({ tone: 'success', message: successMessage });
       onSaved?.(saved);
     } catch (err) {
-      const message = err.message || failureFallback;
+      const message = err instanceof Error ? err.message : failureFallback;
       setError(message);
       notify({ tone: 'error', message });
     } finally {
@@ -306,8 +341,8 @@ export function SessionNoteEditor({
           EVA hoy
           <input
             type="number"
-            min="0"
-            max="10"
+            min={0}
+            max={10}
             value={eva}
             onChange={(e) => {
               setEva(e.target.value);
@@ -340,7 +375,7 @@ export function SessionNoteEditor({
       <label>
         Nota de sesion en formato SOAP
         <textarea
-          rows="10"
+          rows={10}
           value={rawText}
           onChange={(e) => handleTextChange(e.target.value)}
           placeholder={`S - Subjetivo: como llega el paciente y que refiere.
