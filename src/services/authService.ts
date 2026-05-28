@@ -1,10 +1,5 @@
-import type { Session, Subscription, SupabaseClient } from '@supabase/supabase-js';
-import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
-
-const assertReady = (): SupabaseClient => {
-  if (!isSupabaseConfigured || !supabase) throw new Error('Supabase no esta configurado.');
-  return supabase;
-};
+import type { Session, Subscription } from '@supabase/supabase-js';
+import { supabase, isSupabaseConfigured, assertSupabase } from '../lib/supabaseClient';
 
 const noopSubscription: Subscription = {
   id: 'noop',
@@ -14,7 +9,7 @@ const noopSubscription: Subscription = {
 
 export const authService = {
   async getSession(): Promise<Session | null> {
-    const db = assertReady();
+    const db = assertSupabase();
     const { data, error } = await db.auth.getSession();
     if (error) throw error;
     return data.session;
@@ -33,14 +28,14 @@ export const authService = {
     email: string;
     password: string;
   }): Promise<Session | null> {
-    const db = assertReady();
+    const db = assertSupabase();
     const { data, error } = await db.auth.signInWithPassword({ email, password });
     if (error) throw error;
     return data.session;
   },
 
   async signOut(): Promise<void> {
-    const db = assertReady();
+    const db = assertSupabase();
     const { error } = await db.auth.signOut();
     if (error) throw error;
   }

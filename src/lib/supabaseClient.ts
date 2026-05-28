@@ -14,3 +14,8 @@ export const supabase: SupabaseClient | null =
         }
       })
     : null;
+
+export const assertSupabase = (): SupabaseClient => {
+  if (!isSupabaseConfigured || !supabase) throw new Error('Supabase no esta configurado.');
+  return supabase;
+};

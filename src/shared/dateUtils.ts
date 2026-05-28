@@ -7,15 +7,3 @@ export const getLocalISODate = (date: Date = new Date()): string => {
   return localDate.toISOString().split('T')[0];
 };
 
-export const formatDisplayDate = (isoString: string | null | undefined): string => {
-  if (!isoString) return '';
-  try {
-    return new Date(isoString).toLocaleDateString(undefined, {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  } catch {
-    return isoString;
-  }
-};

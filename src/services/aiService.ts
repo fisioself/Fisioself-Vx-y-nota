@@ -1,4 +1,4 @@
-import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
+import { assertSupabase } from '../lib/supabaseClient';
 import { getErrorMessage } from '../shared/errors';
 import type { AiType } from '../features/session-notes/types';
 
@@ -35,9 +35,9 @@ export const aiService = {
     if (!text?.trim()) throw new Error('Escribe una nota primero.');
     if (!AI_TYPES.some((item) => item.id === type)) throw new Error('Tipo de IA invalido.');
     if (!proxyUrl) throw buildAiConfigError();
-    if (!isSupabaseConfigured || !supabase) throw new Error('Supabase no esta configurado.');
+    const db = assertSupabase();
 
-    const { data: sessionData, error } = await supabase.auth.getSession();
+    const { data: sessionData, error } = await db.auth.getSession();
     if (error) throw error;
     const token = sessionData.session?.access_token;
     if (!token) throw new Error('Inicia sesion antes de usar IA.');

@@ -1,4 +1,4 @@
-import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
+import { supabase, isSupabaseConfigured, assertSupabase } from '../lib/supabaseClient';
 import type { Appointment } from '../types/clinical';
 
 const connectUrl = import.meta.env.VITE_GOOGLE_CALENDAR_CONNECT_URL as string | undefined;
@@ -12,8 +12,8 @@ interface ConnectionStatus {
 }
 
 const getAccessToken = async (): Promise<string> => {
-  if (!isSupabaseConfigured || !supabase) throw new Error('Supabase no esta configurado.');
-  const { data, error } = await supabase.auth.getSession();
+  const db = assertSupabase();
+  const { data, error } = await db.auth.getSession();
   if (error) throw error;
   const token = data.session?.access_token;
   if (!token) throw new Error('Inicia sesion antes de usar Google Calendar.');

@@ -127,18 +127,6 @@ export const buildClinicalRecordText = (record: ClinicalRecord | null | undefine
   ].join('\n');
 };
 
-export const downloadTextFile = ({ filename, text }: { filename: string; text: string }): void => {
-  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
-};
-
 const paragraph = (label: string, value: Unknownable): string =>
   `<p><strong>${escapeHtml(label)}:</strong> ${escapeHtml(safe(value))}</p>`;
 

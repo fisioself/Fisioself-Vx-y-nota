@@ -1,5 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
-import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
+import { assertSupabase } from '../lib/supabaseClient';
 import type {
   AiConsult,
   Appointment,
@@ -16,11 +15,6 @@ interface SupabaseResult<T> {
   error: (Error & { code?: string }) | null;
 }
 
-const assertReady = (): SupabaseClient => {
-  if (!isSupabaseConfigured || !supabase) throw new Error('Supabase no esta configurado.');
-  return supabase;
-};
-
 const unwrap = <T>({ data, error }: SupabaseResult<T>): T => {
   if (error) throw error;
   return data as T;
@@ -31,27 +25,27 @@ const sortByDateDesc = (a: TimelineEntry, b: TimelineEntry): number =>
 
 export const clinicalApi = {
   async listPatients(): Promise<Patient[]> {
-    const db = assertReady();
+    const db = assertSupabase();
     return unwrap(await db.from('patients').select('*').order('updated_at', { ascending: false }));
   },
 
   async createPatient(payload: Partial<Patient>): Promise<Patient> {
-    const db = assertReady();
+    const db = assertSupabase();
     return unwrap(await db.from('patients').insert(payload).select('*').single());
   },
 
   async updatePatient(id: string, payload: Partial<Patient>): Promise<Patient> {
-    const db = assertReady();
+    const db = assertSupabase();
     return unwrap(await db.from('patients').update(payload).eq('id', id).select('*').single());
   },
 
   async deletePatient(id: string): Promise<unknown> {
-    const db = assertReady();
+    const db = assertSupabase();
     return unwrap(await db.from('patients').delete().eq('id', id));
   },
 
   async getPatient(id: string): Promise<ClinicalRecord> {
-    const db = assertReady();
+    const db = assertSupabase();
     return unwrap(
       await db
         .from('patients')
@@ -64,17 +58,17 @@ export const clinicalApi = {
   },
 
   async addEvaluation(payload: Partial<Evaluation>): Promise<Evaluation> {
-    const db = assertReady();
+    const db = assertSupabase();
     return unwrap(await db.from('evaluations').insert(payload).select('*').single());
   },
 
   async updateEvaluation(id: string, payload: Partial<Evaluation>): Promise<Evaluation> {
-    const db = assertReady();
+    const db = assertSupabase();
     return unwrap(await db.from('evaluations').update(payload).eq('id', id).select('*').single());
   },
 
   async addSessionNote(payload: Partial<SessionNote>): Promise<SessionNote> {
-    const db = assertReady();
+    const db = assertSupabase();
     const response = (await db
       .from('session_notes')
       .insert(payload)
@@ -89,7 +83,7 @@ export const clinicalApi = {
   },
 
   async updateSessionNote(id: string, payload: Partial<SessionNote>): Promise<SessionNote> {
-    const db = assertReady();
+    const db = assertSupabase();
     const response = (await db
       .from('session_notes')
       .update(payload)
@@ -107,27 +101,27 @@ export const clinicalApi = {
   },
 
   async deleteSessionNote(id: string): Promise<unknown> {
-    const db = assertReady();
+    const db = assertSupabase();
     return unwrap(await db.from('session_notes').delete().eq('id', id));
   },
 
   async addAiConsult(payload: Partial<AiConsult>): Promise<AiConsult> {
-    const db = assertReady();
+    const db = assertSupabase();
     return unwrap(await db.from('ai_consults').insert(payload).select('*').single());
   },
 
   async addAppointment(payload: Partial<Appointment>): Promise<Appointment> {
-    const db = assertReady();
+    const db = assertSupabase();
     return unwrap(await db.from('appointments').insert(payload).select('*').single());
   },
 
   async updateAppointment(id: string, payload: Partial<Appointment>): Promise<Appointment> {
-    const db = assertReady();
+    const db = assertSupabase();
     return unwrap(await db.from('appointments').update(payload).eq('id', id).select('*').single());
   },
 
   async getClinicStats(): Promise<ClinicStats> {
-    const db = assertReady();
+    const db = assertSupabase();
 
     const { count: totalPatients, error: pError } = await db
       .from('patients')
