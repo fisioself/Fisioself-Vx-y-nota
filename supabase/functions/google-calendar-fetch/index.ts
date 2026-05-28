@@ -41,13 +41,18 @@ const refreshGoogleToken = async ({
 
 const resolveSessionType = (colorId?: string) => {
   switch (colorId) {
-    case '3': return 'Valoración'; // Grape (Morado)
-    case '5': return 'Descarga muscular'; // Banana (Amarillo)
-    case '4': 
-    case '6': return 'Terapia a domicilio'; // Flamingo/Tangerine (Naranja)
-    case '1': 
-    case '9': return 'Sesión clínica'; // Lavender/Blueberry (Azul)
-    default: return 'Sesión clínica';
+    case '3':
+      return 'Valoración'; // Grape (Morado)
+    case '5':
+      return 'Descarga muscular'; // Banana (Amarillo)
+    case '4':
+    case '6':
+      return 'Terapia a domicilio'; // Flamingo/Tangerine (Naranja)
+    case '1':
+    case '9':
+      return 'Sesión clínica'; // Lavender/Blueberry (Azul)
+    default:
+      return 'Sesión clínica';
   }
 };
 
@@ -90,7 +95,10 @@ Deno.serve(async (req) => {
     let accessToken: string | null = tokens?.access_token ?? null;
     const refreshTokenStored: string | null = tokens?.refresh_token ?? null;
 
-    if (!accessToken || new Date(connection.token_expires_at || 0) <= new Date(Date.now() + 60_000)) {
+    if (
+      !accessToken ||
+      new Date(connection.token_expires_at || 0) <= new Date(Date.now() + 60_000)
+    ) {
       if (!refreshTokenStored) throw new Error('Falta refresh token de Google');
       const refreshed = await refreshGoogleToken({
         refreshToken: refreshTokenStored,
@@ -103,10 +111,15 @@ Deno.serve(async (req) => {
         p_access_token: accessToken,
         p_refresh_token: refreshTokenStored
       });
-      await supabase.from('calendar_connections').update({
-        token_expires_at: new Date(Date.now() + Number(refreshed.expires_in || 3600) * 1000).toISOString(),
-        updated_at: new Date().toISOString()
-      }).eq('id', connection.id);
+      await supabase
+        .from('calendar_connections')
+        .update({
+          token_expires_at: new Date(
+            Date.now() + Number(refreshed.expires_in || 3600) * 1000
+          ).toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', connection.id);
     }
 
     // Fetch events from Google
@@ -134,7 +147,7 @@ Deno.serve(async (req) => {
     // Process each event
     for (const event of events) {
       if (event.status === 'cancelled') continue;
-      
+
       const title = event.summary?.trim();
       if (!title) continue; // Skip events without title
 
@@ -158,7 +171,7 @@ Deno.serve(async (req) => {
           .insert({ full_name: title, created_by: userId })
           .select('id')
           .single();
-        
+
         if (pError) {
           console.error('Error creating patient', pError);
           continue;

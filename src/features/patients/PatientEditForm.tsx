@@ -1,6 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { clinicalApi } from '../../services/clinicalApi';
-import { PATIENT_STATUSES, validatePatient, hasErrors } from '../../shared/clinicalValidation.js';
+import {
+  PATIENT_STATUSES,
+  validatePatient,
+  hasErrors,
+  emptyStringsToNull
+} from '../../shared/clinicalValidation.js';
+import type { Patient, PatientStatus, Sex, ValidationErrors } from '../../types/clinical';
+import { getErrorMessage } from '../../shared/errors';
 
 interface PatientEditFormProps {
   patient: Patient | null;

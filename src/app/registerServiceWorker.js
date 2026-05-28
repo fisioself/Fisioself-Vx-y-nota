@@ -7,7 +7,7 @@ export const registerServiceWorker = () => {
     navigator.serviceWorker.getRegistrations().then(function (registrations) {
       for (const registration of registrations) {
         registration.unregister();
-        console.log('[SW] Service Worker desinstalado (Modo Dev)');
+        console.warn('[SW] Service Worker desinstalado (Modo Dev)');
       }
     });
     return;
@@ -17,7 +17,7 @@ export const registerServiceWorker = () => {
     navigator.serviceWorker
       .register('/sw.js', { type: 'module' })
       .then((registration) => {
-        console.log('[SW] Registrado con exito:', registration.scope);
+        console.warn('[SW] Registrado con exito:', registration.scope);
       })
       .catch((err) => {
         console.warn('[SW] Registro fallido:', err.message);

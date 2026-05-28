@@ -1,26 +1,25 @@
 import { useEffect, useRef, useState } from 'react';
-import { supabase } from '../../lib/supabaseClient.js';
+import { assertSupabase } from '../../lib/supabaseClient.js';
 
-export const useDictation = (onText, onError) => {
+export const useDictation = (
+  onText: (text: string) => void,
+  onError?: (message: string) => void
+) => {
   const [listening, setListening] = useState(false);
   const [processing, setProcessing] = useState(false);
-  const mediaRecorderRef = useRef(null);
-  const chunksRef = useRef([]);
-  const timerRef = useRef(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const supported = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
 
   const transcribeAudio = async (blob: Blob): Promise<void> => {
-    if (!supabase) {
-      alert('Supabase no esta configurado para Whisper.');
-      return;
-    }
     setProcessing(true);
     try {
       const formData = new FormData();
       formData.append('file', blob, 'recording.webm');
 
-      const { data, error } = await supabase.functions.invoke('whisper-transcribe', {
+      const { data, error } = await assertSupabase().functions.invoke('whisper-transcribe', {
         body: formData
       });
 
@@ -28,7 +27,7 @@ export const useDictation = (onText, onError) => {
       if (data?.text) onText(data.text);
     } catch (error) {
       console.error('Transcription failed:', error);
-      alert('Error al procesar el dictado con Whisper.');
+      onError?.('Error al procesar el dictado con Whisper.');
     } finally {
       setProcessing(false);
     }
@@ -62,7 +61,6 @@ export const useDictation = (onText, onError) => {
           onError?.('Dictado detenido automaticamente tras 5 minutos.');
         }
       }, MAX_MS);
-
     } catch (error) {
       console.error('Error starting recording:', error);
       onError?.('No se pudo acceder al microfono.');
@@ -77,28 +75,6 @@ export const useDictation = (onText, onError) => {
     if (mediaRecorderRef.current && listening) {
       mediaRecorderRef.current.stop();
       setListening(false);
-    }
-  };
-
-  const transcribeAudio = async (blob) => {
-    setProcessing(true);
-    try {
-      const formData = new FormData();
-      formData.append('file', blob, 'recording.webm');
-
-      const { data, error } = await supabase.functions.invoke('whisper-transcribe', {
-        body: formData,
-      });
-
-      if (error) throw error;
-      if (data?.text) {
-        onText(data.text);
-      }
-    } catch (error) {
-      console.error('Transcription failed:', error);
-      onError?.('Error al procesar el dictado con Whisper.');
-    } finally {
-      setProcessing(false);
     }
   };
 

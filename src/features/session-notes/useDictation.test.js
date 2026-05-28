@@ -3,13 +3,18 @@ import { renderHook, act } from '@testing-library/react';
 import { useDictation } from './useDictation.js';
 import { supabase } from '../../lib/supabaseClient.js';
 
-vi.mock('../../lib/supabaseClient.js', () => ({
-  supabase: {
+vi.mock('../../lib/supabaseClient.js', () => {
+  const supabaseMock = {
     functions: {
       invoke: vi.fn()
     }
-  }
-}));
+  };
+  return {
+    supabase: supabaseMock,
+    isSupabaseConfigured: true,
+    assertSupabase: () => supabaseMock
+  };
+});
 
 describe('useDictation with Whisper', () => {
   const mockOnText = vi.fn();

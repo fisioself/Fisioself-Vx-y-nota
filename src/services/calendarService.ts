@@ -70,7 +70,9 @@ export const calendarService = {
     return data.appointment as Appointment | undefined;
   },
 
-  async fetchEvents(options: { timeMin?: string; maxResults?: number } = {}): Promise<GoogleCalendarEvent[]> {
+  async fetchEvents(
+    options: { timeMin?: string; maxResults?: number } = {}
+  ): Promise<GoogleCalendarEvent[]> {
     if (!fetchUrl) throw new Error('Falta configurar VITE_GOOGLE_CALENDAR_FETCH_URL.');
     const token = await getAccessToken();
     const response = await fetch(fetchUrl, {

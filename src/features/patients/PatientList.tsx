@@ -1,8 +1,8 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { clinicalApi } from '../../services/clinicalApi';
-import { PATIENT_STATUSES } from '../../shared/clinicalValidation.js';
 import { useToast } from '../../app/ToastProvider.jsx';
+import type { Patient } from '../../types/clinical';
 
 interface PatientListProps {
   selectedId?: string | null;
@@ -12,7 +12,7 @@ interface PatientListProps {
 export function PatientList({ selectedId, onSelect }: PatientListProps) {
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('Todos');
+  const statusFilter = 'Todos';
   const [importing, setImporting] = useState(false);
   const { notify } = useToast();
   const queryClient = useQueryClient();
@@ -36,7 +36,7 @@ export function PatientList({ selectedId, onSelect }: PatientListProps) {
   const handleImport = async () => {
     setImporting(true);
     notify({ tone: 'success', message: 'Sincronizando pacientes desde Google Calendar...' });
-    
+
     // Simular un tiempo de carga mientras se sincroniza
     setTimeout(() => {
       setImporting(false);
@@ -50,7 +50,7 @@ export function PatientList({ selectedId, onSelect }: PatientListProps) {
 
     // Filter by status
     if (statusFilter !== 'Todos') {
-      result = result.filter(p => p.status === statusFilter);
+      result = result.filter((p) => p.status === statusFilter);
     }
 
     // Filter by query
@@ -62,7 +62,7 @@ export function PatientList({ selectedId, onSelect }: PatientListProps) {
           .some((value) => String(value).toLowerCase().includes(q))
       );
     }
-    
+
     return result;
   }, [patients, debouncedQuery, statusFilter]);
 
@@ -74,12 +74,7 @@ export function PatientList({ selectedId, onSelect }: PatientListProps) {
           <h2>Pacientes</h2>
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <button 
-            type="button" 
-            className="secondary" 
-            onClick={handleImport}
-            disabled={importing}
-          >
+          <button type="button" className="secondary" onClick={handleImport} disabled={importing}>
             {importing ? 'Sincronizando...' : 'Importar de Calendar'}
           </button>
           <span className="pill">{filtered.length}</span>

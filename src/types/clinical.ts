@@ -112,11 +112,15 @@ export interface TimelineEntry {
 
 export type ValidationErrors<T> = Partial<Record<keyof T | string, string>>;
 
+type ClinicStatsPatientRef = { full_name: string | null };
+
 export interface ClinicStatsActivityItem {
   id: string;
   session_number: number;
   session_date: string | null;
-  patients?: { full_name: string | null } | null;
+  // Supabase devuelve la relacion `patients(full_name)` como arreglo cuando el
+  // cliente no esta tipado con el esquema; admitimos ambas formas.
+  patients?: ClinicStatsPatientRef | ClinicStatsPatientRef[] | null;
 }
 
 export interface ClinicStats {

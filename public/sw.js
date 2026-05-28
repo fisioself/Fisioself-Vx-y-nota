@@ -109,18 +109,18 @@ self.addEventListener('sync', (event) => {
             } else if (response.status === 401) {
               // Notificar error de autenticación
               const clients = await self.clients.matchAll();
-              clients.forEach(client => {
+              clients.forEach((client) => {
                 client.postMessage({
                   type: 'SYNC_ERROR',
                   status: 401,
                   message: 'Sesion caducada. Inicia sesion para sincronizar tus notas.'
                 });
               });
-              break; 
+              break;
             } else if (response.status === 409) {
               // Conflicto de datos: el registro cambió en el servidor
               const clients = await self.clients.matchAll();
-              clients.forEach(client => {
+              clients.forEach((client) => {
                 client.postMessage({
                   type: 'SYNC_CONFLICT',
                   id: reqData.id,

@@ -1,41 +1,38 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { calendarService } from '../../services/calendarService.js';
-import { usePushNotifications } from '../../shared/usePushNotifications.js';
+import { getErrorMessage } from '../../shared/errors';
 import { NativeCalendar } from '../../components/calendar/NativeCalendar';
 
-export function AgendaView({ onPatientSelect }) {
-  const [status, setStatus] = useState({ loading: true, connected: false, email: null });
+interface AgendaViewProps {
+  onPatientSelect?: (patientId: string) => void;
+}
+
+interface AgendaStatus {
+  loading: boolean;
+  connected: boolean;
+  email: string | null;
+}
+
+export function AgendaView({ onPatientSelect }: AgendaViewProps) {
+  const [status, setStatus] = useState<AgendaStatus>({
+    loading: true,
+    connected: false,
+    email: null
+  });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [events, setEvents] = useState<GoogleCalendarEvent[]>([]);
-  const [eventsLoading, setEventsLoading] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const { subscribed, subscribe, loading: pushLoading } = usePushNotifications();
-
-  const loadEvents = useCallback(async () => {
-    setEventsLoading(true);
-    try {
-      const result = await calendarService.fetchEvents({ maxResults: 10 });
-      setEvents(result);
-    } catch {
-      setEvents([]);
-    } finally {
-      setEventsLoading(false);
-    }
-  }, []);
 
   const refreshStatus = useCallback(async (): Promise<boolean> => {
     try {
       const result = await calendarService.getConnectionStatus();
       setStatus({ loading: false, connected: result.connected, email: result.email });
-      if (result.connected) loadEvents();
       return result.connected;
     } catch {
       setStatus({ loading: false, connected: false, email: null });
       return false;
     }
-  }, [loadEvents]);
+  }, []);
 
   useEffect(() => {
     refreshStatus();
@@ -106,7 +103,8 @@ export function AgendaView({ onPatientSelect }) {
         ) : (
           <div>
             <p className="muted" style={{ marginBottom: '1rem' }}>
-              Conecta tu cuenta de Google y tus citas se sincronizarán automáticamente con tu calendario.
+              Conecta tu cuenta de Google y tus citas se sincronizarán automáticamente con tu
+              calendario.
             </p>
             <button type="button" onClick={handleConnect} disabled={busy}>
               {busy ? 'Conectando…' : 'Conectar Google Calendar'}

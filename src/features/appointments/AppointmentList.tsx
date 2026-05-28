@@ -2,6 +2,9 @@ import { useState } from 'react';
 import { calendarService } from '../../services/calendarService.js';
 import { clinicalApi } from '../../services/clinicalApi';
 import { AppointmentForm } from './AppointmentForm.jsx';
+import { getErrorMessage } from '../../shared/errors';
+import { useToast } from '../../app/ToastProvider';
+import type { Appointment, Patient } from '../../types/clinical';
 import './appointments.css';
 
 interface AppointmentListProps {
@@ -14,6 +17,7 @@ export function AppointmentList({ patient, appointments = [], onChanged }: Appoi
   const [showForm, setShowForm] = useState(false);
   const [syncing, setSyncing] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState<string | null>(null);
+  const { notify } = useToast();
 
   const syncAppointment = async (id: string) => {
     setSyncing(id);
@@ -21,7 +25,7 @@ export function AppointmentList({ patient, appointments = [], onChanged }: Appoi
       await calendarService.syncAppointment(id);
       onChanged?.();
     } catch (err) {
-      alert(getErrorMessage(err, 'No se pudo sincronizar la cita.'));
+      notify({ tone: 'error', message: getErrorMessage(err, 'No se pudo sincronizar la cita.') });
     } finally {
       setSyncing(null);
     }
@@ -39,27 +43,37 @@ export function AppointmentList({ patient, appointments = [], onChanged }: Appoi
       await clinicalApi.updateAppointment(id, { status: 'cancelled' });
       onChanged?.();
     } catch (err) {
-      alert(getErrorMessage(err, 'No se pudo cancelar la cita.'));
+      notify({ tone: 'error', message: getErrorMessage(err, 'No se pudo cancelar la cita.') });
     } finally {
       setCancelling(null);
     }
   };
 
-  const sendWhatsAppReminder = (appointment) => {
+  const sendWhatsAppReminder = (appointment: Appointment) => {
     if (!patient?.phone) {
-      alert('El paciente no tiene un número de teléfono registrado.');
+      notify({
+        tone: 'warning',
+        message: 'El paciente no tiene un número de teléfono registrado.'
+      });
       return;
     }
 
-    const date = new Date(appointment.starts_at).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
-    const time = new Date(appointment.starts_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-    
-    // Formatting the phone number: remove spaces and special characters. Assuming a country code is needed, 
+    const date = new Date(appointment.starts_at).toLocaleDateString('es-ES', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long'
+    });
+    const time = new Date(appointment.starts_at).toLocaleTimeString('es-ES', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    // Formatting the phone number: remove spaces and special characters. Assuming a country code is needed,
     // it's best if the user stores it with the country code. If not, this might need adjustment per region.
-    const cleanPhone = patient.phone.replace(/\D/g, ''); 
-    const message = `Hola ${patient.full_name.split(' ')[0]}, te recordamos tu cita de Fisioterapia para el ${date} a las ${time}h. ¡Te esperamos!`;
+    const cleanPhone = patient.phone.replace(/\D/g, '');
+    const message = `Hola ${(patient.full_name || '').split(' ')[0]}, te recordamos tu cita de Fisioterapia para el ${date} a las ${time}h. ¡Te esperamos!`;
     const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
-    
+
     window.open(url, '_blank');
   };
 

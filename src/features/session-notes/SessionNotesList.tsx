@@ -2,6 +2,8 @@ import { useMemo, useState, useEffect } from 'react';
 import { useToast } from '../../app/ToastProvider.jsx';
 import { clinicalApi } from '../../services/clinicalApi';
 import { SessionNoteEditor } from './SessionNoteEditor.jsx';
+import type { SessionNote } from '../../types/clinical';
+import { getErrorMessage } from '../../shared/errors';
 
 interface SessionNotesListProps {
   notes?: SessionNote[];

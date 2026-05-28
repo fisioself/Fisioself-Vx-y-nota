@@ -1,8 +1,28 @@
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { clinicalApi } from '../../services/clinicalApi';
 import { getLocalISODate } from '../../shared/dateUtils.js';
 import { draftStorage, getEvaluationDraftKey } from '../../shared/draftStorage.js';
 import { useDraftAutosave } from '../../shared/useDraftAutosave.js';
+import { getErrorMessage } from '../../shared/errors';
+import type { Patient, Evaluation, EvaluationSections } from '../../types/clinical';
+
+interface JointRow {
+  joint: string;
+  range: string;
+  notes: string;
+}
+
+interface StrengthRow {
+  joint: string;
+  strength: string;
+  notes: string;
+}
+
+interface SpecialTestRow {
+  name: string;
+  result: string;
+  notes: string;
+}
 
 interface EvaluationFormValues {
   full_name: string;

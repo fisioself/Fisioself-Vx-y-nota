@@ -1,14 +1,25 @@
-import React, { useMemo, useState, useCallback, useEffect } from 'react';
+import { useMemo, useState, useCallback, useEffect } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import esLocale from '@fullcalendar/core/locales/es';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../../lib/supabaseClient';
+import { assertSupabase } from '../../lib/supabaseClient';
 import { calendarService } from '../../services/calendarService';
 import { useToast } from '../../app/ToastProvider';
 import './NativeCalendar.css';
+
+// Formas minimas y estructurales de los argumentos que FullCalendar pasa a
+// los handlers; evitan `any` sin acoplarnos a los tipos internos de la libreria.
+interface CalendarEventClickArg {
+  event: { extendedProps: { patientId?: string } };
+}
+
+interface CalendarEventChangeArg {
+  event: { id: string; startStr: string; endStr: string };
+  revert: () => void;
+}
 
 const colorMap: Record<string, string> = {
   '1': '#7986cb', // Lavender (Azul claro)
@@ -21,7 +32,7 @@ const colorMap: Record<string, string> = {
   '8': '#616161', // Graphite (Gris)
   '9': '#3f51b5', // Blueberry (Azul oscuro - Clínica)
   '10': '#0b8043', // Basil (Verde oscuro)
-  '11': '#d50000', // Tomato (Rojo)
+  '11': '#d50000' // Tomato (Rojo)
 };
 
 const resolveColor = (colorId?: string | null) => {
@@ -38,10 +49,15 @@ export function NativeCalendar({ onEventClick }: NativeCalendarProps) {
   const { notify } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: appointments = [], isLoading, error } = useQuery({
+  const {
+    data: appointments = [],
+    isLoading,
+    error
+  } = useQuery({
     queryKey: ['all_appointments'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const db = assertSupabase();
+      const { data, error } = await db
         .from('appointments')
         .select('id, title, starts_at, ends_at, color_id, session_type, patient_id')
         .neq('status', 'cancelled');
@@ -52,32 +68,31 @@ export function NativeCalendar({ onEventClick }: NativeCalendarProps) {
 
   const syncWithGoogle = useCallback(async () => {
     setSyncing(true);
-    // Don't show toast immediately to avoid spam on mount
+    // No mostramos toast de inmediato para evitar spam al montar
     try {
-      const { data, error } = await supabase.functions.invoke('google-calendar-fetch');
+      const db = assertSupabase();
+      const { data, error } = await db.functions.invoke('google-calendar-fetch');
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      
+
       notify({ tone: 'success', message: `Sincronizados ${data.count || 0} eventos de Google.` });
       queryClient.invalidateQueries({ queryKey: ['all_appointments'] });
       queryClient.invalidateQueries({ queryKey: ['patients'] });
-    } catch (err: any) {
+    } catch (err) {
+      // No bloqueamos la UI con un toast de error al montar
       console.warn('Google Calendar Sync Error (Non-fatal):', err);
-      // We don't throw a visible toast error on mount to prevent blocking the UI
-      // notify({ tone: 'error', message: err.message || 'Error al sincronizar con Google Calendar.' });
     } finally {
       setSyncing(false);
     }
   }, [notify, queryClient]);
 
-  // Initial sync on mount
+  // Sincronizacion inicial al montar
   useEffect(() => {
     syncWithGoogle();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [syncWithGoogle]);
 
   const events = useMemo(() => {
-    return appointments.map(appt => ({
+    return appointments.map((appt) => ({
       id: appt.id,
       title: appt.title,
       start: appt.starts_at,
@@ -91,32 +106,33 @@ export function NativeCalendar({ onEventClick }: NativeCalendarProps) {
     }));
   }, [appointments]);
 
-  const handleEventClick = (clickInfo: any) => {
+  const handleEventClick = (clickInfo: CalendarEventClickArg) => {
     const patientId = clickInfo.event.extendedProps.patientId;
     if (patientId && onEventClick) {
       onEventClick(patientId);
     }
   };
 
-  const handleEventDrop = async (dropInfo: any) => {
+  const handleEventDrop = async (dropInfo: CalendarEventChangeArg) => {
     const { event } = dropInfo;
     const apptId = event.id;
     const newStart = event.startStr;
     const newEnd = event.endStr;
-    
+
     try {
-      const { error } = await supabase
+      const db = assertSupabase();
+      const { error } = await db
         .from('appointments')
         .update({ starts_at: newStart, ends_at: newEnd })
         .eq('id', apptId);
-      
+
       if (error) throw error;
-      
-      // Sincronización bidireccional (Punto 1): Empujar el cambio de vuelta a Google Calendar
+
+      // Sincronizacion bidireccional: empujar el cambio de vuelta a Google Calendar
       await calendarService.syncAppointment(apptId);
-      
+
       notify({ tone: 'success', message: 'Cita movida y sincronizada con Google.' });
-    } catch (err: any) {
+    } catch {
       dropInfo.revert();
       notify({ tone: 'error', message: 'No se pudo mover la cita.' });
     }
@@ -129,15 +145,11 @@ export function NativeCalendar({ onEventClick }: NativeCalendarProps) {
   return (
     <div className="native-calendar-wrapper">
       <div className="calendar-header-actions">
-        <button 
-          onClick={syncWithGoogle} 
-          disabled={syncing}
-          className="secondary"
-        >
+        <button onClick={syncWithGoogle} disabled={syncing} className="secondary">
           {syncing ? 'Sincronizando...' : 'Sincronizar Calendar'}
         </button>
       </div>
-      
+
       <div className="fc-container">
         {isLoading ? (
           <p className="muted">Cargando agenda...</p>
