@@ -1,20 +1,21 @@
-import React, { useMemo, useState, memo } from 'react';
+import { useMemo, useState, memo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { clinicalApi, Patient } from '../../services/clinicalApi';
-import { exportToPdf } from '../../shared/exportClinicalRecord.js';
-import { EvaluationForm } from '../evaluations/EvaluationForm.jsx';
-import { SessionNoteEditor } from '../session-notes/SessionNoteEditor.jsx';
-import { SessionNotesList } from '../session-notes/SessionNotesList.jsx';
-import { AppointmentList } from '../appointments/AppointmentList.jsx';
-import { ClinicalTimeline } from './ClinicalTimeline.jsx';
-import { PatientEditForm } from './PatientEditForm.jsx';
+import { clinicalApi } from '../../services/clinicalApi';
+import type { Patient, SessionNote, Evaluation, ClinicalRecord } from '../../types/clinical';
+import { exportToPdf } from '../../shared/exportClinicalRecord';
+import { EvaluationForm } from '../evaluations/EvaluationForm';
+import { SessionNoteEditor } from '../session-notes/SessionNoteEditor';
+import { SessionNotesList } from '../session-notes/SessionNotesList';
+import { AppointmentList } from '../appointments/AppointmentList';
+import { ClinicalTimeline } from './ClinicalTimeline';
+import { PatientEditForm } from './PatientEditForm';
 import { ClinicalSummary } from './ClinicalSummary';
-import { useRole } from '../../shared/useRole.js';
-import { EvaluationSummary } from '../evaluations/EvaluationSummary.jsx';
-import { ImageUploader } from '../../components/ImageUploader.jsx';
-import { ClinicalFilesList } from '../../components/ClinicalFilesList.jsx';
+import { useRole } from '../../shared/useRole';
+import { EvaluationSummary } from '../evaluations/EvaluationSummary';
+import { ImageUploader } from '../../components/ImageUploader';
+import { ClinicalFilesList } from '../../components/ClinicalFilesList';
 
-export const getNextSessionNumber = (notes: any[] = []) => {
+export const getNextSessionNumber = (notes: Pick<SessionNote, 'session_number'>[] = []) => {
   const maxSession = notes.reduce((max, note) => {
     const value = Number(note.session_number);
     return Number.isFinite(value) && value > max ? value : max;
@@ -22,7 +23,13 @@ export const getNextSessionNumber = (notes: any[] = []) => {
   return maxSession + 1;
 };
 
-export const buildPatientSummary = ({ notes = [], evaluations = [] }: { notes?: any[]; evaluations?: any[] }) => {
+export const buildPatientSummary = ({
+  notes = [],
+  evaluations = []
+}: {
+  notes?: SessionNote[];
+  evaluations?: Evaluation[];
+}) => {
   const sortedNotes = [...notes].sort(
     (a, b) => Number(a.session_number) - Number(b.session_number)
   );
@@ -31,7 +38,8 @@ export const buildPatientSummary = ({ notes = [], evaluations = [] }: { notes?: 
     .filter((value) => Number.isFinite(value));
   const latestNote = sortedNotes.at(-1);
   const latestEvaluation = [...evaluations].sort(
-    (a, b) => new Date(b.evaluation_date).getTime() - new Date(a.evaluation_date).getTime()
+    (a, b) =>
+      new Date(b.evaluation_date ?? '').getTime() - new Date(a.evaluation_date ?? '').getTime()
   )[0];
   const latestMedicalDiagnosis =
     latestEvaluation?.sections?.consultation?.medical_diagnosis ||
@@ -65,10 +73,10 @@ interface PatientRecordProps {
   onPatientDeleted?: (patient: Partial<Patient>) => void;
 }
 
-export const PatientRecord = memo(function PatientRecord({ 
-  patient, 
-  onPatientUpdated, 
-  onPatientDeleted 
+export const PatientRecord = memo(function PatientRecord({
+  patient,
+  onPatientUpdated,
+  onPatientDeleted
 }: PatientRecordProps) {
   const queryClient = useQueryClient();
   const [deleting, setDeleting] = useState(false);
@@ -84,23 +92,28 @@ export const PatientRecord = memo(function PatientRecord({
     error
   } = useQuery<ClinicalRecord, Error>({
     queryKey: ['patient', patient?.id],
-    queryFn: () => clinicalApi.getPatient(patient!.id),
-    enabled: !!patient?.id,
+    queryFn: () => clinicalApi.getPatient(patient?.id ?? ''),
+    enabled: !!patient?.id
   });
 
   const notes = useMemo<SessionNote[]>(() => {
     const rows = record?.session_notes || [];
-    return [...rows].sort((a: any, b: any) => Number(a.session_number) - Number(b.session_number));
+    return [...rows].sort((a, b) => Number(a.session_number) - Number(b.session_number));
   }, [record]);
 
   const aiConsults = useMemo(() => {
     const rows = record?.ai_consults || [];
-    return [...rows].sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    return [...rows].sort(
+      (a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+    );
   }, [record]);
 
   const evaluations = useMemo<Evaluation[]>(() => {
     const rows = record?.evaluations || [];
-    return [...rows].sort((a: any, b: any) => new Date(b.evaluation_date).getTime() - new Date(a.evaluation_date).getTime());
+    return [...rows].sort(
+      (a, b) =>
+        new Date(b.evaluation_date || 0).getTime() - new Date(a.evaluation_date || 0).getTime()
+    );
   }, [record]);
 
   const timeline = useMemo(() => clinicalApi.buildTimeline(record), [record]);
@@ -118,7 +131,9 @@ export const PatientRecord = memo(function PatientRecord({
     );
   }
 
-  const current: Patient = record || patient;
+  // `record` (when cargado) es un Patient completo; en su defecto usamos el
+  // paciente seleccionado, que siempre incluye al menos el `id`.
+  const current = (record || patient) as Patient;
   const nextSession = getNextSessionNumber(notes);
   const refreshRecord = () => queryClient.invalidateQueries({ queryKey: ['patient', patient.id] });
 
@@ -139,8 +154,8 @@ export const PatientRecord = memo(function PatientRecord({
     try {
       await clinicalApi.deletePatient(current.id);
       onPatientDeleted?.(current);
-    } catch (err: any) {
-      setDeleteError(err.message || 'No se pudo eliminar el paciente.');
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'No se pudo eliminar el paciente.');
     } finally {
       setDeleting(false);
     }
@@ -165,7 +180,11 @@ export const PatientRecord = memo(function PatientRecord({
           >
             {showSessionNote ? 'Cerrar nota' : `Nota de sesion #${nextSession}`}
           </button>
-          <button type="button" className="secondary" onClick={() => exportToPdf(current, timeline)}>
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => exportToPdf(current, timeline)}
+          >
             Exportar PDF
           </button>
           <button
@@ -253,7 +272,7 @@ export const PatientRecord = memo(function PatientRecord({
           <span className="pill">{evaluations.length}</span>
         </div>
         <div className="list-stack">
-          {evaluations.map((evaluation: any) => {
+          {evaluations.map((evaluation) => {
             const isOpen = openEvaluationId === evaluation.id;
             return (
               <article key={evaluation.id} className="note-row">
@@ -313,7 +332,7 @@ export const PatientRecord = memo(function PatientRecord({
           <span className="pill">{aiConsults.length}</span>
         </div>
         <div className="list-stack">
-          {aiConsults.map((consult: any) => (
+          {aiConsults.map((consult) => (
             <article key={consult.id} className="note-row">
               <div className="form-header">
                 <strong>{consult.type}</strong>

@@ -1,18 +1,30 @@
 import { useEffect, useMemo, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { useToast } from '../../app/ToastProvider.jsx';
+import { useToast } from '../../app/ToastProvider';
 import { clinicalApi } from '../../services/clinicalApi';
-import { aiService, AI_TYPES } from '../../services/aiService.js';
-import { getLocalISODate } from '../../shared/dateUtils.js';
-import { hasErrors, validateSessionNote } from '../../shared/clinicalValidation.js';
-import { consent, CONSENT_KEYS } from '../../shared/consent.js';
-import { draftStorage, getDraftKey } from '../../shared/draftStorage.js';
-import { useDraftAutosave } from '../../shared/useDraftAutosave.js';
-import { useShortcuts } from '../../shared/useShortcuts.js';
-import { AiConsultModal } from './AiConsultModal.jsx';
-import { ConsentGate } from './ConsentGate.jsx';
-import { useDictation } from './useDictation.js';
+import { aiService, AI_TYPES } from '../../services/aiService';
+import { getLocalISODate } from '../../shared/dateUtils';
+import { hasErrors, validateSessionNote } from '../../shared/clinicalValidation';
+import { consent, CONSENT_KEYS } from '../../shared/consent';
+import { draftStorage, getDraftKey } from '../../shared/draftStorage';
+import { useDraftAutosave } from '../../shared/useDraftAutosave';
+import { useShortcuts } from '../../shared/useShortcuts';
+import { AiConsultModal } from './AiConsultModal';
+import { ConsentGate } from './ConsentGate';
+import { useDictation } from './useDictation';
+import type { AiConsultSavePayload, AiType, PendingConsult } from './types';
+import type { SessionNote } from '../../types/clinical';
+import { getErrorMessage } from '../../shared/errors';
+
+interface SessionNoteEditorProps {
+  patientId: string;
+  therapistId?: string | null;
+  sessionNumber?: number;
+  note?: SessionNote | null;
+  onSaved?: (saved: SessionNote) => void;
+  onCancel?: () => void;
+}
 
 const SOAP_TEMPLATE = `S - Subjetivo:
 Motivo de la sesion, sintomas reportados, cambios desde la ultima visita.
@@ -30,10 +42,26 @@ Notas adicionales:
 `;
 
 const CLINICAL_SNIPPETS = [
-  { id: 'terapia-manual', label: 'Terapia Manual', text: 'Se aplica terapia manual ortopedica enfocada en liberacion miofascial y movilizacion articular (Grado I-III), logrando disminucion del tono muscular y mejora del ROM sin dolor agudo.' },
-  { id: 'puncion-seca', label: 'Puncion Seca', text: 'Puncion seca en puntos gatillo miofasciales activos (PGM) con respuesta de espasmo local (REL) positiva. Se complementa con estiramiento pasivo.' },
-  { id: 'descarga', label: 'Descarga', text: 'Sesion de descarga muscular global enfocada en tren inferior post-competicion. Masaje deportivo descontracturante, presoterapia y estiramientos neuromusculares (FNP).' },
-  { id: 'ejercicio-terapeutico', label: 'Ejercicio Terapeutico', text: 'Prescripcion de ejercicio terapeutico: movilidad activa, fortalecimiento isometrico/isotonico progresivo y control motor. Tolerancia adecuada al esfuerzo.' }
+  {
+    id: 'terapia-manual',
+    label: 'Terapia Manual',
+    text: 'Se aplica terapia manual ortopedica enfocada en liberacion miofascial y movilizacion articular (Grado I-III), logrando disminucion del tono muscular y mejora del ROM sin dolor agudo.'
+  },
+  {
+    id: 'puncion-seca',
+    label: 'Puncion Seca',
+    text: 'Puncion seca en puntos gatillo miofasciales activos (PGM) con respuesta de espasmo local (REL) positiva. Se complementa con estiramiento pasivo.'
+  },
+  {
+    id: 'descarga',
+    label: 'Descarga',
+    text: 'Sesion de descarga muscular global enfocada en tren inferior post-competicion. Masaje deportivo descontracturante, presoterapia y estiramientos neuromusculares (FNP).'
+  },
+  {
+    id: 'ejercicio-terapeutico',
+    label: 'Ejercicio Terapeutico',
+    text: 'Prescripcion de ejercicio terapeutico: movilidad activa, fortalecimiento isometrico/isotonico progresivo y control motor. Tolerancia adecuada al esfuerzo.'
+  }
 ];
 
 export function SessionNoteEditor({
@@ -247,12 +275,12 @@ export function SessionNoteEditor({
     handleTextChange(rawText.trim() ? `${rawText.trim()}\n\n---\n${SOAP_TEMPLATE}` : SOAP_TEMPLATE);
   };
 
-  const insertSnippet = (text) => {
+  const insertSnippet = (text: string) => {
     handleTextChange(rawText ? `${rawText}\n\n${text}` : text);
     notify({ tone: 'success', message: 'Plantilla insertada.' });
   };
 
-  const save = async () => {
+  const submit = async () => {
     const payload = {
       patient_id: patientId,
       therapist_id: therapistId || null,
@@ -357,9 +385,11 @@ export function SessionNoteEditor({
       </div>
 
       <div className="filter-group" style={{ marginBottom: 12 }}>
-        <p className="eyebrow" style={{ marginBottom: 4 }}>Plantillas Rapidas</p>
+        <p className="eyebrow" style={{ marginBottom: 4 }}>
+          Plantillas Rapidas
+        </p>
         <div className="row wrap filters">
-          {CLINICAL_SNIPPETS.map(snippet => (
+          {CLINICAL_SNIPPETS.map((snippet) => (
             <button
               key={snippet.id}
               type="button"

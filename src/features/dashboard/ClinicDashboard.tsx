@@ -3,19 +3,36 @@ import { useQuery } from '@tanstack/react-query';
 import { clinicalApi } from '../../services/clinicalApi';
 import { calendarService } from '../../services/calendarService';
 import { NativeCalendar } from '../../components/calendar/NativeCalendar';
+import type { ClinicStatsActivityItem } from '../../types/clinical';
 
-export function ClinicDashboard({ onPatientSelect }) {
+interface ClinicDashboardProps {
+  onPatientSelect?: (patientId: string) => void;
+}
+
+const getActivityPatientName = (patients: ClinicStatsActivityItem['patients']): string => {
+  const ref = Array.isArray(patients) ? patients[0] : patients;
+  return ref?.full_name || 'Paciente desconocido';
+};
+
+export function ClinicDashboard({ onPatientSelect }: ClinicDashboardProps) {
   const [calStatus, setCalStatus] = useState({ loading: true, connected: false });
 
   useEffect(() => {
-    calendarService.getConnectionStatus().then(res => {
-      setCalStatus({ loading: false, connected: res.connected });
-    }).catch(() => {
-      setCalStatus({ loading: false, connected: false });
-    });
+    calendarService
+      .getConnectionStatus()
+      .then((res) => {
+        setCalStatus({ loading: false, connected: res.connected });
+      })
+      .catch(() => {
+        setCalStatus({ loading: false, connected: false });
+      });
   }, []);
 
-  const { data: stats, isLoading, error } = useQuery({
+  const {
+    data: stats,
+    isLoading,
+    error
+  } = useQuery({
     queryKey: ['clinic-stats'],
     queryFn: () => clinicalApi.getClinicStats(),
     refetchOnWindowFocus: true
@@ -32,19 +49,42 @@ export function ClinicDashboard({ onPatientSelect }) {
 
   return (
     <div className="record-stack">
-      <header className="hero" style={{ padding: '24px', borderRadius: '22px', position: 'relative' }}>
-        <span style={{ position: 'absolute', top: 10, right: 10, background: '#d50000', color: 'white', padding: '4px 8px', borderRadius: '8px', fontSize: '10px', fontWeight: 'bold' }}>VERSION 5.0 (Caché borrado)</span>
-        <p className="eyebrow" style={{ color: 'rgba(255,255,255,0.7)' }}>Agenda y Control</p>
+      <header
+        className="hero"
+        style={{ padding: '24px', borderRadius: '22px', position: 'relative' }}
+      >
+        <span
+          style={{
+            position: 'absolute',
+            top: 10,
+            right: 10,
+            background: '#d50000',
+            color: 'white',
+            padding: '4px 8px',
+            borderRadius: '8px',
+            fontSize: '10px',
+            fontWeight: 'bold'
+          }}
+        >
+          VERSION 5.0 (Caché borrado)
+        </span>
+        <p className="eyebrow" style={{ color: 'rgba(255,255,255,0.7)' }}>
+          Agenda y Control
+        </p>
         <h1 style={{ fontSize: '32px', color: 'white', marginBottom: '1.5rem' }}>Visión General</h1>
-        
+
         {/* The NativeCalendar inherits the dark background nicely or can be overridden via css if needed */}
         <div style={{ background: 'white', borderRadius: '18px', padding: '4px' }}>
           {calStatus.loading ? (
-            <p style={{ padding: '20px', textAlign: 'center', color: '#666', margin: 0 }}>Comprobando conexión con Google...</p>
+            <p style={{ padding: '20px', textAlign: 'center', color: '#666', margin: 0 }}>
+              Comprobando conexión con Google...
+            </p>
           ) : calStatus.connected ? (
             <NativeCalendar onEventClick={onPatientSelect} />
           ) : (
-            <p style={{ padding: '20px', textAlign: 'center', color: '#666', margin: 0 }}>Google Calendar no está conectado. Ve a "Mi Agenda" para conectarlo.</p>
+            <p style={{ padding: '20px', textAlign: 'center', color: '#666', margin: 0 }}>
+              Google Calendar no está conectado. Ve a "Mi Agenda" para conectarlo.
+            </p>
           )}
         </div>
       </header>
@@ -84,7 +124,7 @@ export function ClinicDashboard({ onPatientSelect }) {
             >
               <div>
                 <strong style={{ display: 'block' }}>
-                  {item.patients?.full_name || 'Paciente desconocido'}
+                  {getActivityPatientName(item.patients)}
                 </strong>
                 <span className="muted" style={{ fontSize: '0.85rem' }}>
                   Sesion #{item.session_number} · {item.session_date}

@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
     if (!token) {
       return new Response(JSON.stringify({ error: 'Falta autorizacion' }), {
         status: 401,
-        headers: { ...buildCorsHeaders(req), 'Content-Type': 'application/json' },
+        headers: { ...buildCorsHeaders(req), 'Content-Type': 'application/json' }
       });
     }
 
@@ -40,7 +40,7 @@ Deno.serve(async (req) => {
     if (userError || !userData.user) {
       return new Response(JSON.stringify({ error: 'Sesion invalida' }), {
         status: 401,
-        headers: { ...buildCorsHeaders(req), 'Content-Type': 'application/json' },
+        headers: { ...buildCorsHeaders(req), 'Content-Type': 'application/json' }
       });
     }
 
@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
     if (!profile?.active || !['admin', 'therapist', 'assistant'].includes(profile.role)) {
       return new Response(JSON.stringify({ error: 'Usuario no autorizado' }), {
         status: 403,
-        headers: { ...buildCorsHeaders(req), 'Content-Type': 'application/json' },
+        headers: { ...buildCorsHeaders(req), 'Content-Type': 'application/json' }
       });
     }
 
@@ -72,7 +72,7 @@ Deno.serve(async (req) => {
     if (audioFile.size > MAX_AUDIO_BYTES) {
       return new Response(JSON.stringify({ error: 'Audio demasiado largo (max 10MB)' }), {
         status: 400,
-        headers: { ...buildCorsHeaders(req), 'Content-Type': 'application/json' },
+        headers: { ...buildCorsHeaders(req), 'Content-Type': 'application/json' }
       });
     }
 
@@ -87,7 +87,7 @@ Deno.serve(async (req) => {
       headers: {
         Authorization: `Bearer ${apiKey}`
       },
-      body: openaiFormData,
+      body: openaiFormData
     });
 
     const data = await response.json();

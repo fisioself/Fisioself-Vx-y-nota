@@ -6,4 +6,3 @@ export const getLocalISODate = (date: Date = new Date()): string => {
   const localDate = new Date(date.getTime() - offset * 60 * 1000);
   return localDate.toISOString().split('T')[0];
 };
-

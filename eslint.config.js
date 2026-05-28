@@ -77,5 +77,14 @@ export default [
         ...globals.es2024
       }
     }
+  },
+  {
+    files: ['public/sw.js'],
+    languageOptions: {
+      globals: {
+        ...globals.serviceworker,
+        ...globals.es2024
+      }
+    }
   }
 ];

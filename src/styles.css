@@ -529,15 +529,39 @@ pre {
 
 /* --- Print Styles for Clinical Reports (Point 2) --- */
 @media print {
-  nav, button, .patient-list, .editor, .ai-box, .filters, .modal-backdrop, .hero-actions {
+  nav,
+  button,
+  .patient-list,
+  .editor,
+  .ai-box,
+  .filters,
+  .modal-backdrop,
+  .hero-actions {
     display: none !important;
   }
-  body { background: white !important; color: black !important; font-size: 11pt; }
-  .shell { width: 100% !important; max-width: none !important; padding: 0 !important; }
-  .card { border: none !important; box-shadow: none !important; background: transparent !important; }
+  body {
+    background: white !important;
+    color: black !important;
+    font-size: 11pt;
+  }
+  .shell {
+    width: 100% !important;
+    max-width: none !important;
+    padding: 0 !important;
+  }
+  .card {
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+  }
   .record-header::before {
-    content: "INFORME CLÍNICO DE FISIOTERAPIA";
-    display: block; text-align: center; font-size: 18pt; font-weight: bold;
-    margin-bottom: 0.5cm; border-bottom: 2px solid black; padding-bottom: 10px;
+    content: 'INFORME CLÍNICO DE FISIOTERAPIA';
+    display: block;
+    text-align: center;
+    font-size: 18pt;
+    font-weight: bold;
+    margin-bottom: 0.5cm;
+    border-bottom: 2px solid black;
+    padding-bottom: 10px;
   }
 }

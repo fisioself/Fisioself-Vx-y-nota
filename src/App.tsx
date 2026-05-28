@@ -19,7 +19,7 @@ interface PatientListProps {
   onSelect: (patient: Patient) => void;
 }
 interface PatientRecordProps {
-  patient: Patient | null;
+  patient: Partial<Patient> | null;
   onPatientUpdated: (patient: Patient) => void;
   onPatientDeleted: () => void;
 }
@@ -65,7 +65,7 @@ export function App() {
   const queryClient = useQueryClient();
   const [session, setSession] = useState<Session | null>(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
-  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+  const [selectedPatient, setSelectedPatient] = useState<Partial<Patient> | null>(null);
   const [showNewPatient, setShowNewPatient] = useState(false);
   const [showAgenda, setShowAgenda] = useState(false);
   const [showDashboard, setShowDashboard] = useState(true);
@@ -233,17 +233,21 @@ export function App() {
       <section className="right-pane">
         <Suspense fallback={<LoadingCard>Cargando datos...</LoadingCard>}>
           {showDashboard ? (
-            <ClinicDashboard onPatientSelect={(patientId) => {
-              setSelectedPatient({ id: patientId });
-              setShowAgenda(false);
-              setShowDashboard(false);
-            }} />
+            <ClinicDashboard
+              onPatientSelect={(patientId) => {
+                setSelectedPatient({ id: patientId });
+                setShowAgenda(false);
+                setShowDashboard(false);
+              }}
+            />
           ) : showAgenda ? (
-            <AgendaView onPatientSelect={(patientId) => {
-              setSelectedPatient({ id: patientId });
-              setShowAgenda(false);
-              setShowDashboard(false);
-            }} />
+            <AgendaView
+              onPatientSelect={(patientId) => {
+                setSelectedPatient({ id: patientId });
+                setShowAgenda(false);
+                setShowDashboard(false);
+              }}
+            />
           ) : (
             <PatientRecord
               patient={selectedPatient}

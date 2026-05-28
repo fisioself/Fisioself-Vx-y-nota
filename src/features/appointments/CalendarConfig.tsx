@@ -1,12 +1,18 @@
 import { calendarService } from '../../services/calendarService';
 import { getErrorMessage } from '../../shared/errors';
+import { useToast } from '../../app/ToastProvider';
 
 export function CalendarConfig() {
+  const { notify } = useToast();
+
   const handleConnect = async () => {
     try {
       await calendarService.startGoogleConnection();
     } catch (err) {
-      alert(getErrorMessage(err, 'Error al conectar Google Calendar.'));
+      notify({
+        tone: 'error',
+        message: getErrorMessage(err, 'Error al conectar Google Calendar.')
+      });
     }
   };
 

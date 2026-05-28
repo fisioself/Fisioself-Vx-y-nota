@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { type ChangeEvent, type FormEvent, useState } from 'react';
 import { clinicalApi } from '../../services/clinicalApi';
+import { getErrorMessage } from '../../shared/errors';
+import type { Patient } from '../../types/clinical';
 
 interface AppointmentFormProps {
   patient: Patient;
