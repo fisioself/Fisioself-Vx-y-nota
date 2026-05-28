@@ -224,10 +224,18 @@ export const buildClinicalRecordHtml = (record: ClinicalRecord | null | undefine
 };
 
 export const printClinicalRecord = (record: ClinicalRecord | null | undefined): void => {
-  const win = window.open('', '_blank', 'noopener,noreferrer');
-  if (!win) throw new Error('No se pudo abrir ventana de impresion.');
-  win.document.write(buildClinicalRecordHtml(record));
-  win.document.close();
-  win.focus();
-  win.print();
+  const htmlContent = buildClinicalRecordHtml(record);
+  const blob = new Blob([htmlContent], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  const iframe = document.createElement('iframe');
+  iframe.style.cssText = 'position:fixed;width:0;height:0;opacity:0;border:none;';
+  iframe.src = url;
+  document.body.appendChild(iframe);
+  iframe.onload = () => {
+    iframe.contentWindow?.print();
+    setTimeout(() => {
+      document.body.removeChild(iframe);
+      URL.revokeObjectURL(url);
+    }, 1000);
+  };
 };
