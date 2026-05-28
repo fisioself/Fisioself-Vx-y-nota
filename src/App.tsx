@@ -23,6 +23,12 @@ interface PatientRecordProps {
   onPatientUpdated: (patient: Patient) => void;
   onPatientDeleted: () => void;
 }
+interface DashboardProps {
+  onPatientSelect: (patientId: string) => void;
+}
+interface AgendaProps {
+  onPatientSelect: (patientId: string) => void;
+}
 
 const LoginScreen = lazy(() =>
   import('./features/auth/LoginScreen').then((module) => ({ default: module.LoginScreen }))
@@ -42,12 +48,12 @@ const AgendaView = lazy(() =>
   import('./features/appointments/AgendaView').then((module) => ({
     default: module.AgendaView
   }))
-) as ComponentType;
+) as ComponentType<AgendaProps>;
 const ClinicDashboard = lazy(() =>
   import('./features/dashboard/ClinicDashboard').then((module) => ({
     default: module.ClinicDashboard
   }))
-) as ComponentType;
+) as ComponentType<DashboardProps>;
 
 const LoadingCard = ({ children = 'Cargando...' }: { children?: ReactNode }) => (
   <section className="card" aria-busy="true">
@@ -228,9 +234,21 @@ export function App() {
       <section className="right-pane">
         <Suspense fallback={<LoadingCard>Cargando datos...</LoadingCard>}>
           {showDashboard ? (
-            <ClinicDashboard />
+            <ClinicDashboard
+              onPatientSelect={(patientId) => {
+                setSelectedPatient({ id: patientId } as Patient);
+                setShowAgenda(false);
+                setShowDashboard(false);
+              }}
+            />
           ) : showAgenda ? (
-            <AgendaView />
+            <AgendaView
+              onPatientSelect={(patientId) => {
+                setSelectedPatient({ id: patientId } as Patient);
+                setShowAgenda(false);
+                setShowDashboard(false);
+              }}
+            />
           ) : (
             <PatientRecord
               patient={selectedPatient}
