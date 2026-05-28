@@ -3,8 +3,17 @@ import type { Appointment } from '../types/clinical';
 
 const connectUrl = import.meta.env.VITE_GOOGLE_CALENDAR_CONNECT_URL as string | undefined;
 const syncUrl = import.meta.env.VITE_GOOGLE_CALENDAR_SYNC_URL as string | undefined;
+const fetchUrl = import.meta.env.VITE_GOOGLE_CALENDAR_FETCH_URL as string | undefined;
 
 export const isGoogleCalendarConfigured = Boolean(connectUrl && syncUrl);
+
+export interface GoogleCalendarEvent {
+  id: string;
+  summary: string | null;
+  starts_at: string;
+  ends_at: string;
+  html_link: string | null;
+}
 
 interface ConnectionStatus {
   connected: boolean;
@@ -59,6 +68,25 @@ export const calendarService = {
     const data = await parseJson(response);
     if (!response.ok) throw new Error((data.error as string) || 'No se pudo sincronizar cita.');
     return data.appointment as Appointment | undefined;
+  },
+
+  async fetchEvents(options: { timeMin?: string; maxResults?: number } = {}): Promise<GoogleCalendarEvent[]> {
+    if (!fetchUrl) throw new Error('Falta configurar VITE_GOOGLE_CALENDAR_FETCH_URL.');
+    const token = await getAccessToken();
+    const response = await fetch(fetchUrl, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        time_min: options.timeMin ?? new Date().toISOString(),
+        max_results: options.maxResults ?? 20
+      })
+    });
+    const data = await parseJson(response);
+    if (!response.ok) throw new Error((data.error as string) || 'No se pudieron obtener eventos.');
+    return (data.events as GoogleCalendarEvent[]) ?? [];
   },
 
   async getConnectionStatus(): Promise<ConnectionStatus> {

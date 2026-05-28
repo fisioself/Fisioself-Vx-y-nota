@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
-import { calendarService } from '../../services/calendarService';
+import { calendarService, type GoogleCalendarEvent } from '../../services/calendarService';
 import { usePushNotifications } from '../../shared/usePushNotifications';
 import { getErrorMessage } from '../../shared/errors';
 
@@ -28,20 +28,35 @@ export function AgendaView() {
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [events, setEvents] = useState<GoogleCalendarEvent[]>([]);
+  const [eventsLoading, setEventsLoading] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const { subscribed, subscribe, loading: pushLoading } = usePushNotifications();
+
+  const loadEvents = useCallback(async () => {
+    setEventsLoading(true);
+    try {
+      const result = await calendarService.fetchEvents({ maxResults: 10 });
+      setEvents(result);
+    } catch {
+      setEvents([]);
+    } finally {
+      setEventsLoading(false);
+    }
+  }, []);
 
   const refreshStatus = useCallback(async (): Promise<boolean> => {
     try {
       const result = await calendarService.getConnectionStatus();
       setStatus({ loading: false, connected: result.connected, email: result.email });
+      if (result.connected) loadEvents();
       return result.connected;
     } catch {
       setStatus({ loading: false, connected: false, email: null });
       return false;
     }
-  }, []);
+  }, [loadEvents]);
 
   useEffect(() => {
     refreshStatus();
@@ -112,13 +127,37 @@ export function AgendaView() {
               {status.email ? `Cuenta: ${status.email}` : 'Cuenta de Google vinculada'}
             </span>
           </div>
-          <p className="muted" style={{ marginBottom: '1rem' }}>
-            Cada cita que crees aparecerá en tu Google Calendar al instante. Si quieres usar otra
-            cuenta, puedes reconectar.
-          </p>
+
+          {eventsLoading ? (
+            <p className="muted">Cargando eventos…</p>
+          ) : events.length > 0 ? (
+            <div className="list-stack" style={{ marginTop: 12 }}>
+              {events.map((ev) => (
+                <article key={ev.id} className="note-row">
+                  <div className="form-header">
+                    <strong>{ev.summary || 'Sin título'}</strong>
+                    {ev.html_link && (
+                      <a href={ev.html_link} target="_blank" rel="noopener noreferrer">
+                        Ver en Calendar
+                      </a>
+                    )}
+                  </div>
+                  <p className="muted">
+                    {new Date(ev.starts_at).toLocaleString()}
+                    {ev.ends_at && ` — ${new Date(ev.ends_at).toLocaleTimeString()}`}
+                  </p>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <p className="muted" style={{ marginTop: 12 }}>
+              No hay eventos próximos en tu Google Calendar.
+            </p>
+          )}
+
           <div
             className="actions"
-            style={{ justifyContent: 'flex-start', gap: 10, flexWrap: 'wrap' }}
+            style={{ justifyContent: 'flex-start', gap: 10, flexWrap: 'wrap', marginTop: 12 }}
           >
             <a
               href="https://calendar.google.com"
@@ -128,6 +167,9 @@ export function AgendaView() {
             >
               Abrir Google Calendar
             </a>
+            <button type="button" className="secondary" onClick={loadEvents} disabled={eventsLoading}>
+              Actualizar
+            </button>
             <button type="button" className="secondary" onClick={handleConnect} disabled={busy}>
               {busy ? 'Reconectando…' : 'Reconectar'}
             </button>
