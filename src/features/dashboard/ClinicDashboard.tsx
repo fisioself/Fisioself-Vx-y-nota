@@ -1,13 +1,21 @@
+import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { clinicalApi } from '../../services/clinicalApi';
-import type { ClinicStats } from '../../types/clinical';
+import { calendarService } from '../../services/calendarService';
+import { NativeCalendar } from '../../components/calendar/NativeCalendar';
 
-export function ClinicDashboard() {
-  const {
-    data: stats,
-    isLoading,
-    error
-  } = useQuery<ClinicStats, Error>({
+export function ClinicDashboard({ onPatientSelect }) {
+  const [calStatus, setCalStatus] = useState({ loading: true, connected: false });
+
+  useEffect(() => {
+    calendarService.getConnectionStatus().then(res => {
+      setCalStatus({ loading: false, connected: res.connected });
+    }).catch(() => {
+      setCalStatus({ loading: false, connected: false });
+    });
+  }, []);
+
+  const { data: stats, isLoading, error } = useQuery({
     queryKey: ['clinic-stats'],
     queryFn: () => clinicalApi.getClinicStats(),
     refetchOnWindowFocus: true
@@ -24,9 +32,21 @@ export function ClinicDashboard() {
 
   return (
     <div className="record-stack">
-      <header className="hero" style={{ padding: '24px', borderRadius: '22px' }}>
-        <p className="eyebrow">Panel de control</p>
-        <h1 style={{ fontSize: '32px' }}>Estadisticas de la Clinica</h1>
+      <header className="hero" style={{ padding: '24px', borderRadius: '22px', position: 'relative' }}>
+        <span style={{ position: 'absolute', top: 10, right: 10, background: '#d50000', color: 'white', padding: '4px 8px', borderRadius: '8px', fontSize: '10px', fontWeight: 'bold' }}>VERSION 5.0 (Caché borrado)</span>
+        <p className="eyebrow" style={{ color: 'rgba(255,255,255,0.7)' }}>Agenda y Control</p>
+        <h1 style={{ fontSize: '32px', color: 'white', marginBottom: '1.5rem' }}>Visión General</h1>
+        
+        {/* The NativeCalendar inherits the dark background nicely or can be overridden via css if needed */}
+        <div style={{ background: 'white', borderRadius: '18px', padding: '4px' }}>
+          {calStatus.loading ? (
+            <p style={{ padding: '20px', textAlign: 'center', color: '#666', margin: 0 }}>Comprobando conexión con Google...</p>
+          ) : calStatus.connected ? (
+            <NativeCalendar onEventClick={onPatientSelect} />
+          ) : (
+            <p style={{ padding: '20px', textAlign: 'center', color: '#666', margin: 0 }}>Google Calendar no está conectado. Ve a "Mi Agenda" para conectarlo.</p>
+          )}
+        </div>
       </header>
 
       <div
@@ -82,14 +102,6 @@ export function ClinicDashboard() {
             <p className="muted">No hay actividad reciente registrada.</p>
           )}
         </ul>
-      </section>
-
-      <section className="card warning">
-        <p className="eyebrow">Recordatorio de seguridad</p>
-        <p style={{ margin: '8px 0 0', fontSize: '0.9rem' }}>
-          Toda la informacion mostrada aqui cumple con las politicas de privacidad y RLS activas.
-          Solo personal autorizado puede ver estos agregados.
-        </p>
       </section>
     </div>
   );

@@ -41,7 +41,6 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
               height: 56,
               borderRadius: 15,
               objectFit: 'cover',
-              background: '#0b0f0e',
               boxShadow: '0 14px 26px rgba(18, 55, 42, 0.2)'
             }}
           />

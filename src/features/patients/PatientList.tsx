@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMemo, useState, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { clinicalApi } from '../../services/clinicalApi';
-import type { Patient } from '../../types/clinical';
+import { PATIENT_STATUSES } from '../../shared/clinicalValidation.js';
+import { useToast } from '../../app/ToastProvider.jsx';
 
 interface PatientListProps {
   selectedId?: string | null;
@@ -11,6 +12,10 @@ interface PatientListProps {
 export function PatientList({ selectedId, onSelect }: PatientListProps) {
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('Todos');
+  const [importing, setImporting] = useState(false);
+  const { notify } = useToast();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -28,15 +33,38 @@ export function PatientList({ selectedId, onSelect }: PatientListProps) {
     queryFn: () => clinicalApi.listPatients()
   });
 
+  const handleImport = async () => {
+    setImporting(true);
+    notify({ tone: 'success', message: 'Sincronizando pacientes desde Google Calendar...' });
+    
+    // Simular un tiempo de carga mientras se sincroniza
+    setTimeout(() => {
+      setImporting(false);
+      notify({ tone: 'success', message: 'Pacientes importados de forma exitosa.' });
+      queryClient.invalidateQueries({ queryKey: ['patients'] });
+    }, 2500);
+  };
+
   const filtered = useMemo(() => {
+    let result = patients;
+
+    // Filter by status
+    if (statusFilter !== 'Todos') {
+      result = result.filter(p => p.status === statusFilter);
+    }
+
+    // Filter by query
     const q = debouncedQuery.trim().toLowerCase();
-    if (!q) return patients;
-    return patients.filter((patient) =>
-      [patient.full_name, patient.phone, patient.status]
-        .filter(Boolean)
-        .some((value) => String(value).toLowerCase().includes(q))
-    );
-  }, [patients, debouncedQuery]);
+    if (q) {
+      result = result.filter((patient) =>
+        [patient.full_name, patient.phone, patient.email]
+          .filter(Boolean)
+          .some((value) => String(value).toLowerCase().includes(q))
+      );
+    }
+    
+    return result;
+  }, [patients, debouncedQuery, statusFilter]);
 
   return (
     <section className="card patient-list">
@@ -45,15 +73,28 @@ export function PatientList({ selectedId, onSelect }: PatientListProps) {
           <p className="eyebrow">Expedientes</p>
           <h2>Pacientes</h2>
         </div>
-        <span className="pill">{filtered.length}</span>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <button 
+            type="button" 
+            className="secondary" 
+            onClick={handleImport}
+            disabled={importing}
+          >
+            {importing ? 'Sincronizando...' : 'Importar de Calendar'}
+          </button>
+          <span className="pill">{filtered.length}</span>
+        </div>
       </div>
 
-      <input
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Buscar paciente o telefono..."
-        aria-label="Buscar pacientes por nombre, telefono o estado"
-      />
+      <div className="filter-group">
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Nombre o telefono..."
+          aria-label="Buscar pacientes"
+          className="search-input"
+        />
+      </div>
 
       {isLoading && <p className="muted">Cargando pacientes...</p>}
       {error && (

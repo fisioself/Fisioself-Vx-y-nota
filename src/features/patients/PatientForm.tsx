@@ -1,8 +1,6 @@
-import { useState, type FormEvent } from 'react';
+import { useState } from 'react';
 import { clinicalApi } from '../../services/clinicalApi';
-import { emptyStringsToNull, hasErrors, validatePatient } from '../../shared/clinicalValidation';
-import { getErrorMessage } from '../../shared/errors';
-import type { Patient, PatientStatus, ValidationErrors } from '../../types/clinical';
+import { validatePatient, hasErrors } from '../../shared/clinicalValidation.js';
 
 interface PatientFormProps {
   onCreated?: (patient: Patient) => void;

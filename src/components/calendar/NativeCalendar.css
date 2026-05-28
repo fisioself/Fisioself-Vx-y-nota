@@ -1,0 +1,81 @@
+.native-calendar-wrapper {
+  width: 100%;
+}
+
+.calendar-header-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 20px;
+}
+
+.fc-container {
+  font-family: inherit;
+}
+
+.fc .fc-button-primary {
+  background-color: var(--primary);
+  border-color: var(--primary);
+  border-radius: 14px;
+  text-transform: capitalize;
+  font-weight: 600;
+}
+
+.fc .fc-button-primary:hover,
+.fc .fc-button-primary:active,
+.fc .fc-button-primary:focus {
+  background-color: #0d281f !important;
+  border-color: #0d281f !important;
+  box-shadow: none !important;
+}
+
+.fc .fc-button-primary:not(:disabled).fc-button-active, 
+.fc .fc-button-primary:not(:disabled):active {
+  background-color: var(--secondary) !important;
+  color: var(--primary) !important;
+  border-color: var(--primary) !important;
+}
+
+.fc-theme-standard td, 
+.fc-theme-standard th {
+  border-color: var(--border);
+}
+
+.fc .fc-col-header-cell-cushion {
+  color: var(--text-main);
+  padding: 8px 0;
+  text-transform: capitalize;
+}
+
+.fc .fc-daygrid-day-number {
+  color: var(--text-main);
+}
+
+.fc-event {
+  border-radius: 6px;
+  padding: 2px 4px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.fc-event:hover {
+  opacity: 0.8;
+}
+
+.fc-timegrid-event .fc-event-main {
+  padding: 2px;
+}
+
+html[data-theme="dark"] .fc .fc-button-primary {
+  color: white;
+}
+
+html[data-theme="dark"] .native-calendar-wrapper {
+  background: var(--bg-card);
+}
+
+html[data-theme="dark"] .fc .fc-col-header-cell-cushion,
+html[data-theme="dark"] .fc .fc-daygrid-day-number,
+html[data-theme="dark"] .fc .fc-list-event-time,
+html[data-theme="dark"] .fc .fc-list-event-title {
+  color: var(--text-main);
+}

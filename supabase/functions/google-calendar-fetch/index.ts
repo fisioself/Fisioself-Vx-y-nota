@@ -39,6 +39,18 @@ const refreshGoogleToken = async ({
   return data;
 };
 
+const resolveSessionType = (colorId?: string) => {
+  switch (colorId) {
+    case '3': return 'Valoración'; // Grape (Morado)
+    case '5': return 'Descarga muscular'; // Banana (Amarillo)
+    case '4': 
+    case '6': return 'Terapia a domicilio'; // Flamingo/Tangerine (Naranja)
+    case '1': 
+    case '9': return 'Sesión clínica'; // Lavender/Blueberry (Azul)
+    default: return 'Sesión clínica';
+  }
+};
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: buildCorsHeaders(req) });
   if (req.method !== 'POST') return json(req, 405, { error: 'Metodo no permitido' });
@@ -51,20 +63,17 @@ Deno.serve(async (req) => {
     const token = getBearerToken(req);
 
     if (!token) return json(req, 401, { error: 'Falta autorizacion' });
-
     const supabase = createClient(supabaseUrl, serviceRoleKey);
-
     const { data: userData, error: userError } = await supabase.auth.getUser(token);
     if (userError || !userData.user) return json(req, 401, { error: 'Sesion invalida' });
 
-    const body = await req.json().catch(() => ({}));
-    const timeMin = typeof body.time_min === 'string' ? body.time_min : new Date().toISOString();
-    const maxResults = typeof body.max_results === 'number' ? Math.min(body.max_results, 50) : 20;
+    const userId = userData.user.id;
 
+    // Get connection
     const { data: connection, error: connectionError } = await supabase
       .from('calendar_connections')
       .select('id, calendar_id, token_expires_at')
-      .eq('user_id', userData.user.id)
+      .eq('user_id', userId)
       .eq('provider', 'google')
       .single();
 
@@ -81,10 +90,7 @@ Deno.serve(async (req) => {
     let accessToken: string | null = tokens?.access_token ?? null;
     const refreshTokenStored: string | null = tokens?.refresh_token ?? null;
 
-    if (
-      !accessToken ||
-      new Date(connection.token_expires_at || 0) <= new Date(Date.now() + 60_000)
-    ) {
+    if (!accessToken || new Date(connection.token_expires_at || 0) <= new Date(Date.now() + 60_000)) {
       if (!refreshTokenStored) throw new Error('Falta refresh token de Google');
       const refreshed = await refreshGoogleToken({
         refreshToken: refreshTokenStored,
@@ -92,60 +98,112 @@ Deno.serve(async (req) => {
         clientSecret: googleClientSecret
       });
       accessToken = refreshed.access_token;
-      const { error: tokenWriteError } = await supabase.rpc('calendar_tokens_set', {
+      await supabase.rpc('calendar_tokens_set', {
         p_connection_id: connection.id,
         p_access_token: accessToken,
         p_refresh_token: refreshTokenStored
       });
-      if (tokenWriteError) throw tokenWriteError;
-      await supabase
-        .from('calendar_connections')
-        .update({
-          token_expires_at: new Date(
-            Date.now() + Number(refreshed.expires_in || 3600) * 1000
-          ).toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', connection.id);
+      await supabase.from('calendar_connections').update({
+        token_expires_at: new Date(Date.now() + Number(refreshed.expires_in || 3600) * 1000).toISOString(),
+        updated_at: new Date().toISOString()
+      }).eq('id', connection.id);
     }
 
+    // Fetch events from Google
     const calendarId = encodeURIComponent(connection.calendar_id || 'primary');
-    const params = new URLSearchParams({
-      timeMin,
-      maxResults: String(maxResults),
-      singleEvents: 'true',
-      orderBy: 'startTime'
+    // Fetch last 3 months and future 6 months
+    const timeMin = new Date();
+    timeMin.setMonth(timeMin.getMonth() - 3);
+    const timeMax = new Date();
+    timeMax.setMonth(timeMax.getMonth() + 6);
+
+    const endpoint = `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events?timeMin=${timeMin.toISOString()}&timeMax=${timeMax.toISOString()}&singleEvents=true&maxResults=500`;
+
+    const googleResponse = await fetch(endpoint, {
+      headers: { Authorization: `Bearer ${accessToken}` }
     });
+    const googleData = await googleResponse.json();
 
-    const googleResponse = await fetch(
-      `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events?${params}`,
-      { headers: { Authorization: `Bearer ${accessToken}` } }
-    );
-
-    const googleData = await googleResponse.json().catch(() => ({}));
     if (!googleResponse.ok) {
-      console.error('google_calendar_fetch_rejected', { status: googleResponse.status });
-      return json(req, googleResponse.status, { error: 'No se pudieron obtener eventos de Google Calendar' });
+      return json(req, googleResponse.status, { error: 'Error fetching Google Calendar' });
     }
 
-    // Return only safe fields — never forward attendee emails or full event descriptions
-    const events = (googleData.items || []).map((item: Record<string, unknown>) => {
-      const start = (item.start as Record<string, unknown> | undefined) ?? {};
-      const end = (item.end as Record<string, unknown> | undefined) ?? {};
-      return {
-        id: item.id,
-        summary: item.summary,
-        starts_at: start.dateTime ?? start.date,
-        ends_at: end.dateTime ?? end.date,
-        html_link: item.htmlLink
-      };
-    });
+    const events = googleData.items || [];
+    let syncedCount = 0;
 
-    return json(req, 200, { events });
+    // Process each event
+    for (const event of events) {
+      if (event.status === 'cancelled') continue;
+      
+      const title = event.summary?.trim();
+      if (!title) continue; // Skip events without title
+
+      const startsAt = event.start?.dateTime || event.start?.date;
+      const endsAt = event.end?.dateTime || event.end?.date;
+      if (!startsAt || !endsAt) continue;
+
+      // Ensure patient exists
+      let patientId;
+      const { data: existingPatients } = await supabase
+        .from('patients')
+        .select('id')
+        .ilike('full_name', title)
+        .limit(1);
+
+      if (existingPatients && existingPatients.length > 0) {
+        patientId = existingPatients[0].id;
+      } else {
+        const { data: newPatient, error: pError } = await supabase
+          .from('patients')
+          .insert({ full_name: title, created_by: userId })
+          .select('id')
+          .single();
+        
+        if (pError) {
+          console.error('Error creating patient', pError);
+          continue;
+        }
+        patientId = newPatient.id;
+      }
+
+      // Check if appointment exists
+      const { data: existingAppt } = await supabase
+        .from('appointments')
+        .select('id')
+        .eq('google_event_id', event.id)
+        .limit(1);
+
+      const appointmentPayload = {
+        patient_id: patientId,
+        title: title,
+        description: event.description || '',
+        location: event.location || '',
+        starts_at: startsAt,
+        ends_at: endsAt,
+        status: 'scheduled',
+        google_calendar_id: connection.calendar_id || 'primary',
+        google_event_id: event.id,
+        google_html_link: event.htmlLink,
+        sync_status: 'synced',
+        color_id: event.colorId || null,
+        session_type: resolveSessionType(event.colorId),
+        updated_at: new Date().toISOString()
+      };
+
+      if (existingAppt && existingAppt.length > 0) {
+        await supabase.from('appointments').update(appointmentPayload).eq('id', existingAppt[0].id);
+      } else {
+        await supabase.from('appointments').insert({
+          ...appointmentPayload,
+          created_by: userId
+        });
+      }
+      syncedCount++;
+    }
+
+    return json(req, 200, { success: true, count: syncedCount });
   } catch (error) {
-    console.error('google_calendar_fetch_failed', {
-      name: error instanceof Error ? error.name : 'UnknownError'
-    });
-    return json(req, 500, { error: 'No se pudieron obtener eventos de Google Calendar' });
+    console.error('google-calendar-fetch-error', error);
+    return json(req, 500, { error: 'Internal Server Error' });
   }
 });

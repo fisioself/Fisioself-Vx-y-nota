@@ -1,53 +1,76 @@
-import { assertSupabase } from '../lib/supabaseClient';
-import type {
-  AiConsult,
-  Appointment,
-  ClinicalRecord,
-  ClinicStats,
-  Evaluation,
-  Patient,
-  SessionNote,
-  TimelineEntry
-} from '../types/clinical';
+import { supabase, isSupabaseConfigured } from '../lib/supabaseClient.js';
 
-interface SupabaseResult<T> {
-  data: T | null;
-  error: (Error & { code?: string }) | null;
+export interface Patient {
+  id: string;
+  full_name: string;
+  email?: string;
+  phone?: string;
+  birth_date?: string;
+  sex?: string;
+  status: string;
+  medical_diagnosis?: string;
+  functional_diagnosis?: string;
+  updated_at: string;
 }
 
-const unwrap = <T>({ data, error }: SupabaseResult<T>): T => {
-  if (error) throw error;
-  return data as T;
+export interface SessionNote {
+  id: string;
+  patient_id: string;
+  therapist_id?: string;
+  session_number: number;
+  session_date: string;
+  eva?: number;
+  raw_text: string;
+  created_at: string;
+}
+
+const assertReady = () => {
+  if (!isSupabaseConfigured || !supabase) throw new Error('Supabase no esta configurado.');
 };
 
-const sortByDateDesc = (a: TimelineEntry, b: TimelineEntry): number =>
+const unwrap = ({ data, error }: { data: any; error: any }) => {
+  if (error) throw error;
+  return data;
+};
+
+const sortByDateDesc = (a: any, b: any) => 
   new Date(b.date).getTime() - new Date(a.date).getTime();
 
 export const clinicalApi = {
   async listPatients(): Promise<Patient[]> {
-    const db = assertSupabase();
-    return unwrap(await db.from('patients').select('*').order('updated_at', { ascending: false }));
+    assertReady();
+    return unwrap(
+      await (supabase as any).from('patients').select('*').order('updated_at', { ascending: false })
+    );
   },
 
   async createPatient(payload: Partial<Patient>): Promise<Patient> {
-    const db = assertSupabase();
-    return unwrap(await db.from('patients').insert(payload).select('*').single());
+    assertReady();
+    const patient = unwrap(await (supabase as any).from('patients').insert(payload).select('*').single());
+    return patient;
   },
 
   async updatePatient(id: string, payload: Partial<Patient>): Promise<Patient> {
-    const db = assertSupabase();
-    return unwrap(await db.from('patients').update(payload).eq('id', id).select('*').single());
-  },
-
-  async deletePatient(id: string): Promise<unknown> {
-    const db = assertSupabase();
-    return unwrap(await db.from('patients').delete().eq('id', id));
-  },
-
-  async getPatient(id: string): Promise<ClinicalRecord> {
-    const db = assertSupabase();
+    assertReady();
     return unwrap(
-      await db
+      await (supabase as any)
+        .from('patients')
+        .update(payload)
+        .eq('id', id)
+        .select('*')
+        .single()
+    );
+  },
+
+  async deletePatient(id: string): Promise<void> {
+    assertReady();
+    return unwrap(await (supabase as any).from('patients').delete().eq('id', id));
+  },
+
+  async getPatient(id: string) {
+    assertReady();
+    return unwrap(
+      await (supabase as any)
         .from('patients')
         .select(
           '*, session_notes(*), evaluations(*), ai_consults(*), follow_ups(*), appointments(*)'
@@ -57,39 +80,50 @@ export const clinicalApi = {
     );
   },
 
-  async addEvaluation(payload: Partial<Evaluation>): Promise<Evaluation> {
-    const db = assertSupabase();
-    return unwrap(await db.from('evaluations').insert(payload).select('*').single());
+  async addEvaluation(payload: any) {
+    assertReady();
+    const evaluation = unwrap(
+      await (supabase as any).from('evaluations').insert(payload).select('*').single()
+    );
+    return evaluation;
   },
 
-  async updateEvaluation(id: string, payload: Partial<Evaluation>): Promise<Evaluation> {
-    const db = assertSupabase();
-    return unwrap(await db.from('evaluations').update(payload).eq('id', id).select('*').single());
+  async updateEvaluation(id: string, payload: any) {
+    assertReady();
+    return unwrap(
+      await (supabase as any)
+        .from('evaluations')
+        .update(payload)
+        .eq('id', id)
+        .select('*')
+        .single()
+    );
   },
 
   async addSessionNote(payload: Partial<SessionNote>): Promise<SessionNote> {
-    const db = assertSupabase();
-    const response = (await db
+    assertReady();
+    const response = await (supabase as any)
       .from('session_notes')
       .insert(payload)
       .select('*')
-      .single()) as SupabaseResult<SessionNote>;
+      .single();
     if (response.error?.code === '23505') {
       throw new Error(
         'Ya existe una nota con ese numero de sesion. Actualiza el expediente e intenta de nuevo.'
       );
     }
-    return unwrap(response);
+    const note = unwrap(response);
+    return note;
   },
 
   async updateSessionNote(id: string, payload: Partial<SessionNote>): Promise<SessionNote> {
-    const db = assertSupabase();
-    const response = (await db
+    assertReady();
+    const response = await (supabase as any)
       .from('session_notes')
       .update(payload)
       .eq('id', id)
       .select('*')
-      .single()) as SupabaseResult<SessionNote>;
+      .single();
 
     if (response.error?.code === '23505') {
       throw new Error(
@@ -100,50 +134,65 @@ export const clinicalApi = {
     return unwrap(response);
   },
 
-  async deleteSessionNote(id: string): Promise<unknown> {
-    const db = assertSupabase();
-    return unwrap(await db.from('session_notes').delete().eq('id', id));
+  async deleteSessionNote(id: string): Promise<void> {
+    assertReady();
+    return unwrap(await (supabase as any).from('session_notes').delete().eq('id', id));
   },
 
-  async addAiConsult(payload: Partial<AiConsult>): Promise<AiConsult> {
-    const db = assertSupabase();
-    return unwrap(await db.from('ai_consults').insert(payload).select('*').single());
+  async addAiConsult(payload: any) {
+    assertReady();
+    const consult = unwrap(await (supabase as any).from('ai_consults').insert(payload).select('*').single());
+    return consult;
   },
 
-  async addAppointment(payload: Partial<Appointment>): Promise<Appointment> {
-    const db = assertSupabase();
-    return unwrap(await db.from('appointments').insert(payload).select('*').single());
+  async addAppointment(payload: any) {
+    assertReady();
+    const appointment = unwrap(
+      await (supabase as any).from('appointments').insert(payload).select('*').single()
+    );
+    return appointment;
   },
 
-  async updateAppointment(id: string, payload: Partial<Appointment>): Promise<Appointment> {
-    const db = assertSupabase();
-    return unwrap(await db.from('appointments').update(payload).eq('id', id).select('*').single());
+  async updateAppointment(id: string, payload: any) {
+    assertReady();
+    return unwrap(
+      await (supabase as any)
+        .from('appointments')
+        .update(payload)
+        .eq('id', id)
+        .select('*')
+        .single()
+    );
   },
 
-  async getClinicStats(): Promise<ClinicStats> {
-    const db = assertSupabase();
-
-    const { count: totalPatients, error: pError } = await db
+  async getClinicStats() {
+    assertReady();
+    
+    // 1. Total Patients
+    const { count: totalPatients, error: pError } = await (supabase as any)
       .from('patients')
       .select('*', { count: 'exact', head: true });
     if (pError) throw pError;
 
+    // 2. Sessions in last 30 days
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const { count: recentSessions, error: sError } = await db
+    const { count: recentSessions, error: sError } = await (supabase as any)
       .from('session_notes')
       .select('*', { count: 'exact', head: true })
       .gte('session_date', thirtyDaysAgo.toISOString().split('T')[0]);
     if (sError) throw sError;
 
-    const { count: upcomingAppointments, error: aError } = await db
+    // 3. Upcoming Appointments
+    const { count: upcomingAppointments, error: aError } = await (supabase as any)
       .from('appointments')
       .select('*', { count: 'exact', head: true })
       .gte('starts_at', new Date().toISOString())
       .eq('status', 'scheduled');
     if (aError) throw aError;
 
-    const { data: latestNotes, error: lnError } = await db
+    // 4. Latest activity (last 5 notes)
+    const { data: latestNotes, error: lnError } = await (supabase as any)
       .from('session_notes')
       .select('id, session_number, session_date, patients(full_name)')
       .order('created_at', { ascending: false })
@@ -154,14 +203,12 @@ export const clinicalApi = {
       totalPatients: totalPatients || 0,
       recentSessions: recentSessions || 0,
       upcomingAppointments: upcomingAppointments || 0,
-      // Supabase types the nested patients join as an array even for many-to-one
-      // relations; we coerce to the runtime shape we actually return.
-      latestActivity: (latestNotes ?? []) as unknown as ClinicStats['latestActivity']
+      latestActivity: latestNotes || []
     };
   },
 
-  buildTimeline(record: ClinicalRecord | null | undefined): TimelineEntry[] {
-    const evaluations: TimelineEntry[] = (record?.evaluations || []).map((item) => ({
+  buildTimeline(record: any) {
+    const evaluations = (record?.evaluations || []).map((item: any) => ({
       id: item.id,
       type: 'evaluation',
       label: 'Valoracion inicial',
@@ -170,16 +217,17 @@ export const clinicalApi = {
       payload: item
     }));
 
-    const notes: TimelineEntry[] = (record?.session_notes || []).map((item) => ({
+    const notes = (record?.session_notes || []).map((item: any) => ({
       id: item.id,
       type: 'session_note',
       label: `Sesion #${item.session_number}`,
       date: item.session_date || item.created_at || new Date(0).toISOString(),
-      description: item.eva != null ? `EVA ${item.eva}/10` : 'Nota de sesion',
+      description:
+        item.eva !== null && item.eva !== undefined ? `EVA ${item.eva}/10` : 'Nota de sesion',
       payload: item
     }));
 
-    const consults: TimelineEntry[] = (record?.ai_consults || []).map((item) => ({
+    const consults = (record?.ai_consults || []).map((item: any) => ({
       id: item.id,
       type: 'ai_consult',
       label: `IA: ${item.type}`,
@@ -188,7 +236,7 @@ export const clinicalApi = {
       payload: item
     }));
 
-    const followUps: TimelineEntry[] = (record?.follow_ups || []).map((item) => ({
+    const followUps = (record?.follow_ups || []).map((item: any) => ({
       id: item.id,
       type: 'follow_up',
       label: `Seguimiento dia ${item.day_number}`,
@@ -197,7 +245,7 @@ export const clinicalApi = {
       payload: item
     }));
 
-    const appointments: TimelineEntry[] = (record?.appointments || []).map((item) => ({
+    const appointments = (record?.appointments || []).map((item: any) => ({
       id: item.id,
       type: 'appointment',
       label: item.title || 'Cita clinica',

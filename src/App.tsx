@@ -148,7 +148,6 @@ export function App() {
               height: 56,
               borderRadius: 14,
               objectFit: 'cover',
-              background: '#0b0f0e',
               flexShrink: 0
             }}
           />
@@ -234,21 +233,17 @@ export function App() {
       <section className="right-pane">
         <Suspense fallback={<LoadingCard>Cargando datos...</LoadingCard>}>
           {showDashboard ? (
-            <ClinicDashboard
-              onPatientSelect={(patientId) => {
-                setSelectedPatient({ id: patientId } as Patient);
-                setShowAgenda(false);
-                setShowDashboard(false);
-              }}
-            />
+            <ClinicDashboard onPatientSelect={(patientId) => {
+              setSelectedPatient({ id: patientId });
+              setShowAgenda(false);
+              setShowDashboard(false);
+            }} />
           ) : showAgenda ? (
-            <AgendaView
-              onPatientSelect={(patientId) => {
-                setSelectedPatient({ id: patientId } as Patient);
-                setShowAgenda(false);
-                setShowDashboard(false);
-              }}
-            />
+            <AgendaView onPatientSelect={(patientId) => {
+              setSelectedPatient({ id: patientId });
+              setShowAgenda(false);
+              setShowDashboard(false);
+            }} />
           ) : (
             <PatientRecord
               patient={selectedPatient}

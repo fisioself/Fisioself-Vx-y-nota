@@ -1,6 +1,6 @@
-import { openDB } from 'idb';
+import { openDB } from 'https://cdn.jsdelivr.net/npm/idb@8/build/index.js';
 
-const CACHE_NAME = 'fisioself-notas-vx-v1';
+const CACHE_NAME = 'fisioself-notas-vx-v3';
 const APP_SHELL = ['/', '/index.html', '/manifest.webmanifest'];
 
 const dbPromise = openDB('fisioself-sync-db', 1, {
@@ -98,15 +98,40 @@ self.addEventListener('sync', (event) => {
 
         for (const reqData of allReqs) {
           try {
-            await fetch(reqData.url, {
+            const response = await fetch(reqData.url, {
               method: reqData.method,
               headers: reqData.headers,
               body: reqData.body
             });
-            await store.delete(reqData.id);
+
+            if (response.ok) {
+              await store.delete(reqData.id);
+            } else if (response.status === 401) {
+              // Notificar error de autenticación
+              const clients = await self.clients.matchAll();
+              clients.forEach(client => {
+                client.postMessage({
+                  type: 'SYNC_ERROR',
+                  status: 401,
+                  message: 'Sesion caducada. Inicia sesion para sincronizar tus notas.'
+                });
+              });
+              break; 
+            } else if (response.status === 409) {
+              // Conflicto de datos: el registro cambió en el servidor
+              const clients = await self.clients.matchAll();
+              clients.forEach(client => {
+                client.postMessage({
+                  type: 'SYNC_CONFLICT',
+                  id: reqData.id,
+                  message: 'Conflicto detectado en una nota. Por favor revisa tus borradores.'
+                });
+              });
+              // Keep in queue but mark as conflict
+              await store.put({ ...reqData, conflict: true });
+            }
           } catch (err) {
             console.error('Background sync failed for req', reqData.id, err);
-            // Will retry on next sync event
           }
         }
       })()

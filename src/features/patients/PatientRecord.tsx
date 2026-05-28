@@ -1,22 +1,20 @@
-import { memo, useMemo, useState } from 'react';
+import React, { useMemo, useState, memo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { clinicalApi } from '../../services/clinicalApi';
-import { printClinicalRecord } from '../../shared/exportClinicalRecord';
-import { EvaluationForm } from '../evaluations/EvaluationForm';
-import { SessionNoteEditor } from '../session-notes/SessionNoteEditor';
-import { SessionNotesList } from '../session-notes/SessionNotesList';
-import { AppointmentList } from '../appointments/AppointmentList';
-import { ClinicalTimeline } from './ClinicalTimeline';
-import { PatientEditForm } from './PatientEditForm';
+import { clinicalApi, Patient } from '../../services/clinicalApi';
+import { exportToPdf } from '../../shared/exportClinicalRecord.js';
+import { EvaluationForm } from '../evaluations/EvaluationForm.jsx';
+import { SessionNoteEditor } from '../session-notes/SessionNoteEditor.jsx';
+import { SessionNotesList } from '../session-notes/SessionNotesList.jsx';
+import { AppointmentList } from '../appointments/AppointmentList.jsx';
+import { ClinicalTimeline } from './ClinicalTimeline.jsx';
+import { PatientEditForm } from './PatientEditForm.jsx';
 import { ClinicalSummary } from './ClinicalSummary';
-import { useRole } from '../../shared/useRole';
-import { EvaluationSummary } from '../evaluations/EvaluationSummary';
-import { ImageUploader } from '../../components/ImageUploader';
-import { ClinicalFilesList } from '../../components/ClinicalFilesList';
-import { getErrorMessage } from '../../shared/errors';
-import type { ClinicalRecord, Evaluation, Patient, SessionNote } from '../../types/clinical';
+import { useRole } from '../../shared/useRole.js';
+import { EvaluationSummary } from '../evaluations/EvaluationSummary.jsx';
+import { ImageUploader } from '../../components/ImageUploader.jsx';
+import { ClinicalFilesList } from '../../components/ClinicalFilesList.jsx';
 
-export const getNextSessionNumber = (notes: SessionNote[] = []): number => {
+export const getNextSessionNumber = (notes: any[] = []) => {
   const maxSession = notes.reduce((max, note) => {
     const value = Number(note.session_number);
     return Number.isFinite(value) && value > max ? value : max;
@@ -24,25 +22,7 @@ export const getNextSessionNumber = (notes: SessionNote[] = []): number => {
   return maxSession + 1;
 };
 
-interface PatientSummary {
-  sessionsCount: number;
-  latestSessionNumber: number | null;
-  latestSessionDate: string | null;
-  latestEva: number | null;
-  initialEva: number | null;
-  evaChange: number | null;
-  diagnosis: string;
-  medicalDiagnosis: string;
-  latestNotePreview: string;
-}
-
-export const buildPatientSummary = ({
-  notes = [],
-  evaluations = []
-}: {
-  notes?: SessionNote[];
-  evaluations?: Evaluation[];
-}): PatientSummary => {
+export const buildPatientSummary = ({ notes = [], evaluations = [] }: { notes?: any[]; evaluations?: any[] }) => {
   const sortedNotes = [...notes].sort(
     (a, b) => Number(a.session_number) - Number(b.session_number)
   );
@@ -51,8 +31,7 @@ export const buildPatientSummary = ({
     .filter((value) => Number.isFinite(value));
   const latestNote = sortedNotes.at(-1);
   const latestEvaluation = [...evaluations].sort(
-    (a, b) =>
-      new Date(b.evaluation_date || 0).getTime() - new Date(a.evaluation_date || 0).getTime()
+    (a, b) => new Date(b.evaluation_date).getTime() - new Date(a.evaluation_date).getTime()
   )[0];
   const latestMedicalDiagnosis =
     latestEvaluation?.sections?.consultation?.medical_diagnosis ||
@@ -81,15 +60,15 @@ export const buildPatientSummary = ({
 };
 
 interface PatientRecordProps {
-  patient: Patient | null;
+  patient: Partial<Patient> | null;
   onPatientUpdated?: (patient: Patient) => void;
-  onPatientDeleted?: (patient: Patient) => void;
+  onPatientDeleted?: (patient: Partial<Patient>) => void;
 }
 
-export const PatientRecord = memo(function PatientRecord({
-  patient,
-  onPatientUpdated,
-  onPatientDeleted
+export const PatientRecord = memo(function PatientRecord({ 
+  patient, 
+  onPatientUpdated, 
+  onPatientDeleted 
 }: PatientRecordProps) {
   const queryClient = useQueryClient();
   const [deleting, setDeleting] = useState(false);
@@ -106,27 +85,22 @@ export const PatientRecord = memo(function PatientRecord({
   } = useQuery<ClinicalRecord, Error>({
     queryKey: ['patient', patient?.id],
     queryFn: () => clinicalApi.getPatient(patient!.id),
-    enabled: !!patient?.id
+    enabled: !!patient?.id,
   });
 
   const notes = useMemo<SessionNote[]>(() => {
     const rows = record?.session_notes || [];
-    return [...rows].sort((a, b) => Number(a.session_number) - Number(b.session_number));
+    return [...rows].sort((a: any, b: any) => Number(a.session_number) - Number(b.session_number));
   }, [record]);
 
   const aiConsults = useMemo(() => {
     const rows = record?.ai_consults || [];
-    return [...rows].sort(
-      (a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
-    );
+    return [...rows].sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   }, [record]);
 
   const evaluations = useMemo<Evaluation[]>(() => {
     const rows = record?.evaluations || [];
-    return [...rows].sort(
-      (a, b) =>
-        new Date(b.evaluation_date || 0).getTime() - new Date(a.evaluation_date || 0).getTime()
-    );
+    return [...rows].sort((a: any, b: any) => new Date(b.evaluation_date).getTime() - new Date(a.evaluation_date).getTime());
   }, [record]);
 
   const timeline = useMemo(() => clinicalApi.buildTimeline(record), [record]);
@@ -165,8 +139,8 @@ export const PatientRecord = memo(function PatientRecord({
     try {
       await clinicalApi.deletePatient(current.id);
       onPatientDeleted?.(current);
-    } catch (err) {
-      setDeleteError(getErrorMessage(err, 'No se pudo eliminar el paciente.'));
+    } catch (err: any) {
+      setDeleteError(err.message || 'No se pudo eliminar el paciente.');
     } finally {
       setDeleting(false);
     }
@@ -191,7 +165,7 @@ export const PatientRecord = memo(function PatientRecord({
           >
             {showSessionNote ? 'Cerrar nota' : `Nota de sesion #${nextSession}`}
           </button>
-          <button type="button" className="secondary" onClick={() => printClinicalRecord(current)}>
+          <button type="button" className="secondary" onClick={() => exportToPdf(current, timeline)}>
             Exportar PDF
           </button>
           <button
@@ -213,7 +187,7 @@ export const PatientRecord = memo(function PatientRecord({
         <PatientEditForm
           patient={current}
           onCancel={() => setShowEdit(false)}
-          onUpdated={(updated) => {
+          onUpdated={(updated: Patient) => {
             setShowEdit(false);
             onPatientUpdated?.(updated);
             refreshRecord();
@@ -246,7 +220,7 @@ export const PatientRecord = memo(function PatientRecord({
       {loading && <p className="muted">Cargando expediente...</p>}
       {error && (
         <p className="error" role="alert">
-          {error.message || 'Error cargando expediente'}
+          {(error as Error).message || 'Error cargando expediente'}
         </p>
       )}
       {deleteError && (
@@ -279,7 +253,7 @@ export const PatientRecord = memo(function PatientRecord({
           <span className="pill">{evaluations.length}</span>
         </div>
         <div className="list-stack">
-          {evaluations.map((evaluation) => {
+          {evaluations.map((evaluation: any) => {
             const isOpen = openEvaluationId === evaluation.id;
             return (
               <article key={evaluation.id} className="note-row">
@@ -339,7 +313,7 @@ export const PatientRecord = memo(function PatientRecord({
           <span className="pill">{aiConsults.length}</span>
         </div>
         <div className="list-stack">
-          {aiConsults.map((consult) => (
+          {aiConsults.map((consult: any) => (
             <article key={consult.id} className="note-row">
               <div className="form-header">
                 <strong>{consult.type}</strong>

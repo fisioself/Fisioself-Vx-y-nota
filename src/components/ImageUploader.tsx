@@ -51,17 +51,18 @@ export function ImageUploader({ patientId, onUploadComplete }: ImageUploaderProp
   return (
     <div className="image-uploader">
       <label className="button secondary" style={{ cursor: 'pointer', display: 'inline-block' }}>
-        {uploading ? 'Subiendo...' : 'Adjuntar archivo'}
+        {uploading ? 'Subiendo...' : 'Adjuntar o tomar foto'}
         <input
           type="file"
           accept="image/jpeg,image/png,image/webp,application/pdf"
+          capture="environment"
           style={{ display: 'none' }}
           onChange={handleFileChange}
           disabled={uploading}
         />
       </label>
       <p className="muted" style={{ fontSize: '0.8rem', marginTop: '0.5rem' }}>
-        JPEG, PNG, WEBP o PDF hasta 10MB
+        Toma una foto con tu cámara o sube un archivo (Max 10MB)
       </p>
     </div>
   );

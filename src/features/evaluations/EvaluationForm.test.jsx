@@ -1,10 +1,10 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
-import { clinicalApi } from '../../services/clinicalApi.js';
+import { clinicalApi } from '../../services/clinicalApi';
 import { EvaluationForm } from './EvaluationForm.jsx';
 
-vi.mock('../../services/clinicalApi.js', () => ({
+vi.mock('../../services/clinicalApi', () => ({
   clinicalApi: {
     addEvaluation: vi.fn()
   }

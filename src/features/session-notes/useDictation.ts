@@ -1,18 +1,12 @@
-import { useRef, useState } from 'react';
-import { supabase } from '../../lib/supabaseClient';
+import { useEffect, useRef, useState } from 'react';
+import { supabase } from '../../lib/supabaseClient.js';
 
-interface DictationResult {
-  supported: boolean;
-  listening: boolean;
-  processing: boolean;
-  toggle: () => void;
-}
-
-export const useDictation = (onText: (text: string) => void): DictationResult => {
+export const useDictation = (onText, onError) => {
   const [listening, setListening] = useState(false);
   const [processing, setProcessing] = useState(false);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
+  const mediaRecorderRef = useRef(null);
+  const chunksRef = useRef([]);
+  const timerRef = useRef(null);
 
   const supported = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
 
@@ -59,20 +53,64 @@ export const useDictation = (onText: (text: string) => void): DictationResult =>
 
       mediaRecorder.start();
       setListening(true);
+
+      // Hallazgo #14: 5-minute limit
+      const MAX_MS = 5 * 60 * 1000;
+      timerRef.current = setTimeout(() => {
+        if (mediaRecorderRef.current?.state === 'recording') {
+          stopRecording();
+          onError?.('Dictado detenido automaticamente tras 5 minutos.');
+        }
+      }, MAX_MS);
+
     } catch (error) {
       console.error('Error starting recording:', error);
-      alert('No se pudo acceder al microfono.');
+      onError?.('No se pudo acceder al microfono.');
     }
   };
 
-  const stopRecording = (): void => {
+  const stopRecording = () => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
     if (mediaRecorderRef.current && listening) {
       mediaRecorderRef.current.stop();
       setListening(false);
     }
   };
 
-  const toggle = (): void => {
+  const transcribeAudio = async (blob) => {
+    setProcessing(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', blob, 'recording.webm');
+
+      const { data, error } = await supabase.functions.invoke('whisper-transcribe', {
+        body: formData,
+      });
+
+      if (error) throw error;
+      if (data?.text) {
+        onText(data.text);
+      }
+    } catch (error) {
+      console.error('Transcription failed:', error);
+      onError?.('Error al procesar el dictado con Whisper.');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    };
+  }, []);
+
+  const toggle = () => {
     if (listening) {
       stopRecording();
     } else {

@@ -6,6 +6,10 @@ import react from '@vitejs/plugin-react';
 // bundles in the browser cache.
 export default defineConfig({
   plugins: [react()],
+  define: {
+    // Hallazgo #4: Auto-increment cache version using build timestamp
+    __BUILD_VERSION__: JSON.stringify(new Date().getTime().toString())
+  },
   build: {
     rollupOptions: {
       output: {

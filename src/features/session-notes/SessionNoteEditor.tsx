@@ -1,30 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { useToast } from '../../app/ToastProvider';
+import { useToast } from '../../app/ToastProvider.jsx';
 import { clinicalApi } from '../../services/clinicalApi';
-import { aiService, AI_TYPES } from '../../services/aiService';
-import { getLocalISODate } from '../../shared/dateUtils';
-import { hasErrors, validateSessionNote } from '../../shared/clinicalValidation';
-import { consent, CONSENT_KEYS } from '../../shared/consent';
-import { draftStorage, getDraftKey } from '../../shared/draftStorage';
-import { useDraftAutosave } from '../../shared/useDraftAutosave';
-import { useShortcuts } from '../../shared/useShortcuts';
-import { getErrorMessage } from '../../shared/errors';
-import { AiConsultModal } from './AiConsultModal';
-import { ConsentGate } from './ConsentGate';
-import { useDictation } from './useDictation';
-import type { AiType, AiConsultSavePayload, PendingConsult } from './types';
-import type { SessionNote } from '../../types/clinical';
-
-interface SessionNoteEditorProps {
-  patientId: string;
-  therapistId?: string | null;
-  sessionNumber?: number;
-  note?: SessionNote | null;
-  onSaved?: (note: SessionNote) => void;
-  onCancel?: () => void;
-}
+import { aiService, AI_TYPES } from '../../services/aiService.js';
+import { getLocalISODate } from '../../shared/dateUtils.js';
+import { hasErrors, validateSessionNote } from '../../shared/clinicalValidation.js';
+import { consent, CONSENT_KEYS } from '../../shared/consent.js';
+import { draftStorage, getDraftKey } from '../../shared/draftStorage.js';
+import { useDraftAutosave } from '../../shared/useDraftAutosave.js';
+import { useShortcuts } from '../../shared/useShortcuts.js';
+import { AiConsultModal } from './AiConsultModal.jsx';
+import { ConsentGate } from './ConsentGate.jsx';
+import { useDictation } from './useDictation.js';
 
 const SOAP_TEMPLATE = `S - Subjetivo:
 Motivo de la sesion, sintomas reportados, cambios desde la ultima visita.
@@ -40,6 +28,13 @@ Indicaciones, ejercicios en casa, progresion y proxima sesion.
 
 Notas adicionales:
 `;
+
+const CLINICAL_SNIPPETS = [
+  { id: 'terapia-manual', label: 'Terapia Manual', text: 'Se aplica terapia manual ortopedica enfocada en liberacion miofascial y movilizacion articular (Grado I-III), logrando disminucion del tono muscular y mejora del ROM sin dolor agudo.' },
+  { id: 'puncion-seca', label: 'Puncion Seca', text: 'Puncion seca en puntos gatillo miofasciales activos (PGM) con respuesta de espasmo local (REL) positiva. Se complementa con estiramiento pasivo.' },
+  { id: 'descarga', label: 'Descarga', text: 'Sesion de descarga muscular global enfocada en tren inferior post-competicion. Masaje deportivo descontracturante, presoterapia y estiramientos neuromusculares (FNP).' },
+  { id: 'ejercicio-terapeutico', label: 'Ejercicio Terapeutico', text: 'Prescripcion de ejercicio terapeutico: movilidad activa, fortalecimiento isometrico/isotonico progresivo y control motor. Tolerancia adecuada al esfuerzo.' }
+];
 
 export function SessionNoteEditor({
   patientId,
@@ -113,9 +108,14 @@ export function SessionNoteEditor({
     setIsDirty(true);
   };
 
-  const dictation = useDictation((chunk: string) => {
-    handleTextChange(rawText ? `${rawText} ${chunk}` : chunk);
-  });
+  const dictation = useDictation(
+    (chunk) => {
+      handleTextChange(rawText ? `${rawText} ${chunk}` : chunk);
+    },
+    (message) => {
+      notify({ tone: 'error', message });
+    }
+  );
 
   const executeAi = async (type: AiType) => {
     setAiBusy(true);
@@ -247,7 +247,12 @@ export function SessionNoteEditor({
     handleTextChange(rawText.trim() ? `${rawText.trim()}\n\n---\n${SOAP_TEMPLATE}` : SOAP_TEMPLATE);
   };
 
-  const submit = async () => {
+  const insertSnippet = (text) => {
+    handleTextChange(rawText ? `${rawText}\n\n${text}` : text);
+    notify({ tone: 'success', message: 'Plantilla insertada.' });
+  };
+
+  const save = async () => {
     const payload = {
       patient_id: patientId,
       therapist_id: therapistId || null,
@@ -349,6 +354,23 @@ export function SessionNoteEditor({
                 : 'Dictar por voz (Whisper)'}
           </button>
         )}
+      </div>
+
+      <div className="filter-group" style={{ marginBottom: 12 }}>
+        <p className="eyebrow" style={{ marginBottom: 4 }}>Plantillas Rapidas</p>
+        <div className="row wrap filters">
+          {CLINICAL_SNIPPETS.map(snippet => (
+            <button
+              key={snippet.id}
+              type="button"
+              className="pill secondary"
+              style={{ fontSize: '0.85rem', padding: '6px 10px' }}
+              onClick={() => insertSnippet(snippet.text)}
+            >
+              + {snippet.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <label>
