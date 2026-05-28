@@ -29,4 +29,3 @@ describe('App', () => {
     expect(screen.getByText(/vite_supabase_url/i)).toBeInTheDocument();
   });
 });
-

@@ -10,6 +10,6 @@ export function createIDBPersister(idbValidKey = 'reactQuery') {
     },
     removeClient: async () => {
       await del(idbValidKey);
-    },
+    }
   };
 }

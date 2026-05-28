@@ -37,20 +37,21 @@ export const buildPatientSummary = ({ notes = [], evaluations = [] }: { notes?: 
     latestEvaluation?.sections?.consultation?.medical_diagnosis ||
     latestEvaluation?.medical_diagnosis ||
     '';
+  const initialEvaRaw = latestEvaluation?.eva_initial;
   const initialEva =
-    latestEvaluation?.eva_initial !== null && latestEvaluation?.eva_initial !== undefined
-      ? Number(latestEvaluation.eva_initial)
-      : evaValues[0];
+    initialEvaRaw !== null && initialEvaRaw !== undefined ? Number(initialEvaRaw) : evaValues[0];
   const latestEva = evaValues.at(-1);
   const evaChange =
-    Number.isFinite(initialEva) && Number.isFinite(latestEva) ? latestEva - initialEva : null;
+    Number.isFinite(initialEva) && Number.isFinite(latestEva)
+      ? (latestEva as number) - (initialEva as number)
+      : null;
 
   return {
     sessionsCount: sortedNotes.length,
-    latestSessionNumber: latestNote?.session_number || null,
-    latestSessionDate: latestNote?.session_date || null,
-    latestEva: Number.isFinite(latestEva) ? latestEva : null,
-    initialEva: Number.isFinite(initialEva) ? initialEva : null,
+    latestSessionNumber: latestNote?.session_number ?? null,
+    latestSessionDate: latestNote?.session_date ?? null,
+    latestEva: Number.isFinite(latestEva) ? (latestEva as number) : null,
+    initialEva: Number.isFinite(initialEva) ? (initialEva as number) : null,
     evaChange,
     diagnosis: latestEvaluation?.prognosis || '',
     medicalDiagnosis: latestMedicalDiagnosis,
@@ -77,13 +78,17 @@ export const PatientRecord = memo(function PatientRecord({
   const [showSessionNote, setShowSessionNote] = useState(false);
   const [openEvaluationId, setOpenEvaluationId] = useState<string | null>(null);
 
-  const { data: record, isLoading: loading, error } = useQuery({
+  const {
+    data: record,
+    isLoading: loading,
+    error
+  } = useQuery<ClinicalRecord, Error>({
     queryKey: ['patient', patient?.id],
     queryFn: () => clinicalApi.getPatient(patient!.id),
     enabled: !!patient?.id,
   });
 
-  const notes = useMemo(() => {
+  const notes = useMemo<SessionNote[]>(() => {
     const rows = record?.session_notes || [];
     return [...rows].sort((a: any, b: any) => Number(a.session_number) - Number(b.session_number));
   }, [record]);
@@ -93,7 +98,7 @@ export const PatientRecord = memo(function PatientRecord({
     return [...rows].sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   }, [record]);
 
-  const evaluations = useMemo(() => {
+  const evaluations = useMemo<Evaluation[]>(() => {
     const rows = record?.evaluations || [];
     return [...rows].sort((a: any, b: any) => new Date(b.evaluation_date).getTime() - new Date(a.evaluation_date).getTime());
   }, [record]);
@@ -113,9 +118,10 @@ export const PatientRecord = memo(function PatientRecord({
     );
   }
 
-  const current = record || patient;
+  const current: Patient = record || patient;
   const nextSession = getNextSessionNumber(notes);
   const refreshRecord = () => queryClient.invalidateQueries({ queryKey: ['patient', patient.id] });
+
   const deletePatient = async () => {
     const name = current.full_name || 'este paciente';
     const confirmed = window.confirm(
@@ -146,9 +152,7 @@ export const PatientRecord = memo(function PatientRecord({
         <div>
           <p className="eyebrow">Expediente clinico</p>
           <h2>{current.full_name}</h2>
-          <p className="muted">
-            {summary.diagnosis || 'Sin diagnostico fisioterapeutico'}
-          </p>
+          <p className="muted">{summary.diagnosis || 'Sin diagnostico fisioterapeutico'}</p>
         </div>
         <div className="hero-actions">
           <button type="button" onClick={() => setShowEvaluation((value) => !value)}>
@@ -283,7 +287,11 @@ export const PatientRecord = memo(function PatientRecord({
 
       <SessionNotesList notes={notes} onChanged={refreshRecord} />
 
-      <AppointmentList patient={current} appointments={record?.appointments || []} onChanged={refreshRecord} />
+      <AppointmentList
+        patient={current}
+        appointments={record?.appointments || []}
+        onChanged={refreshRecord}
+      />
 
       <section className="card">
         <div className="form-header">
@@ -293,7 +301,7 @@ export const PatientRecord = memo(function PatientRecord({
           </div>
           <ImageUploader patientId={current.id} onUploadComplete={refreshRecord} />
         </div>
-        <ClinicalFilesList patientId={current.id} refreshTrigger={record?.id} />
+        <ClinicalFilesList patientId={current.id} refreshTrigger={record?.id ? 1 : 0} />
       </section>
 
       <section className="card">
@@ -309,7 +317,9 @@ export const PatientRecord = memo(function PatientRecord({
             <article key={consult.id} className="note-row">
               <div className="form-header">
                 <strong>{consult.type}</strong>
-                <span>{new Date(consult.created_at).toLocaleDateString()}</span>
+                <span>
+                  {consult.created_at ? new Date(consult.created_at).toLocaleDateString() : ''}
+                </span>
               </div>
               <p className="muted">Validada: {consult.validated ? 'si' : 'pendiente'}</p>
               <pre>{consult.output_text}</pre>

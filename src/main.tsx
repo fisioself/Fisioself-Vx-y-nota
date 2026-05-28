@@ -1,0 +1,43 @@
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import { QueryClient } from '@tanstack/react-query';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
+import { AppRoot } from './app/AppRoot';
+import { ErrorBoundary } from './app/ErrorBoundary';
+import { registerServiceWorker } from './app/registerServiceWorker';
+import { ToastProvider } from './app/ToastProvider';
+import { initSentry } from './lib/sentry';
+import { createIDBPersister } from './lib/offlineSync';
+import './styles.css';
+import './app/toasts.css';
+
+initSentry();
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      gcTime: 1000 * 60 * 60 * 24, // 24 hours
+      staleTime: 1000 * 60 * 5, // 5 minutos de caché instantáneo (Offline Speed - Punto 3)
+      retry: 1,
+      refetchOnWindowFocus: true,
+    },
+  },
+});
+const persister = createIDBPersister();
+
+const rootElement = document.getElementById('root');
+if (!rootElement) throw new Error('Root element #root not found in document.');
+
+createRoot(rootElement).render(
+  <React.StrictMode>
+    <ErrorBoundary>
+      <PersistQueryClientProvider client={queryClient} persistOptions={{ persister }}>
+        <ToastProvider>
+          <AppRoot />
+        </ToastProvider>
+      </PersistQueryClientProvider>
+    </ErrorBoundary>
+  </React.StrictMode>
+);
+
+registerServiceWorker();

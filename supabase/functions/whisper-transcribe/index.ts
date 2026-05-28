@@ -23,7 +23,7 @@ Deno.serve(async (req) => {
     if (!supabaseUrl || !serviceRoleKey || !apiKey) {
       return new Response(JSON.stringify({ error: 'Servidor no configurado correctamente' }), {
         status: 500,
-        headers: { ...buildCorsHeaders(req), 'Content-Type': 'application/json' },
+        headers: { ...buildCorsHeaders(req), 'Content-Type': 'application/json' }
       });
     }
 
@@ -64,7 +64,7 @@ Deno.serve(async (req) => {
     if (!audioFile || !(audioFile instanceof File)) {
       return new Response(JSON.stringify({ error: 'No se recibio ningun archivo de audio' }), {
         status: 400,
-        headers: { ...buildCorsHeaders(req), 'Content-Type': 'application/json' },
+        headers: { ...buildCorsHeaders(req), 'Content-Type': 'application/json' }
       });
     }
 
@@ -85,7 +85,7 @@ Deno.serve(async (req) => {
     const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `Bearer ${apiKey}`
       },
       body: openaiFormData,
     });
@@ -94,13 +94,13 @@ Deno.serve(async (req) => {
 
     return new Response(JSON.stringify(data), {
       headers: { ...buildCorsHeaders(req), 'Content-Type': 'application/json' },
-      status: response.status,
+      status: response.status
     });
   } catch (error) {
     console.error('whisper_failed', error);
     return new Response(JSON.stringify({ error: 'Error procesando audio' }), {
       status: 500,
-      headers: { ...buildCorsHeaders(req), 'Content-Type': 'application/json' },
+      headers: { ...buildCorsHeaders(req), 'Content-Type': 'application/json' }
     });
   }
 });

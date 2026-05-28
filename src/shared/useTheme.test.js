@@ -6,13 +6,16 @@ describe('useTheme', () => {
   beforeEach(() => {
     localStorage.clear();
     document.documentElement.removeAttribute('data-theme');
-    vi.stubGlobal('matchMedia', vi.fn().mockImplementation(query => ({
-      matches: false,
-      media: query,
-      onchange: null,
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-    })));
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn().mockImplementation((query) => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn()
+      }))
+    );
   });
 
   it('should initialize with light theme by default', () => {
@@ -29,7 +32,7 @@ describe('useTheme', () => {
 
   it('should toggle theme and update document attribute and localStorage', () => {
     const { result } = renderHook(() => useTheme());
-    
+
     act(() => {
       result.current.toggleTheme();
     });

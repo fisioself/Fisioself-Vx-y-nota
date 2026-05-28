@@ -17,7 +17,8 @@ describe('clinicalApi.addSessionNote', () => {
 
     vi.doMock('../lib/supabaseClient.js', () => ({
       isSupabaseConfigured: true,
-      supabase: { from }
+      supabase: { from },
+      assertSupabase: () => ({ from })
     }));
 
     const { clinicalApi } = await import('./clinicalApi');

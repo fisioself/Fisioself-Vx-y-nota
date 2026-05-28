@@ -6,7 +6,7 @@ const APP_SHELL = ['/', '/index.html', '/manifest.webmanifest'];
 const dbPromise = openDB('fisioself-sync-db', 1, {
   upgrade(db) {
     db.createObjectStore('sync-queue', { keyPath: 'id', autoIncrement: true });
-  },
+  }
 });
 
 self.addEventListener('install', (event) => {
@@ -27,16 +27,17 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   const { request } = event;
-  
+
   if (request.method === 'POST' || request.method === 'PUT' || request.method === 'DELETE') {
-    if (request.url.includes('/rest/v1/')) { // Supabase API
+    if (request.url.includes('/rest/v1/')) {
+      // Supabase API
       event.respondWith(
         fetch(request.clone()).catch(async (_err) => {
           const db = await dbPromise;
           const clonedReq = request.clone();
           const headers = {};
           clonedReq.headers.forEach((value, key) => (headers[key] = value));
-          
+
           let body;
           try {
             body = await clonedReq.text();
@@ -140,7 +141,7 @@ self.addEventListener('sync', (event) => {
 
 self.addEventListener('push', (event) => {
   let data = { title: 'Fisioself', body: 'Tienes una nueva notificacion clinica.' };
-  
+
   if (event.data) {
     try {
       data = event.data.json();
@@ -157,7 +158,7 @@ self.addEventListener('push', (event) => {
     data: {
       dateOfArrival: Date.now(),
       primaryKey: '2'
-    },
+    }
   };
 
   event.waitUntil(self.registration.showNotification(data.title, options));

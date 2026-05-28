@@ -6,9 +6,9 @@ import { supabase } from '../../lib/supabaseClient.js';
 vi.mock('../../lib/supabaseClient.js', () => ({
   supabase: {
     functions: {
-      invoke: vi.fn(),
-    },
-  },
+      invoke: vi.fn()
+    }
+  }
 }));
 
 describe('useDictation with Whisper', () => {
@@ -16,25 +16,28 @@ describe('useDictation with Whisper', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    
+
     // Mock getUserMedia
     vi.stubGlobal('navigator', {
       mediaDevices: {
         getUserMedia: vi.fn().mockResolvedValue({
-          getTracks: () => [{ stop: vi.fn() }],
-        }),
-      },
+          getTracks: () => [{ stop: vi.fn() }]
+        })
+      }
     });
 
     // Mock MediaRecorder
-    vi.stubGlobal('MediaRecorder', vi.fn().mockImplementation(function() {
-      this.start = vi.fn();
-      this.stop = vi.fn(() => {
-        if (this.onstop) this.onstop();
-      });
-      this.ondataavailable = null;
-      this.onstop = null;
-    }));
+    vi.stubGlobal(
+      'MediaRecorder',
+      vi.fn().mockImplementation(function () {
+        this.start = vi.fn();
+        this.stop = vi.fn(() => {
+          if (this.onstop) this.onstop();
+        });
+        this.ondataavailable = null;
+        this.onstop = null;
+      })
+    );
   });
 
   it('should initialize with correct default states', () => {
@@ -45,8 +48,11 @@ describe('useDictation with Whisper', () => {
   });
 
   it('should call transcribeAudio on stop recording', async () => {
-    supabase.functions.invoke.mockResolvedValue({ data: { text: 'transcribed text' }, error: null });
-    
+    supabase.functions.invoke.mockResolvedValue({
+      data: { text: 'transcribed text' },
+      error: null
+    });
+
     const { result } = renderHook(() => useDictation(mockOnText));
 
     await act(async () => {
@@ -61,6 +67,9 @@ describe('useDictation with Whisper', () => {
 
     expect(result.current.listening).toBe(false);
     // Transcribe happens async after stop
-    expect(supabase.functions.invoke).toHaveBeenCalledWith('whisper-transcribe', expect.any(Object));
+    expect(supabase.functions.invoke).toHaveBeenCalledWith(
+      'whisper-transcribe',
+      expect.any(Object)
+    );
   });
 });

@@ -4,7 +4,8 @@ const loadClinicalApi = async (from) => {
   vi.resetModules();
   vi.doMock('../lib/supabaseClient.js', () => ({
     isSupabaseConfigured: true,
-    supabase: { from }
+    supabase: { from },
+    assertSupabase: () => ({ from })
   }));
 
   return import('./clinicalApi');
