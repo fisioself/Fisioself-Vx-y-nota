@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { calendarService } from '../../services/calendarService.js';
+import { calendarService } from '../../services/calendarService';
 import { clinicalApi } from '../../services/clinicalApi';
-import { AppointmentForm } from './AppointmentForm.jsx';
+import { AppointmentForm } from './AppointmentForm';
 import { getErrorMessage } from '../../shared/errors';
 import { useToast } from '../../app/ToastProvider';
 import type { Appointment, Patient } from '../../types/clinical';

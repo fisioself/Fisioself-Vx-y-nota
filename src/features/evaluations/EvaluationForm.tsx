@@ -1,8 +1,8 @@
 import { useState, type FormEvent } from 'react';
 import { clinicalApi } from '../../services/clinicalApi';
-import { getLocalISODate } from '../../shared/dateUtils.js';
-import { draftStorage, getEvaluationDraftKey } from '../../shared/draftStorage.js';
-import { useDraftAutosave } from '../../shared/useDraftAutosave.js';
+import { getLocalISODate } from '../../shared/dateUtils';
+import { draftStorage, getEvaluationDraftKey } from '../../shared/draftStorage';
+import { useDraftAutosave } from '../../shared/useDraftAutosave';
 import { getErrorMessage } from '../../shared/errors';
 import type { Patient, Evaluation, EvaluationSections } from '../../types/clinical';
 

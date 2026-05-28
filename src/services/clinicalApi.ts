@@ -1,4 +1,5 @@
 import { assertSupabase } from '../lib/supabaseClient';
+import type { TablesInsert, TablesUpdate } from '../types/supabase';
 import type {
   Patient,
   SessionNote,
@@ -30,12 +31,25 @@ export const clinicalApi = {
 
   async createPatient(payload: Partial<Patient>): Promise<Patient> {
     const db = assertSupabase();
-    return unwrap(await db.from('patients').insert(payload).select('*').single());
+    return unwrap(
+      await db
+        .from('patients')
+        .insert(payload as TablesInsert<'patients'>)
+        .select('*')
+        .single()
+    );
   },
 
   async updatePatient(id: string, payload: Partial<Patient>): Promise<Patient> {
     const db = assertSupabase();
-    return unwrap(await db.from('patients').update(payload).eq('id', id).select('*').single());
+    return unwrap(
+      await db
+        .from('patients')
+        .update(payload as TablesUpdate<'patients'>)
+        .eq('id', id)
+        .select('*')
+        .single()
+    );
   },
 
   async deletePatient(id: string): Promise<void> {
@@ -58,17 +72,34 @@ export const clinicalApi = {
 
   async addEvaluation(payload: Partial<Evaluation>): Promise<Evaluation> {
     const db = assertSupabase();
-    return unwrap(await db.from('evaluations').insert(payload).select('*').single());
+    return unwrap(
+      await db
+        .from('evaluations')
+        .insert(payload as TablesInsert<'evaluations'>)
+        .select('*')
+        .single()
+    );
   },
 
   async updateEvaluation(id: string, payload: Partial<Evaluation>): Promise<Evaluation> {
     const db = assertSupabase();
-    return unwrap(await db.from('evaluations').update(payload).eq('id', id).select('*').single());
+    return unwrap(
+      await db
+        .from('evaluations')
+        .update(payload as TablesUpdate<'evaluations'>)
+        .eq('id', id)
+        .select('*')
+        .single()
+    );
   },
 
   async addSessionNote(payload: Partial<SessionNote>): Promise<SessionNote> {
     const db = assertSupabase();
-    const response = await db.from('session_notes').insert(payload).select('*').single();
+    const response = await db
+      .from('session_notes')
+      .insert(payload as TablesInsert<'session_notes'>)
+      .select('*')
+      .single();
     if (response.error?.code === '23505') {
       throw new Error(
         'Ya existe una nota con ese numero de sesion. Actualiza el expediente e intenta de nuevo.'
@@ -81,7 +112,7 @@ export const clinicalApi = {
     const db = assertSupabase();
     const response = await db
       .from('session_notes')
-      .update(payload)
+      .update(payload as TablesUpdate<'session_notes'>)
       .eq('id', id)
       .select('*')
       .single();
@@ -102,17 +133,36 @@ export const clinicalApi = {
 
   async addAiConsult(payload: Partial<AiConsult>): Promise<AiConsult> {
     const db = assertSupabase();
-    return unwrap(await db.from('ai_consults').insert(payload).select('*').single());
+    return unwrap(
+      await db
+        .from('ai_consults')
+        .insert(payload as TablesInsert<'ai_consults'>)
+        .select('*')
+        .single()
+    );
   },
 
   async addAppointment(payload: Partial<Appointment>): Promise<Appointment> {
     const db = assertSupabase();
-    return unwrap(await db.from('appointments').insert(payload).select('*').single());
+    return unwrap(
+      await db
+        .from('appointments')
+        .insert(payload as TablesInsert<'appointments'>)
+        .select('*')
+        .single()
+    );
   },
 
   async updateAppointment(id: string, payload: Partial<Appointment>): Promise<Appointment> {
     const db = assertSupabase();
-    return unwrap(await db.from('appointments').update(payload).eq('id', id).select('*').single());
+    return unwrap(
+      await db
+        .from('appointments')
+        .update(payload as TablesUpdate<'appointments'>)
+        .eq('id', id)
+        .select('*')
+        .single()
+    );
   },
 
   async getClinicStats(): Promise<ClinicStats> {

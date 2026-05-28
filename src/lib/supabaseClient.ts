@@ -1,13 +1,14 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '../types/supabase';
 
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
 
 export const isSupabaseConfigured = Boolean(url && anonKey);
 
-export const supabase: SupabaseClient | null =
+export const supabase: SupabaseClient<Database> | null =
   isSupabaseConfigured && url && anonKey
-    ? createClient(url, anonKey, {
+    ? createClient<Database>(url, anonKey, {
         auth: {
           persistSession: true,
           autoRefreshToken: true
@@ -15,7 +16,7 @@ export const supabase: SupabaseClient | null =
       })
     : null;
 
-export const assertSupabase = (): SupabaseClient => {
+export const assertSupabase = (): SupabaseClient<Database> => {
   if (!isSupabaseConfigured || !supabase) throw new Error('Supabase no esta configurado.');
   return supabase;
 };

@@ -5,7 +5,7 @@ import {
   validatePatient,
   hasErrors,
   emptyStringsToNull
-} from '../../shared/clinicalValidation.js';
+} from '../../shared/clinicalValidation';
 import type { Patient, PatientStatus, Sex, ValidationErrors } from '../../types/clinical';
 import { getErrorMessage } from '../../shared/errors';
 

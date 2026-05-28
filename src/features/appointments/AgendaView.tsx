@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { calendarService } from '../../services/calendarService.js';
+import { calendarService } from '../../services/calendarService';
 import { getErrorMessage } from '../../shared/errors';
 import { NativeCalendar } from '../../components/calendar/NativeCalendar';
 

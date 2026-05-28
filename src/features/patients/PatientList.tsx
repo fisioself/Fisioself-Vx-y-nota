@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { clinicalApi } from '../../services/clinicalApi';
-import { useToast } from '../../app/ToastProvider.jsx';
+import { useToast } from '../../app/ToastProvider';
 import type { Patient } from '../../types/clinical';
 
 interface PatientListProps {

@@ -15,7 +15,7 @@ export const registerServiceWorker = () => {
 
   window.addEventListener('load', () => {
     navigator.serviceWorker
-      .register('/sw.js', { type: 'module' })
+      .register('/sw.js')
       .then((registration) => {
         console.warn('[SW] Registrado con exito:', registration.scope);
       })

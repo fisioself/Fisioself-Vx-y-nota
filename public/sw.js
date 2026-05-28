@@ -1,14 +1,49 @@
-import { openDB } from 'https://cdn.jsdelivr.net/npm/idb@8/build/index.js';
-
-const CACHE_NAME = 'fisioself-notas-vx-v3';
+// Classic Service Worker — no ES module imports, no CDN dependencies
+const CACHE_NAME = 'fisioself-notas-vx-v4';
 const APP_SHELL = ['/', '/index.html', '/manifest.webmanifest'];
+const DB_NAME = 'fisioself-sync-db';
+const STORE_NAME = 'sync-queue';
 
-const dbPromise = openDB('fisioself-sync-db', 1, {
-  upgrade(db) {
-    db.createObjectStore('sync-queue', { keyPath: 'id', autoIncrement: true });
-  }
-});
+// ---- Tiny IndexedDB promise helpers (replaces idb library) ----
+function idbOpen() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+      }
+    };
+    req.onsuccess = (e) => resolve(e.target.result);
+    req.onerror = () => reject(req.error);
+  });
+}
 
+function idbPut(db, record) {
+  return new Promise((resolve, reject) => {
+    const req = db.transaction(STORE_NAME, 'readwrite').objectStore(STORE_NAME).put(record);
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+  });
+}
+
+function idbGetAll(db) {
+  return new Promise((resolve, reject) => {
+    const req = db.transaction(STORE_NAME, 'readonly').objectStore(STORE_NAME).getAll();
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+function idbDelete(db, id) {
+  return new Promise((resolve, reject) => {
+    const req = db.transaction(STORE_NAME, 'readwrite').objectStore(STORE_NAME).delete(id);
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+  });
+}
+
+// ---- Lifecycle ----
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));
   self.skipWaiting();
@@ -25,15 +60,15 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
+// ---- Fetch ----
 self.addEventListener('fetch', (event) => {
   const { request } = event;
 
   if (request.method === 'POST' || request.method === 'PUT' || request.method === 'DELETE') {
     if (request.url.includes('/rest/v1/')) {
-      // Supabase API
       event.respondWith(
         fetch(request.clone()).catch(async (_err) => {
-          const db = await dbPromise;
+          const db = await idbOpen();
           const clonedReq = request.clone();
           const headers = {};
           clonedReq.headers.forEach((value, key) => (headers[key] = value));
@@ -45,7 +80,7 @@ self.addEventListener('fetch', (event) => {
             body = null;
           }
 
-          await db.put('sync-queue', {
+          await idbPut(db, {
             url: clonedReq.url,
             method: clonedReq.method,
             headers,
@@ -57,7 +92,6 @@ self.addEventListener('fetch', (event) => {
             await self.registration.sync.register('clinical-sync');
           }
 
-          // Return a fake 202 Accepted response so the frontend thinks it succeeded locally
           return new Response(JSON.stringify({ status: 'queued_offline' }), {
             status: 202,
             headers: { 'Content-Type': 'application/json' }
@@ -87,14 +121,13 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
+// ---- Background sync ----
 self.addEventListener('sync', (event) => {
   if (event.tag === 'clinical-sync') {
     event.waitUntil(
       (async () => {
-        const db = await dbPromise;
-        const tx = db.transaction('sync-queue', 'readwrite');
-        const store = tx.objectStore('sync-queue');
-        const allReqs = await store.getAll();
+        const db = await idbOpen();
+        const allReqs = await idbGetAll(db);
 
         for (const reqData of allReqs) {
           try {
@@ -105,9 +138,8 @@ self.addEventListener('sync', (event) => {
             });
 
             if (response.ok) {
-              await store.delete(reqData.id);
+              await idbDelete(db, reqData.id);
             } else if (response.status === 401) {
-              // Notificar error de autenticación
               const clients = await self.clients.matchAll();
               clients.forEach((client) => {
                 client.postMessage({
@@ -118,7 +150,6 @@ self.addEventListener('sync', (event) => {
               });
               break;
             } else if (response.status === 409) {
-              // Conflicto de datos: el registro cambió en el servidor
               const clients = await self.clients.matchAll();
               clients.forEach((client) => {
                 client.postMessage({
@@ -127,8 +158,7 @@ self.addEventListener('sync', (event) => {
                   message: 'Conflicto detectado en una nota. Por favor revisa tus borradores.'
                 });
               });
-              // Keep in queue but mark as conflict
-              await store.put({ ...reqData, conflict: true });
+              await idbPut(db, { ...reqData, conflict: true });
             }
           } catch (err) {
             console.error('Background sync failed for req', reqData.id, err);
@@ -139,6 +169,7 @@ self.addEventListener('sync', (event) => {
   }
 });
 
+// ---- Push notifications ----
 self.addEventListener('push', (event) => {
   let data = { title: 'Fisioself', body: 'Tienes una nueva notificacion clinica.' };
 

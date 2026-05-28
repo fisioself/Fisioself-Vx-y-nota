@@ -2,18 +2,18 @@ import { useMemo, useState, memo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { clinicalApi } from '../../services/clinicalApi';
 import type { Patient, SessionNote, Evaluation, ClinicalRecord } from '../../types/clinical';
-import { exportToPdf } from '../../shared/exportClinicalRecord.js';
-import { EvaluationForm } from '../evaluations/EvaluationForm.jsx';
-import { SessionNoteEditor } from '../session-notes/SessionNoteEditor.jsx';
-import { SessionNotesList } from '../session-notes/SessionNotesList.jsx';
-import { AppointmentList } from '../appointments/AppointmentList.jsx';
-import { ClinicalTimeline } from './ClinicalTimeline.jsx';
-import { PatientEditForm } from './PatientEditForm.jsx';
+import { exportToPdf } from '../../shared/exportClinicalRecord';
+import { EvaluationForm } from '../evaluations/EvaluationForm';
+import { SessionNoteEditor } from '../session-notes/SessionNoteEditor';
+import { SessionNotesList } from '../session-notes/SessionNotesList';
+import { AppointmentList } from '../appointments/AppointmentList';
+import { ClinicalTimeline } from './ClinicalTimeline';
+import { PatientEditForm } from './PatientEditForm';
 import { ClinicalSummary } from './ClinicalSummary';
-import { useRole } from '../../shared/useRole.js';
-import { EvaluationSummary } from '../evaluations/EvaluationSummary.jsx';
-import { ImageUploader } from '../../components/ImageUploader.jsx';
-import { ClinicalFilesList } from '../../components/ClinicalFilesList.jsx';
+import { useRole } from '../../shared/useRole';
+import { EvaluationSummary } from '../evaluations/EvaluationSummary';
+import { ImageUploader } from '../../components/ImageUploader';
+import { ClinicalFilesList } from '../../components/ClinicalFilesList';
 
 export const getNextSessionNumber = (notes: Pick<SessionNote, 'session_number'>[] = []) => {
   const maxSession = notes.reduce((max, note) => {

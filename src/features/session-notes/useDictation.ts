@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { assertSupabase } from '../../lib/supabaseClient.js';
+import { assertSupabase } from '../../lib/supabaseClient';
 
 export const useDictation = (
   onText: (text: string) => void,

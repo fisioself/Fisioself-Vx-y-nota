@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { clinicalApi } from '../../services/clinicalApi';
-import { validatePatient, hasErrors, emptyStringsToNull } from '../../shared/clinicalValidation.js';
+import { validatePatient, hasErrors, emptyStringsToNull } from '../../shared/clinicalValidation';
 import type { Patient, PatientStatus, ValidationErrors } from '../../types/clinical';
 import { getErrorMessage } from '../../shared/errors';
 
