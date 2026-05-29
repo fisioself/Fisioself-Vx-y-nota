@@ -53,21 +53,6 @@ export function ClinicDashboard({ onPatientSelect }: ClinicDashboardProps) {
         className="hero"
         style={{ padding: '24px', borderRadius: '22px', position: 'relative' }}
       >
-        <span
-          style={{
-            position: 'absolute',
-            top: 10,
-            right: 10,
-            background: '#d50000',
-            color: 'white',
-            padding: '4px 8px',
-            borderRadius: '8px',
-            fontSize: '10px',
-            fontWeight: 'bold'
-          }}
-        >
-          VERSION 5.0 (Caché borrado)
-        </span>
         <p className="eyebrow" style={{ color: 'rgba(255,255,255,0.7)' }}>
           Agenda y Control
         </p>

@@ -18,12 +18,15 @@ export function useRole() {
         .eq('id', userId)
         .single();
 
-      if (error) {
-        console.error('Error fetching role:', error);
-        return null;
-      }
+      if (error) throw error;
       return (data?.role as Role | undefined) ?? null;
     },
-    staleTime: Infinity
+    staleTime: Infinity,
+    retry: (failureCount, err) => {
+      const msg = (err as { message?: string })?.message ?? '';
+      if (/40[134]|PGRST116/i.test(msg)) return false;
+      return failureCount < 2;
+    },
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 8000)
   });
 }
