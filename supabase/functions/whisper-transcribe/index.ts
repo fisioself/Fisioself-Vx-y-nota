@@ -17,7 +17,7 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    const apiKey = Deno.env.get('OPENAI_API_KEY');
+    const apiKey = Deno.env.get('GROQ_API_KEY');
     const token = getBearerToken(req);
 
     if (!supabaseUrl || !serviceRoleKey || !apiKey) {
@@ -79,10 +79,10 @@ Deno.serve(async (req) => {
     // Hallazgo #3: Fix FormData bug
     const openaiFormData = new FormData();
     openaiFormData.append('file', audioFile, 'recording.webm');
-    openaiFormData.append('model', 'whisper-1');
+    openaiFormData.append('model', 'whisper-large-v3-turbo');
     openaiFormData.append('language', 'es');
 
-    const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+    const response = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${apiKey}`
