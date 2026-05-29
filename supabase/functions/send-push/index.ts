@@ -40,13 +40,28 @@ Deno.serve(async (req: Request) => {
     return jsonResponse(req, 503, { error: 'VAPID keys not configured' });
   }
 
-  // Require service_role or authenticated user
+  // Accept either x-push-secret (DB triggers / cron) or Authorization JWT (direct calls)
+  const pushSecretHeader = req.headers.get('x-push-secret');
   const authHeader = req.headers.get('Authorization');
-  if (!authHeader) {
-    return jsonResponse(req, 401, { error: 'Missing Authorization header' });
+
+  if (!pushSecretHeader && !authHeader) {
+    return jsonResponse(req, 401, { error: 'Missing authentication' });
   }
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+  // Verify x-push-secret against integration_config (same pattern as gcal_autosync_secret)
+  if (pushSecretHeader) {
+    const { data: configRow } = await supabase
+      .from('integration_config')
+      .select('value')
+      .eq('key', 'push_reminder_secret')
+      .single();
+
+    if (!configRow || configRow.value !== pushSecretHeader) {
+      return jsonResponse(req, 401, { error: 'Invalid push secret' });
+    }
+  }
 
   let payload: PushPayload;
   try {
@@ -98,7 +113,6 @@ Deno.serve(async (req: Request) => {
       } catch (err: unknown) {
         const status = (err as { statusCode?: number })?.statusCode;
         if (status === 410 || status === 404) {
-          // Subscription expired or unregistered — clean up
           expiredIds.push(sub.id);
         } else {
           console.error('[send-push] Failed for endpoint', sub.endpoint, err);
@@ -108,7 +122,6 @@ Deno.serve(async (req: Request) => {
     })
   );
 
-  // Remove expired subscriptions
   if (expiredIds.length > 0) {
     await supabase.from('push_subscriptions').delete().in('id', expiredIds);
   }
