@@ -106,8 +106,10 @@ Deno.serve(async (req) => {
     );
   }
 
-  const apiKey = Deno.env.get('OPENROUTER_API_KEY');
-  const model = Deno.env.get('OPENROUTER_MODEL') || 'deepseek/deepseek-chat-v3-0324:free';
+  // Groq: free tier, OpenAI-compatible, and does NOT train on API data —
+  // important for clinical PHI. Same GROQ_API_KEY used by whisper-transcribe.
+  const apiKey = Deno.env.get('GROQ_API_KEY');
+  const model = Deno.env.get('GROQ_MODEL') || 'llama-3.3-70b-versatile';
 
   if (!apiKey) return json(req, 503, { error: 'IA no configurada' });
 
@@ -126,13 +128,11 @@ Deno.serve(async (req) => {
   if (!AI_TYPES.has(type)) return json(req, 400, { error: 'Tipo de IA invalido' });
 
   try {
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-        'HTTP-Referer': 'https://fisioself.app',
-        'X-Title': 'Fisioself Clinical AI'
+        Authorization: `Bearer ${apiKey}`
       },
       body: JSON.stringify({
         model,
