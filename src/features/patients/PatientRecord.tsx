@@ -89,11 +89,20 @@ export const PatientRecord = memo(function PatientRecord({
   const {
     data: record,
     isLoading: loading,
-    error
+    error,
+    refetch,
+    isRefetching
   } = useQuery<ClinicalRecord, Error>({
     queryKey: ['patient', patient?.id],
     queryFn: () => clinicalApi.getPatient(patient?.id ?? ''),
-    enabled: !!patient?.id
+    enabled: !!patient?.id,
+    retry: (failureCount, err) => {
+      const msg = err?.message ?? '';
+      // No reintentar en errores permanentes (4xx, not found)
+      if (/40[134]|PGRST116|not found/i.test(msg)) return false;
+      return failureCount < 3;
+    },
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 10000)
   });
 
   const notes = useMemo<SessionNote[]>(() => {
@@ -236,117 +245,132 @@ export const PatientRecord = memo(function PatientRecord({
         </section>
       </div>
 
-      {loading && <p className="muted">Cargando expediente...</p>}
-      {error && (
-        <p className="error" role="alert">
-          {(error as Error).message || 'Error cargando expediente'}
-        </p>
-      )}
       {deleteError && (
         <p className="error" role="alert">
           {deleteError}
         </p>
       )}
 
-      <ClinicalTimeline items={timeline} />
-      <ClinicalSummary summary={summary} nextSession={nextSession} />
+      {(loading || isRefetching) && !record && <p className="muted">Cargando expediente...</p>}
 
-      {showSessionNote && (
-        <SessionNoteEditor
-          patientId={current.id}
-          sessionNumber={nextSession}
-          onCancel={() => setShowSessionNote(false)}
-          onSaved={() => {
-            setShowSessionNote(false);
-            refreshRecord();
-          }}
-        />
+      {error && !record && (
+        <section className="card" style={{ textAlign: 'center', padding: '2rem' }}>
+          <p className="error" role="alert" style={{ marginBottom: '1rem' }}>
+            No se pudo cargar el expediente clínico.
+            {error.message ? ` (${error.message})` : ''}
+          </p>
+          <p className="muted" style={{ marginBottom: '1rem' }}>
+            Esto puede ser un error transitorio de red o del servidor. Tus datos están seguros.
+          </p>
+          <button type="button" onClick={() => refetch()} disabled={isRefetching}>
+            {isRefetching ? 'Reintentando...' : 'Reintentar'}
+          </button>
+        </section>
       )}
 
-      <section className="card">
-        <div className="form-header">
-          <div>
-            <p className="eyebrow">Valoraciones</p>
-            <h2>Historial de valoracion</h2>
-          </div>
-          <span className="pill">{evaluations.length}</span>
-        </div>
-        <div className="list-stack">
-          {evaluations.map((evaluation) => {
-            const isOpen = openEvaluationId === evaluation.id;
-            return (
-              <article key={evaluation.id} className="note-row">
-                <button
-                  type="button"
-                  className="note-toggle"
-                  onClick={() => setOpenEvaluationId(isOpen ? null : evaluation.id)}
-                >
-                  <span>
-                    <strong>{evaluation.evaluation_date}</strong>
-                  </span>
-                  {evaluation.eva_initial !== null && evaluation.eva_initial !== undefined && (
-                    <span>EVA inicial {evaluation.eva_initial}/10</span>
-                  )}
-                </button>
-                <p style={{ marginTop: '0.5rem', marginBottom: '0.5rem' }}>
-                  {evaluation.prognosis || 'Sin diagnostico fisioterapeutico registrado'}
-                </p>
-                {evaluation.red_flags && (
-                  <p className="error" style={{ marginBottom: '0.5rem' }}>
-                    Banderas rojas: {evaluation.red_flags}
-                  </p>
-                )}
-                {isOpen && <EvaluationSummary evaluation={evaluation} />}
-              </article>
-            );
-          })}
-          {!evaluations.length && <p className="muted">Aun no hay valoraciones registradas.</p>}
-        </div>
-      </section>
+      {(!error || record) && (
+        <>
+          <ClinicalTimeline items={timeline} />
+          <ClinicalSummary summary={summary} nextSession={nextSession} />
 
-      <SessionNotesList notes={notes} onChanged={refreshRecord} />
+          {showSessionNote && (
+            <SessionNoteEditor
+              patientId={current.id}
+              sessionNumber={nextSession}
+              onCancel={() => setShowSessionNote(false)}
+              onSaved={() => {
+                setShowSessionNote(false);
+                refreshRecord();
+              }}
+            />
+          )}
 
-      <AppointmentList
-        patient={current}
-        appointments={record?.appointments || []}
-        onChanged={refreshRecord}
-      />
-
-      <section className="card">
-        <div className="form-header">
-          <div>
-            <p className="eyebrow">Documentos</p>
-            <h2>Archivos clinicos</h2>
-          </div>
-          <ImageUploader patientId={current.id} onUploadComplete={refreshRecord} />
-        </div>
-        <ClinicalFilesList patientId={current.id} refreshTrigger={record?.id ? 1 : 0} />
-      </section>
-
-      <section className="card">
-        <div className="form-header">
-          <div>
-            <p className="eyebrow">IA trazable</p>
-            <h2>Consultas IA</h2>
-          </div>
-          <span className="pill">{aiConsults.length}</span>
-        </div>
-        <div className="list-stack">
-          {aiConsults.map((consult) => (
-            <article key={consult.id} className="note-row">
-              <div className="form-header">
-                <strong>{consult.type}</strong>
-                <span>
-                  {consult.created_at ? new Date(consult.created_at).toLocaleDateString() : ''}
-                </span>
+          <section className="card">
+            <div className="form-header">
+              <div>
+                <p className="eyebrow">Valoraciones</p>
+                <h2>Historial de valoracion</h2>
               </div>
-              <p className="muted">Validada: {consult.validated ? 'si' : 'pendiente'}</p>
-              <pre>{consult.output_text}</pre>
-            </article>
-          ))}
-          {!aiConsults.length && <p className="muted">Aun no hay consultas IA trazables.</p>}
-        </div>
-      </section>
+              <span className="pill">{evaluations.length}</span>
+            </div>
+            <div className="list-stack">
+              {evaluations.map((evaluation) => {
+                const isOpen = openEvaluationId === evaluation.id;
+                return (
+                  <article key={evaluation.id} className="note-row">
+                    <button
+                      type="button"
+                      className="note-toggle"
+                      onClick={() => setOpenEvaluationId(isOpen ? null : evaluation.id)}
+                    >
+                      <span>
+                        <strong>{evaluation.evaluation_date}</strong>
+                      </span>
+                      {evaluation.eva_initial !== null && evaluation.eva_initial !== undefined && (
+                        <span>EVA inicial {evaluation.eva_initial}/10</span>
+                      )}
+                    </button>
+                    <p style={{ marginTop: '0.5rem', marginBottom: '0.5rem' }}>
+                      {evaluation.prognosis || 'Sin diagnostico fisioterapeutico registrado'}
+                    </p>
+                    {evaluation.red_flags && (
+                      <p className="error" style={{ marginBottom: '0.5rem' }}>
+                        Banderas rojas: {evaluation.red_flags}
+                      </p>
+                    )}
+                    {isOpen && <EvaluationSummary evaluation={evaluation} />}
+                  </article>
+                );
+              })}
+              {!evaluations.length && <p className="muted">Aun no hay valoraciones registradas.</p>}
+            </div>
+          </section>
+
+          <SessionNotesList notes={notes} onChanged={refreshRecord} />
+
+          <AppointmentList
+            patient={current}
+            appointments={record?.appointments || []}
+            onChanged={refreshRecord}
+          />
+
+          <section className="card">
+            <div className="form-header">
+              <div>
+                <p className="eyebrow">Documentos</p>
+                <h2>Archivos clinicos</h2>
+              </div>
+              <ImageUploader patientId={current.id} onUploadComplete={refreshRecord} />
+            </div>
+            <ClinicalFilesList patientId={current.id} refreshTrigger={record?.id ? 1 : 0} />
+          </section>
+
+          <section className="card">
+            <div className="form-header">
+              <div>
+                <p className="eyebrow">IA trazable</p>
+                <h2>Consultas IA</h2>
+              </div>
+              <span className="pill">{aiConsults.length}</span>
+            </div>
+            <div className="list-stack">
+              {aiConsults.map((consult) => (
+                <article key={consult.id} className="note-row">
+                  <div className="form-header">
+                    <strong>{consult.type}</strong>
+                    <span>
+                      {consult.created_at ? new Date(consult.created_at).toLocaleDateString() : ''}
+                    </span>
+                  </div>
+                  <p className="muted">Validada: {consult.validated ? 'si' : 'pendiente'}</p>
+                  <pre>{consult.output_text}</pre>
+                </article>
+              ))}
+              {!aiConsults.length && <p className="muted">Aun no hay consultas IA trazables.</p>}
+            </div>
+          </section>
+        </>
+      )}
     </section>
   );
 });
