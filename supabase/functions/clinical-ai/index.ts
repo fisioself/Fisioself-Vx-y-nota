@@ -106,8 +106,8 @@ Deno.serve(async (req) => {
     );
   }
 
-  const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
-  const model = Deno.env.get('CLAUDE_MODEL') || 'claude-3-5-sonnet-latest';
+  const apiKey = Deno.env.get('OPENROUTER_API_KEY');
+  const model = Deno.env.get('OPENROUTER_MODEL') || 'deepseek/deepseek-chat-v3-0324:free';
 
   if (!apiKey) return json(req, 503, { error: 'IA no configurada' });
 
@@ -126,34 +126,34 @@ Deno.serve(async (req) => {
   if (!AI_TYPES.has(type)) return json(req, 400, { error: 'Tipo de IA invalido' });
 
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01'
+        Authorization: `Bearer ${apiKey}`,
+        'HTTP-Referer': 'https://fisioself.app',
+        'X-Title': 'Fisioself Clinical AI'
       },
       body: JSON.stringify({
         model,
         max_tokens: 1400,
-        system: SYSTEM_PROMPT,
         stream: true,
         messages: [
-          {
-            role: 'user',
-            content: `${prompts[type]}\n\nNota clinica:\n${text}`
-          }
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: `${prompts[type]}\n\nNota clinica:\n${text}` }
         ]
       })
     });
 
-    if (!response.ok) {
+    if (!response.ok || !response.body) {
       const data = await response.json().catch(() => ({}));
       console.error('clinical_ai_upstream_failed', {
         status: response.status,
-        code: data?.error?.type || 'unknown'
+        error: (data as { error?: { message?: string } })?.error?.message || 'unknown'
       });
-      return json(req, response.status, { error: GENERIC_AI_ERROR });
+      return json(req, response.status >= 500 ? 502 : response.status, {
+        error: GENERIC_AI_ERROR
+      });
     }
 
     const headers = buildCorsHeaders(req);
@@ -161,7 +161,46 @@ Deno.serve(async (req) => {
     headers.set('Cache-Control', 'no-cache');
     headers.set('Connection', 'keep-alive');
 
-    return new Response(response.body, { headers });
+    // Convert OpenAI SSE → Anthropic delta format so the frontend parser stays unchanged
+    const transformed = new ReadableStream<Uint8Array>({
+      async start(controller) {
+        const reader = response.body!.getReader();
+        const decoder = new TextDecoder();
+        const encoder = new TextEncoder();
+        let buffer = '';
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() ?? '';
+            for (const line of lines) {
+              if (!line.startsWith('data: ')) continue;
+              const raw = line.slice(6).trim();
+              if (raw === '[DONE]') continue;
+              try {
+                const parsed = JSON.parse(raw) as {
+                  choices?: Array<{ delta?: { content?: string } }>;
+                };
+                const chunk = parsed.choices?.[0]?.delta?.content;
+                if (chunk) {
+                  const out = `data: ${JSON.stringify({ type: 'content_block_delta', delta: { text: chunk } })}\n\n`;
+                  controller.enqueue(encoder.encode(out));
+                }
+              } catch {
+                // Skip malformed chunks
+              }
+            }
+          }
+        } finally {
+          reader.releaseLock();
+          controller.close();
+        }
+      }
+    });
+
+    return new Response(transformed, { headers });
   } catch (error) {
     console.error('clinical_ai_failed', {
       name: error instanceof Error ? error.name : 'UnknownError'
