@@ -42,19 +42,45 @@ const refreshGoogleToken = async ({
 const resolveSessionType = (colorId?: string) => {
   switch (colorId) {
     case '3':
-      return 'Valoración'; // Grape (Morado)
+      return 'Valoración';
     case '5':
-      return 'Descarga muscular'; // Banana (Amarillo)
+      return 'Descarga muscular';
     case '4':
     case '6':
-      return 'Terapia a domicilio'; // Flamingo/Tangerine (Naranja)
+      return 'Terapia a domicilio';
     case '1':
     case '9':
-      return 'Sesión clínica'; // Lavender/Blueberry (Azul)
+      return 'Sesión clínica';
     default:
       return 'Sesión clínica';
   }
 };
+
+// Extract a 7-or-more digit phone number embedded in an event title.
+const extractPhone = (raw: string): string | null => {
+  const match = raw.match(/(\d{7,})/);
+  return match ? match[1] : null;
+};
+
+// Return a cleaned display name: strip trailing "#N" session counter and any
+// embedded phone number, then collapse extra whitespace.
+const cleanDisplayName = (raw: string): string =>
+  raw
+    .trim()
+    .replace(/#\s*\d+\s*$/, '')
+    .replace(/\d{7,}/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+
+// Normalised key used for matching — lower-case, accent-free, digits removed.
+const normalizeKey = (name: string): string =>
+  name
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z\s]/gi, '')
+    .replace(/\s{2,}/g, ' ')
+    .toLowerCase()
+    .trim();
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: buildCorsHeaders(req) });
@@ -74,10 +100,10 @@ Deno.serve(async (req) => {
 
     const userId = userData.user.id;
 
-    // Get connection
+    // Fetch connection including token columns directly (no calendar_tokens_get RPC)
     const { data: connection, error: connectionError } = await supabase
       .from('calendar_connections')
-      .select('id, calendar_id, token_expires_at')
+      .select('id, calendar_id, token_expires_at, access_token, refresh_token')
       .eq('user_id', userId)
       .eq('provider', 'google')
       .single();
@@ -86,14 +112,8 @@ Deno.serve(async (req) => {
       return json(req, 400, { error: 'Google Calendar no conectado' });
     }
 
-    const { data: tokensRows, error: tokensError } = await supabase.rpc('calendar_tokens_get', {
-      p_connection_id: connection.id
-    });
-    if (tokensError) throw tokensError;
-    const tokens = Array.isArray(tokensRows) ? tokensRows[0] : tokensRows;
-
-    let accessToken: string | null = tokens?.access_token ?? null;
-    const refreshTokenStored: string | null = tokens?.refresh_token ?? null;
+    let accessToken: string | null = connection.access_token ?? null;
+    const refreshTokenStored: string | null = connection.refresh_token ?? null;
 
     if (
       !accessToken ||
@@ -106,14 +126,11 @@ Deno.serve(async (req) => {
         clientSecret: googleClientSecret
       });
       accessToken = refreshed.access_token;
-      await supabase.rpc('calendar_tokens_set', {
-        p_connection_id: connection.id,
-        p_access_token: accessToken,
-        p_refresh_token: refreshTokenStored
-      });
+      // Write refreshed tokens directly to columns
       await supabase
         .from('calendar_connections')
         .update({
+          access_token: accessToken,
           token_expires_at: new Date(
             Date.now() + Number(refreshed.expires_in || 3600) * 1000
           ).toISOString(),
@@ -122,15 +139,17 @@ Deno.serve(async (req) => {
         .eq('id', connection.id);
     }
 
-    // Fetch events from Google
+    // Fetch events from Google — last 3 months through next 6 months
     const calendarId = encodeURIComponent(connection.calendar_id || 'primary');
-    // Fetch last 3 months and future 6 months
     const timeMin = new Date();
     timeMin.setMonth(timeMin.getMonth() - 3);
     const timeMax = new Date();
     timeMax.setMonth(timeMax.getMonth() + 6);
 
-    const endpoint = `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events?timeMin=${timeMin.toISOString()}&timeMax=${timeMax.toISOString()}&singleEvents=true&maxResults=500`;
+    const endpoint =
+      `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events` +
+      `?timeMin=${timeMin.toISOString()}&timeMax=${timeMax.toISOString()}` +
+      `&singleEvents=true&maxResults=500`;
 
     const googleResponse = await fetch(endpoint, {
       headers: { Authorization: `Bearer ${accessToken}` }
@@ -144,32 +163,52 @@ Deno.serve(async (req) => {
     const events = googleData.items || [];
     let syncedCount = 0;
 
-    // Process each event
+    // Load all existing patients once to avoid N+1 lookups
+    const { data: allPatients } = await supabase.from('patients').select('id, full_name, created_at');
+    const patientsByKey = new Map<string, { id: string; created_at: string }>();
+    for (const p of allPatients || []) {
+      if (!p.full_name) continue;
+      const key = normalizeKey(p.full_name);
+      const existing = patientsByKey.get(key);
+      // Keep the oldest record per normalized key
+      if (!existing || new Date(p.created_at) < new Date(existing.created_at)) {
+        patientsByKey.set(key, { id: p.id, created_at: p.created_at });
+      }
+    }
+
     for (const event of events) {
       if (event.status === 'cancelled') continue;
 
-      const title = event.summary?.trim();
-      if (!title) continue; // Skip events without title
+      const rawTitle = event.summary?.trim();
+      if (!rawTitle) continue;
 
       const startsAt = event.start?.dateTime || event.start?.date;
       const endsAt = event.end?.dateTime || event.end?.date;
       if (!startsAt || !endsAt) continue;
 
-      // Ensure patient exists
-      let patientId;
-      const { data: existingPatients } = await supabase
-        .from('patients')
-        .select('id')
-        .ilike('full_name', title)
-        .limit(1);
+      const displayName = cleanDisplayName(rawTitle);
+      const phone = extractPhone(rawTitle);
+      const nameKey = normalizeKey(displayName);
 
-      if (existingPatients && existingPatients.length > 0) {
-        patientId = existingPatients[0].id;
+      // Resolve or create patient using normalised key
+      let patientId: string;
+      const existingEntry = patientsByKey.get(nameKey);
+
+      if (existingEntry) {
+        patientId = existingEntry.id;
+        // Backfill phone if we extracted one and the patient doesn't have it yet
+        if (phone) {
+          await supabase
+            .from('patients')
+            .update({ phone })
+            .eq('id', patientId)
+            .is('phone', null);
+        }
       } else {
         const { data: newPatient, error: pError } = await supabase
           .from('patients')
-          .insert({ full_name: title, created_by: userId })
-          .select('id')
+          .insert({ full_name: displayName, phone: phone ?? null, created_by: userId })
+          .select('id, created_at')
           .single();
 
         if (pError) {
@@ -177,9 +216,10 @@ Deno.serve(async (req) => {
           continue;
         }
         patientId = newPatient.id;
+        patientsByKey.set(nameKey, { id: newPatient.id, created_at: newPatient.created_at });
       }
 
-      // Check if appointment exists
+      // Upsert appointment by google_event_id
       const { data: existingAppt } = await supabase
         .from('appointments')
         .select('id')
@@ -188,7 +228,7 @@ Deno.serve(async (req) => {
 
       const appointmentPayload = {
         patient_id: patientId,
-        title: title,
+        title: displayName,
         description: event.description || '',
         location: event.location || '',
         starts_at: startsAt,
@@ -206,10 +246,7 @@ Deno.serve(async (req) => {
       if (existingAppt && existingAppt.length > 0) {
         await supabase.from('appointments').update(appointmentPayload).eq('id', existingAppt[0].id);
       } else {
-        await supabase.from('appointments').insert({
-          ...appointmentPayload,
-          created_by: userId
-        });
+        await supabase.from('appointments').insert({ ...appointmentPayload, created_by: userId });
       }
       syncedCount++;
     }
