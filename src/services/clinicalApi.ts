@@ -29,6 +29,49 @@ export const clinicalApi = {
     return unwrap(await db.from('patients').select('*').order('updated_at', { ascending: false }));
   },
 
+  async listPatientsToday(): Promise<Patient[]> {
+    const db = assertSupabase();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const { data, error } = await db
+      .from('appointments')
+      .select('patient_id, starts_at, patients(*)')
+      .gte('starts_at', today.toISOString())
+      .lt('starts_at', tomorrow.toISOString())
+      .neq('status', 'cancelled')
+      .order('starts_at', { ascending: true });
+
+    if (error) throw error;
+
+    const seen = new Set<string>();
+    const patients: Patient[] = [];
+    for (const row of data || []) {
+      if (row.patient_id && !seen.has(row.patient_id)) {
+        seen.add(row.patient_id);
+        const p = Array.isArray(row.patients) ? row.patients[0] : row.patients;
+        if (p) patients.push(p as Patient);
+      }
+    }
+    return patients;
+  },
+
+  async searchPatients(query: string): Promise<Patient[]> {
+    const db = assertSupabase();
+    const q = query.trim();
+    if (!q) return [];
+    return unwrap(
+      await db
+        .from('patients')
+        .select('*')
+        .or(`full_name.ilike.%${q}%,phone.ilike.%${q}%,email.ilike.%${q}%`)
+        .order('full_name', { ascending: true })
+        .limit(50)
+    );
+  },
+
   async createPatient(payload: Partial<Patient>): Promise<Patient> {
     const db = assertSupabase();
     return unwrap(
