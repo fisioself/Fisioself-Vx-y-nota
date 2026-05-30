@@ -39,6 +39,11 @@ const refreshGoogleToken = async ({
   return data;
 };
 
+// Color → tipo de sesión, según el código de color de Google Calendar:
+//   3 (Grape/Morado)        → Valoración
+//   5 (Banana/Amarillo)     → Descarga muscular
+//   4/6 (Flamingo/Tangerine, Naranja) → Terapia a domicilio
+//   1/7/9 (Lavender/Peacock/Blueberry, Azul) → Sesión clínica (rehabilitación)
 const resolveSessionType = (colorId?: string) => {
   switch (colorId) {
     case '3':
@@ -49,6 +54,7 @@ const resolveSessionType = (colorId?: string) => {
     case '6':
       return 'Terapia a domicilio';
     case '1':
+    case '7':
     case '9':
       return 'Sesión clínica';
     default:
@@ -139,28 +145,35 @@ Deno.serve(async (req) => {
         .eq('id', connection.id);
     }
 
-    // Fetch events from Google — last 3 months through next 6 months
+    // Fetch events from Google — fixed history start of 2022-11-20 through
+    // next 6 months. Paginate via nextPageToken so we keep the full history.
     const calendarId = encodeURIComponent(connection.calendar_id || 'primary');
-    const timeMin = new Date();
-    timeMin.setMonth(timeMin.getMonth() - 3);
+    const timeMin = new Date('2022-11-20T00:00:00Z');
     const timeMax = new Date();
     timeMax.setMonth(timeMax.getMonth() + 6);
 
-    const endpoint =
+    const baseEndpoint =
       `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events` +
       `?timeMin=${timeMin.toISOString()}&timeMax=${timeMax.toISOString()}` +
-      `&singleEvents=true&maxResults=500`;
+      `&singleEvents=true&orderBy=startTime&maxResults=2500`;
 
-    const googleResponse = await fetch(endpoint, {
-      headers: { Authorization: `Bearer ${accessToken}` }
-    });
-    const googleData = await googleResponse.json();
+    const events: Array<Record<string, unknown>> = [];
+    let pageToken: string | undefined;
+    do {
+      const endpoint = pageToken
+        ? `${baseEndpoint}&pageToken=${encodeURIComponent(pageToken)}`
+        : baseEndpoint;
+      const googleResponse = await fetch(endpoint, {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      const googleData = await googleResponse.json();
+      if (!googleResponse.ok) {
+        return json(req, googleResponse.status, { error: 'Error fetching Google Calendar' });
+      }
+      if (Array.isArray(googleData.items)) events.push(...googleData.items);
+      pageToken = googleData.nextPageToken;
+    } while (pageToken);
 
-    if (!googleResponse.ok) {
-      return json(req, googleResponse.status, { error: 'Error fetching Google Calendar' });
-    }
-
-    const events = googleData.items || [];
     let syncedCount = 0;
 
     // Load all existing patients once to avoid N+1 lookups
@@ -179,11 +192,13 @@ Deno.serve(async (req) => {
     for (const event of events) {
       if (event.status === 'cancelled') continue;
 
-      const rawTitle = event.summary?.trim();
+      const rawTitle = (event.summary as string | undefined)?.trim();
       if (!rawTitle) continue;
 
-      const startsAt = event.start?.dateTime || event.start?.date;
-      const endsAt = event.end?.dateTime || event.end?.date;
+      const start = event.start as Record<string, string> | undefined;
+      const end = event.end as Record<string, string> | undefined;
+      const startsAt = start?.dateTime || start?.date;
+      const endsAt = end?.dateTime || end?.date;
       if (!startsAt || !endsAt) continue;
 
       const displayName = cleanDisplayName(rawTitle);
@@ -219,27 +234,29 @@ Deno.serve(async (req) => {
         patientsByKey.set(nameKey, { id: newPatient.id, created_at: newPatient.created_at });
       }
 
+      const colorId = (event.colorId as string | undefined) || null;
+
       // Upsert appointment by google_event_id
       const { data: existingAppt } = await supabase
         .from('appointments')
         .select('id')
-        .eq('google_event_id', event.id)
+        .eq('google_event_id', event.id as string)
         .limit(1);
 
       const appointmentPayload = {
         patient_id: patientId,
         title: displayName,
-        description: event.description || '',
-        location: event.location || '',
+        description: (event.description as string | undefined) || '',
+        location: (event.location as string | undefined) || '',
         starts_at: startsAt,
         ends_at: endsAt,
         status: 'scheduled',
         google_calendar_id: connection.calendar_id || 'primary',
-        google_event_id: event.id,
-        google_html_link: event.htmlLink,
+        google_event_id: event.id as string,
+        google_html_link: event.htmlLink as string | undefined,
         sync_status: 'synced',
-        color_id: event.colorId || null,
-        session_type: resolveSessionType(event.colorId),
+        color_id: colorId,
+        session_type: resolveSessionType(colorId ?? undefined),
         updated_at: new Date().toISOString()
       };
 
