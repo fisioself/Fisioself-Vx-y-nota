@@ -145,10 +145,12 @@ Deno.serve(async (req) => {
         .eq('id', connection.id);
     }
 
-    // Fetch events from Google — fixed history start of 2022-11-20 through
-    // next 6 months. Paginate via nextPageToken so we keep the full history.
+    // Routine sync window: last 2 months through next 6 months. This keeps the
+    // on-mount sync fast (the full historical backfill was a one-time import).
+    // Paginate via nextPageToken in case a window ever exceeds one page.
     const calendarId = encodeURIComponent(connection.calendar_id || 'primary');
-    const timeMin = new Date('2022-11-20T00:00:00Z');
+    const timeMin = new Date();
+    timeMin.setMonth(timeMin.getMonth() - 2);
     const timeMax = new Date();
     timeMax.setMonth(timeMax.getMonth() + 6);
 
