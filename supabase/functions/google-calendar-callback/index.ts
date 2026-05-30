@@ -96,9 +96,6 @@ Deno.serve(async (req) => {
     });
     const profile = await profileResponse.json().catch(() => ({}));
 
-    // Upsert metadata only. Tokens go into the encrypted columns via the
-    // calendar_tokens_set RPC below; we never store the plaintext access /
-    // refresh tokens in the row directly.
     const { data: upserted, error: upsertError } = await supabase
       .from('calendar_connections')
       .upsert(
@@ -107,6 +104,8 @@ Deno.serve(async (req) => {
           provider: 'google',
           provider_account_email: profile.email || null,
           calendar_id: 'primary',
+          access_token: accessToken,
+          refresh_token: refreshToken || null,
           token_expires_at: tokenExpiresAt,
           updated_at: new Date().toISOString()
         },
@@ -116,13 +115,6 @@ Deno.serve(async (req) => {
       .single();
 
     if (upsertError || !upserted) throw upsertError || new Error('Upsert sin id');
-
-    const { error: tokenError } = await supabase.rpc('calendar_tokens_set', {
-      p_connection_id: upserted.id,
-      p_access_token: accessToken,
-      p_refresh_token: refreshToken || null
-    });
-    if (tokenError) throw tokenError;
 
     await supabase
       .from('google_oauth_states')
