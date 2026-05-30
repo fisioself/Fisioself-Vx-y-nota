@@ -98,11 +98,10 @@ Deno.serve(async (req) => {
       return json(req, 403, { error: 'No tienes permiso para sincronizar esta cita' });
     }
 
-    // Read metadata only; tokens come out of the encrypted columns via
-    // calendar_tokens_get below, never directly from this row.
+    // Read connection + tokens directly (access_token/refresh_token are plain columns)
     const { data: connection, error: connectionError } = await supabase
       .from('calendar_connections')
-      .select('id, calendar_id, token_expires_at')
+      .select('id, calendar_id, token_expires_at, access_token, refresh_token')
       .eq('user_id', userData.user.id)
       .eq('provider', 'google')
       .eq('calendar_id', appointment.google_calendar_id || 'primary')
@@ -116,14 +115,8 @@ Deno.serve(async (req) => {
       return json(req, 400, { error: 'Google Calendar no conectado' });
     }
 
-    const { data: tokensRows, error: tokensError } = await supabase.rpc('calendar_tokens_get', {
-      p_connection_id: connection.id
-    });
-    if (tokensError) throw tokensError;
-    const tokens = Array.isArray(tokensRows) ? tokensRows[0] : tokensRows;
-
-    let accessToken: string | null = tokens?.access_token ?? null;
-    const refreshTokenStored: string | null = tokens?.refresh_token ?? null;
+    let accessToken: string | null = connection.access_token ?? null;
+    const refreshTokenStored: string | null = connection.refresh_token ?? null;
 
     if (
       !accessToken ||
@@ -136,18 +129,10 @@ Deno.serve(async (req) => {
         clientSecret: googleClientSecret
       });
       accessToken = refreshed.access_token;
-      // Persist the new access token (encrypted) and update the expiry. The
-      // refresh token does not rotate on a normal refresh, so we re-write it
-      // unchanged to keep both columns consistent.
-      const { error: tokenWriteError } = await supabase.rpc('calendar_tokens_set', {
-        p_connection_id: connection.id,
-        p_access_token: accessToken,
-        p_refresh_token: refreshTokenStored
-      });
-      if (tokenWriteError) throw tokenWriteError;
       await supabase
         .from('calendar_connections')
         .update({
+          access_token: accessToken,
           token_expires_at: new Date(
             Date.now() + Number(refreshed.expires_in || 3600) * 1000
           ).toISOString(),

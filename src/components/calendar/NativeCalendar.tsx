@@ -68,26 +68,36 @@ export function NativeCalendar({ onEventClick }: NativeCalendarProps) {
 
   const syncWithGoogle = useCallback(async () => {
     setSyncing(true);
-    // No mostramos toast de inmediato para evitar spam al montar
     try {
       const db = assertSupabase();
       const { data, error } = await db.functions.invoke('google-calendar-fetch');
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
+      try {
+        sessionStorage.setItem('gcal_auto_synced_at', String(Date.now()));
+      } catch {
+        // sessionStorage no disponible (privado/iframe) — ignorar
+      }
       notify({ tone: 'success', message: `Sincronizados ${data.count || 0} eventos de Google.` });
       queryClient.invalidateQueries({ queryKey: ['all_appointments'] });
       queryClient.invalidateQueries({ queryKey: ['patients'] });
     } catch (err) {
-      // No bloqueamos la UI con un toast de error al montar
       console.warn('Google Calendar Sync Error (Non-fatal):', err);
     } finally {
       setSyncing(false);
     }
   }, [notify, queryClient]);
 
-  // Sincronizacion inicial al montar
+  // Sincronizacion inicial al montar — con cooldown de 3 min para evitar
+  // llamadas redundantes al navegar entre vistas del mismo panel.
   useEffect(() => {
+    try {
+      const ts = sessionStorage.getItem('gcal_auto_synced_at');
+      if (ts && Date.now() - Number(ts) < 3 * 60 * 1000) return;
+    } catch {
+      // sessionStorage no disponible — sincronizar igualmente
+    }
     syncWithGoogle();
   }, [syncWithGoogle]);
 

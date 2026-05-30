@@ -176,28 +176,39 @@ Deno.serve(async (req) => {
         .eq('google_event_id', event.id)
         .limit(1);
 
-      const appointmentPayload = {
-        patient_id: patientId,
-        title: title,
-        description: event.description || '',
-        location: event.location || '',
-        starts_at: startsAt,
-        ends_at: endsAt,
-        status: 'scheduled',
-        google_calendar_id: connection.calendar_id || 'primary',
-        google_event_id: event.id,
-        google_html_link: event.htmlLink,
-        sync_status: 'synced',
-        color_id: event.colorId || null,
-        session_type: resolveSessionType(event.colorId),
-        updated_at: new Date().toISOString()
-      };
-
       if (existingAppt && existingAppt.length > 0) {
-        await supabase.from('appointments').update(appointmentPayload).eq('id', existingAppt[0].id);
+        // En UPDATEs solo tocar metadatos de Google — NO campos clínicos
+        // (title, starts_at, ends_at, description, location) para que el trigger
+        // appointments_autosync no detecte cambios y no llame a google-calendar-sync.
+        await supabase
+          .from('appointments')
+          .update({
+            status: 'scheduled',
+            google_calendar_id: connection.calendar_id || 'primary',
+            google_event_id: event.id,
+            google_html_link: event.htmlLink,
+            sync_status: 'synced',
+            color_id: event.colorId || null,
+            session_type: resolveSessionType(event.colorId),
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingAppt[0].id);
       } else {
         await supabase.from('appointments').insert({
-          ...appointmentPayload,
+          patient_id: patientId,
+          title: title,
+          description: event.description || '',
+          location: event.location || '',
+          starts_at: startsAt,
+          ends_at: endsAt,
+          status: 'scheduled',
+          google_calendar_id: connection.calendar_id || 'primary',
+          google_event_id: event.id,
+          google_html_link: event.htmlLink,
+          sync_status: 'synced',
+          color_id: event.colorId || null,
+          session_type: resolveSessionType(event.colorId),
+          updated_at: new Date().toISOString(),
           created_by: userId
         });
       }
