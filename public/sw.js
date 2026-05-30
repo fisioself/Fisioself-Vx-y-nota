@@ -116,7 +116,16 @@ self.addEventListener('fetch', (event) => {
           caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
           return response;
         })
-        .catch(() => caches.match('/index.html'));
+        .catch(() => {
+          // Only fall back to /index.html for HTML navigation requests.
+          // JS/CSS chunk requests must fail so the ErrorBoundary can detect
+          // the stale-chunk pattern and trigger a reload.
+          if (request.destination === 'document' ||
+              request.headers.get('accept')?.includes('text/html')) {
+            return caches.match('/index.html');
+          }
+          return Response.error();
+        });
     })
   );
 });
