@@ -100,14 +100,12 @@ Deno.serve(async (req) => {
       req,
       429,
       { error: 'Demasiadas solicitudes de IA. Intenta de nuevo en un momento.' },
-      {
-        'Retry-After': String(rate?.retry_after_seconds || 60)
-      }
+      { 'Retry-After': String(rate?.retry_after_seconds || 60) }
     );
   }
 
-  // Groq: free tier, OpenAI-compatible, and does NOT train on API data —
-  // important for clinical PHI. Same GROQ_API_KEY used by whisper-transcribe.
+  // Groq: free tier, OpenAI-compatible, does NOT train on API data (critical for PHI).
+  // Same GROQ_API_KEY used by whisper-transcribe.
   const apiKey = Deno.env.get('GROQ_API_KEY');
   const model = Deno.env.get('GROQ_MODEL') || 'llama-3.3-70b-versatile';
 
@@ -128,6 +126,10 @@ Deno.serve(async (req) => {
   if (!AI_TYPES.has(type)) return json(req, 400, { error: 'Tipo de IA invalido' });
 
   try {
+    // Non-streaming for reliability: Supabase Edge Function egress with SSE streams
+    // can behave unpredictably. We request the full response as JSON, then emit
+    // a single SSE chunk in Anthropic content_block_delta format so aiService.ts
+    // frontend parser works unchanged.
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -137,7 +139,7 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         model,
         max_tokens: 1400,
-        stream: true,
+        stream: false,
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
           { role: 'user', content: `${prompts[type]}\n\nNota clinica:\n${text}` }
@@ -145,15 +147,25 @@ Deno.serve(async (req) => {
       })
     });
 
-    if (!response.ok || !response.body) {
-      const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
       console.error('clinical_ai_upstream_failed', {
         status: response.status,
-        error: (data as { error?: { message?: string } })?.error?.message || 'unknown'
+        error: (errData as { error?: { message?: string } })?.error?.message || 'unknown',
+        model
       });
       return json(req, response.status >= 500 ? 502 : response.status, {
         error: GENERIC_AI_ERROR
       });
+    }
+
+    const resData = (await response.json()) as {
+      choices?: Array<{ message?: { content?: string } }>;
+    };
+    const content = resData.choices?.[0]?.message?.content ?? '';
+    if (!content.trim()) {
+      console.error('clinical_ai_empty_response', { model });
+      return json(req, 502, { error: GENERIC_AI_ERROR });
     }
 
     const headers = buildCorsHeaders(req);
@@ -161,49 +173,14 @@ Deno.serve(async (req) => {
     headers.set('Cache-Control', 'no-cache');
     headers.set('Connection', 'keep-alive');
 
-    // Convert OpenAI SSE → Anthropic delta format so the frontend parser stays unchanged
-    const transformed = new ReadableStream<Uint8Array>({
-      async start(controller) {
-        const reader = response.body!.getReader();
-        const decoder = new TextDecoder();
-        const encoder = new TextEncoder();
-        let buffer = '';
-        try {
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split('\n');
-            buffer = lines.pop() ?? '';
-            for (const line of lines) {
-              if (!line.startsWith('data: ')) continue;
-              const raw = line.slice(6).trim();
-              if (raw === '[DONE]') continue;
-              try {
-                const parsed = JSON.parse(raw) as {
-                  choices?: Array<{ delta?: { content?: string } }>;
-                };
-                const chunk = parsed.choices?.[0]?.delta?.content;
-                if (chunk) {
-                  const out = `data: ${JSON.stringify({ type: 'content_block_delta', delta: { text: chunk } })}\n\n`;
-                  controller.enqueue(encoder.encode(out));
-                }
-              } catch {
-                // Skip malformed chunks
-              }
-            }
-          }
-        } finally {
-          reader.releaseLock();
-          controller.close();
-        }
-      }
-    });
+    const sseChunk = `data: ${JSON.stringify({ type: 'content_block_delta', delta: { text: content } })}\n\n`;
 
-    return new Response(transformed, { headers });
+    return new Response(new TextEncoder().encode(sseChunk), { headers });
   } catch (error) {
     console.error('clinical_ai_failed', {
-      name: error instanceof Error ? error.name : 'UnknownError'
+      name: error instanceof Error ? error.name : 'UnknownError',
+      message: error instanceof Error ? error.message : String(error),
+      model
     });
     return json(req, 502, { error: GENERIC_AI_ERROR });
   }
