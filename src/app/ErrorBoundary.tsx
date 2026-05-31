@@ -17,6 +17,17 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
+    // Chunk loading errors happen after a new Vercel deploy: the old JS filename
+    // no longer exists on the CDN. Forcing a reload fetches the new bundle.
+    const msg = error?.message ?? '';
+    if (
+      /Failed to fetch dynamically imported module|Importing a module script failed|Unable to preload CSS|error loading dynamically imported module/i.test(
+        msg
+      )
+    ) {
+      window.location.reload();
+      return;
+    }
     if (import.meta.env.DEV) {
       console.error('Unhandled UI error', error, info);
     }

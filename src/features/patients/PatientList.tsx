@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { clinicalApi } from '../../services/clinicalApi';
 import { useToast } from '../../app/ToastProvider';
@@ -12,59 +12,41 @@ interface PatientListProps {
 export function PatientList({ selectedId, onSelect }: PatientListProps) {
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
-  const statusFilter = 'Todos';
   const [importing, setImporting] = useState(false);
   const { notify } = useToast();
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedQuery(query);
-    }, 300);
+    const handler = setTimeout(() => setDebouncedQuery(query), 300);
     return () => clearTimeout(handler);
   }, [query]);
 
-  const {
-    data: patients = [],
-    isLoading,
-    error
-  } = useQuery<Patient[], Error>({
-    queryKey: ['patients'],
-    queryFn: () => clinicalApi.listPatients()
+  const isSearching = debouncedQuery.trim().length > 0;
+
+  const { data: todayPatients = [], isLoading: loadingToday } = useQuery<Patient[], Error>({
+    queryKey: ['patients', 'today'],
+    queryFn: () => clinicalApi.listPatientsToday(),
+    enabled: !isSearching
   });
+
+  const { data: searchResults = [], isLoading: loadingSearch } = useQuery<Patient[], Error>({
+    queryKey: ['patients', 'search', debouncedQuery],
+    queryFn: () => clinicalApi.searchPatients(debouncedQuery),
+    enabled: isSearching
+  });
+
+  const patients = isSearching ? searchResults : todayPatients;
+  const isLoading = isSearching ? loadingSearch : loadingToday;
 
   const handleImport = async () => {
     setImporting(true);
     notify({ tone: 'success', message: 'Sincronizando pacientes desde Google Calendar...' });
-
-    // Simular un tiempo de carga mientras se sincroniza
     setTimeout(() => {
       setImporting(false);
       notify({ tone: 'success', message: 'Pacientes importados de forma exitosa.' });
       queryClient.invalidateQueries({ queryKey: ['patients'] });
     }, 2500);
   };
-
-  const filtered = useMemo(() => {
-    let result = patients;
-
-    // Filter by status
-    if (statusFilter !== 'Todos') {
-      result = result.filter((p) => p.status === statusFilter);
-    }
-
-    // Filter by query
-    const q = debouncedQuery.trim().toLowerCase();
-    if (q) {
-      result = result.filter((patient) =>
-        [patient.full_name, patient.phone, patient.email]
-          .filter(Boolean)
-          .some((value) => String(value).toLowerCase().includes(q))
-      );
-    }
-
-    return result;
-  }, [patients, debouncedQuery, statusFilter]);
 
   return (
     <section className="card patient-list">
@@ -77,7 +59,7 @@ export function PatientList({ selectedId, onSelect }: PatientListProps) {
           <button type="button" className="secondary" onClick={handleImport} disabled={importing}>
             {importing ? 'Sincronizando...' : 'Importar de Calendar'}
           </button>
-          <span className="pill">{filtered.length}</span>
+          <span className="pill">{patients.length}</span>
         </div>
       </div>
 
@@ -85,21 +67,16 @@ export function PatientList({ selectedId, onSelect }: PatientListProps) {
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Nombre o telefono..."
+          placeholder="Buscar por nombre o telefono..."
           aria-label="Buscar pacientes"
           className="search-input"
         />
       </div>
 
-      {isLoading && <p className="muted">Cargando pacientes...</p>}
-      {error && (
-        <p className="error" role="alert">
-          {error.message || 'No se pudieron cargar pacientes.'}
-        </p>
-      )}
+      {isLoading && <p className="muted">Cargando...</p>}
 
       <div className="list-stack">
-        {filtered.map((patient) => (
+        {patients.map((patient) => (
           <button
             key={patient.id}
             type="button"
@@ -111,7 +88,14 @@ export function PatientList({ selectedId, onSelect }: PatientListProps) {
             <small>{patient.phone || 'Sin telefono'}</small>
           </button>
         ))}
-        {!isLoading && !filtered.length && <p className="muted">No hay pacientes para mostrar.</p>}
+
+        {!isLoading && !patients.length && (
+          <p className="muted">
+            {isSearching
+              ? 'No se encontraron pacientes.'
+              : 'Sin pacientes agendados hoy — usa el buscador'}
+          </p>
+        )}
       </div>
     </section>
   );

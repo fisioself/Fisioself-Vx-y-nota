@@ -57,12 +57,32 @@ export function NativeCalendar({ onEventClick }: NativeCalendarProps) {
     queryKey: ['all_appointments'],
     queryFn: async () => {
       const db = assertSupabase();
-      const { data, error } = await db
-        .from('appointments')
-        .select('id, title, starts_at, ends_at, color_id, session_type, patient_id')
-        .neq('status', 'cancelled');
-      if (error) throw error;
-      return data;
+      // Supabase/PostgREST limita a 1000 filas por defecto. Con >2000 citas
+      // historicas eso dejaba meses recientes vacios. Paginamos en lotes de
+      // 1000 con .range() hasta traer todas las citas.
+      const PAGE = 1000;
+      const all: Array<{
+        id: string;
+        title: string;
+        starts_at: string;
+        ends_at: string;
+        color_id: string | null;
+        session_type: string | null;
+        patient_id: string | null;
+      }> = [];
+      for (let from = 0; ; from += PAGE) {
+        const { data, error } = await db
+          .from('appointments')
+          .select('id, title, starts_at, ends_at, color_id, session_type, patient_id')
+          .neq('status', 'cancelled')
+          .order('starts_at', { ascending: true })
+          .range(from, from + PAGE - 1);
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        all.push(...data);
+        if (data.length < PAGE) break;
+      }
+      return all;
     }
   });
 

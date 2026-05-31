@@ -159,7 +159,7 @@ export function App() {
         </div>
         <div className="hero-actions">
           <button type="button" className="secondary" onClick={toggleTheme} title="Cambiar tema">
-            {theme === 'light' ? '🌙 Modo Oscuro' : '☀️ Modo Claro'}
+            {theme === 'light' ? 'Modo Oscuro' : 'Modo Claro'}
           </button>
           <span className="pill">{session.user?.email}</span>
           <button type="button" className="secondary" onClick={logout}>
