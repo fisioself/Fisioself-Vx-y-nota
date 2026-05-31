@@ -26,7 +26,7 @@ interface PatientRecordProps {
 interface DashboardProps {
   onPatientSelect: (patientId: string) => void;
 }
-interface AgendaProps {
+interface FinanceProps {
   onPatientSelect: (patientId: string) => void;
 }
 
@@ -44,11 +44,11 @@ const PatientRecord = lazy(() =>
     default: module.PatientRecord
   }))
 ) as ComponentType<PatientRecordProps>;
-const AgendaView = lazy(() =>
-  import('./features/appointments/AgendaView').then((module) => ({
-    default: module.AgendaView
+const FinanceView = lazy(() =>
+  import('./features/finance/FinanceView').then((module) => ({
+    default: module.FinanceView
   }))
-) as ComponentType<AgendaProps>;
+) as ComponentType<FinanceProps>;
 const ClinicDashboard = lazy(() =>
   import('./features/dashboard/ClinicDashboard').then((module) => ({
     default: module.ClinicDashboard
@@ -67,7 +67,7 @@ export function App() {
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [selectedPatient, setSelectedPatient] = useState<Partial<Patient> | null>(null);
   const [showNewPatient, setShowNewPatient] = useState(false);
-  const [showAgenda, setShowAgenda] = useState(false);
+  const [showFinance, setShowFinance] = useState(false);
   const [showDashboard, setShowDashboard] = useState(true);
 
   const { theme, toggleTheme } = useTheme();
@@ -102,7 +102,7 @@ export function App() {
     await authService.signOut();
     draftStorage.clearAll();
     setSelectedPatient(null);
-    setShowAgenda(false);
+    setShowFinance(false);
     setSession(null);
   };
 
@@ -175,7 +175,7 @@ export function App() {
             className={showDashboard ? '' : 'secondary'}
             onClick={() => {
               setShowDashboard(true);
-              setShowAgenda(false);
+              setShowFinance(false);
               setSelectedPatient(null);
             }}
           >
@@ -183,20 +183,20 @@ export function App() {
           </button>
           <button
             type="button"
-            className={showAgenda ? '' : 'secondary'}
+            className={showFinance ? '' : 'secondary'}
             onClick={() => {
-              setShowAgenda(true);
+              setShowFinance(true);
               setShowDashboard(false);
               setSelectedPatient(null);
             }}
           >
-            Agenda
+            Finanzas
           </button>
           <button
             type="button"
             className="secondary"
             onClick={() => {
-              setShowAgenda(false);
+              setShowFinance(false);
               setShowDashboard(false);
               setShowNewPatient((value) => !value);
             }}
@@ -211,7 +211,7 @@ export function App() {
               onCancel={() => setShowNewPatient(false)}
               onCreated={(patient) => {
                 setSelectedPatient(patient);
-                setShowAgenda(false);
+                setShowFinance(false);
                 setShowDashboard(false);
                 setShowNewPatient(false);
                 queryClient.invalidateQueries({ queryKey: ['patients'] });
@@ -223,7 +223,7 @@ export function App() {
             selectedId={selectedPatient?.id}
             onSelect={(patient) => {
               setSelectedPatient(patient);
-              setShowAgenda(false);
+              setShowFinance(false);
               setShowDashboard(false);
             }}
           />
@@ -236,15 +236,15 @@ export function App() {
             <ClinicDashboard
               onPatientSelect={(patientId) => {
                 setSelectedPatient({ id: patientId });
-                setShowAgenda(false);
+                setShowFinance(false);
                 setShowDashboard(false);
               }}
             />
-          ) : showAgenda ? (
-            <AgendaView
+          ) : showFinance ? (
+            <FinanceView
               onPatientSelect={(patientId) => {
                 setSelectedPatient({ id: patientId });
-                setShowAgenda(false);
+                setShowFinance(false);
                 setShowDashboard(false);
               }}
             />
