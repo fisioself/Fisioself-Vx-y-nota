@@ -39,6 +39,7 @@ export interface GlobalFinanceSummary {
   pendingReceivables: number;
   monthly: MonthlyPoint[];
   receivables: ReceivableRow[];
+  incomeByMethod: Record<string, number>;
 }
 
 const unwrap = <T>({ data, error }: { data: unknown; error: unknown }): T => {
@@ -197,12 +198,12 @@ export const financeApi = {
     const sinceStr = since.toISOString().slice(0, 10);
 
     const [payRes, expRes, pkgRes, patRes] = await Promise.all([
-      db.from('payments').select('amount, paid_at, patient_id').gte('paid_at', sinceStr),
+      db.from('payments').select('amount, paid_at, patient_id, method').gte('paid_at', sinceStr),
       db.from('expenses').select('amount, spent_at').gte('spent_at', sinceStr),
       db.from('patient_packages').select('total_amount, patient_id'),
       db.from('patients').select('id, full_name')
     ]);
-    const payments = unwrap<Array<{ amount: number; paid_at: string; patient_id: string }>>(payRes);
+    const payments = unwrap<Array<{ amount: number; paid_at: string; patient_id: string; method: string }>>(payRes);
     const expenses = unwrap<Array<{ amount: number; spent_at: string }>>(expRes);
     const packages = unwrap<Array<{ total_amount: number; patient_id: string }>>(pkgRes);
     const patients = unwrap<Array<{ id: string; full_name: string }>>(patRes);
@@ -216,9 +217,12 @@ export const financeApi = {
     }
     const incomeByMonth = new Map<string, number>();
     const expenseByMonth = new Map<string, number>();
+    const incomeByMethod: Record<string, number> = {};
     for (const p of payments) {
       const k = monthKey(p.paid_at);
       incomeByMonth.set(k, (incomeByMonth.get(k) ?? 0) + Number(p.amount ?? 0));
+      const m = p.method ?? 'otro';
+      incomeByMethod[m] = (incomeByMethod[m] ?? 0) + Number(p.amount ?? 0);
     }
     for (const e of expenses) {
       const k = monthKey(e.spent_at);
@@ -272,7 +276,8 @@ export const financeApi = {
       totalBilled,
       pendingReceivables,
       monthly,
-      receivables
+      receivables,
+      incomeByMethod
     };
   }
 };

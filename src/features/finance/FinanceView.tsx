@@ -542,41 +542,35 @@ export function FinanceView(_props: FinanceViewProps) {
 
           {selectedPatient && <PatientFinancePanel patient={selectedPatient} />}
 
-          {/* Cuentas por cobrar */}
+          {/* Cuánto hay en caja */}
           <section className="card">
             <div className="form-header">
               <div>
-                <p className="eyebrow">Pendientes</p>
-                <h2>Cuentas por cobrar</h2>
+                <p className="eyebrow">Ingresos recibidos (últimos 12m)</p>
+                <h2>¿Cuánto hay en caja?</h2>
               </div>
             </div>
-            <ul className="list-stack" style={{ marginTop: 12, listStyle: 'none', padding: 0 }}>
-              {(summary?.receivables ?? []).map((r) => (
-                <li
-                  key={r.patientId}
-                  className="note-row"
-                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}
-                >
-                  <button
-                    type="button"
-                    className="secondary"
-                    style={{ textAlign: 'left', flex: 1 }}
-                    onClick={() =>
-                      setSelectedPatient({ id: r.patientId, full_name: r.fullName } as Patient)
-                    }
-                  >
-                    {r.fullName}
-                    <span className="muted" style={{ display: 'block', fontSize: '0.8rem' }}>
-                      Pagó {money(r.paid)} de {money(r.billed)}
-                    </span>
-                  </button>
-                  <strong style={{ color: '#c0392b' }}>{money(r.balance)}</strong>
-                </li>
-              ))}
-              {summary && summary.receivables.length === 0 && (
-                <p className="muted">No hay saldos pendientes. 🎉</p>
-              )}
-            </ul>
+            <div
+              className="summary-grid"
+              style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', marginTop: 12 }}
+            >
+              <div className="card">
+                <span>Total cobrado</span>
+                <strong style={{ color: '#1f9d57' }}>{money(summary?.totalIncome ?? 0)}</strong>
+              </div>
+              <div className="card" style={{ background: 'var(--bg-sunken)' }}>
+                <span>Efectivo</span>
+                <strong>{money(summary?.incomeByMethod?.efectivo ?? 0)}</strong>
+              </div>
+              <div className="card" style={{ background: 'var(--bg-sunken)' }}>
+                <span>Transferencia</span>
+                <strong>{money(summary?.incomeByMethod?.transferencia ?? 0)}</strong>
+              </div>
+              <div className="card" style={{ background: 'var(--bg-sunken)' }}>
+                <span>Tarjeta</span>
+                <strong>{money(summary?.incomeByMethod?.tarjeta ?? 0)}</strong>
+              </div>
+            </div>
           </section>
 
           <ExpensesPanel />
