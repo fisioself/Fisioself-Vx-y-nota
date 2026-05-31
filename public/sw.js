@@ -1,5 +1,5 @@
 // Classic Service Worker — no ES module imports, no CDN dependencies
-const CACHE_NAME = 'fisioself-notas-vx-v4';
+const CACHE_NAME = 'fisioself-notas-vx-v5';
 const APP_SHELL = ['/', '/index.html', '/manifest.webmanifest'];
 const DB_NAME = 'fisioself-sync-db';
 const STORE_NAME = 'sync-queue';
@@ -107,6 +107,29 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
 
+  const isDocument =
+    request.mode === 'navigate' ||
+    request.destination === 'document' ||
+    (request.headers.get('accept') || '').includes('text/html');
+
+  // HTML (la "cáscara" de la app): NETWORK-FIRST. Siempre intentamos traer el
+  // index.html más reciente — que referencia el bundle JS recién desplegado —
+  // y solo caemos a la copia en caché si no hay conexión. Esto evita quedarnos
+  // con una versión vieja tras cada deploy.
+  if (isDocument) {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put('/index.html', copy));
+          return response;
+        })
+        .catch(() => caches.match('/index.html').then((cached) => cached || caches.match('/')))
+    );
+    return;
+  }
+
+  // Assets con hash (JS/CSS/imágenes): CACHE-FIRST (son inmutables por su hash).
   event.respondWith(
     caches.match(request).then((cached) => {
       if (cached) return cached;
@@ -116,16 +139,7 @@ self.addEventListener('fetch', (event) => {
           caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
           return response;
         })
-        .catch(() => {
-          // Only fall back to /index.html for HTML navigation requests.
-          // JS/CSS chunk requests must fail so the ErrorBoundary can detect
-          // the stale-chunk pattern and trigger a reload.
-          if (request.destination === 'document' ||
-              request.headers.get('accept')?.includes('text/html')) {
-            return caches.match('/index.html');
-          }
-          return Response.error();
-        });
+        .catch(() => Response.error());
     })
   );
 });
