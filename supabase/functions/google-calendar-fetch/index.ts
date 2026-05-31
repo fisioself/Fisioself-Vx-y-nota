@@ -39,22 +39,231 @@ const refreshGoogleToken = async ({
   return data;
 };
 
+// Color → tipo de sesión (código de color de Google Calendar):
+//   3 (Morado)            → Valoración
+//   5 (Amarillo)          → Descarga muscular
+//   4/6 (Naranja)         → Terapia a domicilio
+//   1/7/9 (Azul)          → Sesión clínica (rehabilitación)
 const resolveSessionType = (colorId?: string) => {
   switch (colorId) {
     case '3':
-      return 'Valoración'; // Grape (Morado)
+      return 'Valoración';
     case '5':
-      return 'Descarga muscular'; // Banana (Amarillo)
+      return 'Descarga muscular';
     case '4':
     case '6':
-      return 'Terapia a domicilio'; // Flamingo/Tangerine (Naranja)
+      return 'Terapia a domicilio';
     case '1':
+    case '7':
     case '9':
-      return 'Sesión clínica'; // Lavender/Blueberry (Azul)
+      return 'Sesión clínica';
     default:
       return 'Sesión clínica';
   }
 };
+
+const extractPhone = (raw: string): string | null => {
+  const match = raw.match(/(\d{7,})/);
+  return match ? match[1] : null;
+};
+
+// Nombre para mostrar: quita el contador "#N" y cualquier teléfono incrustado.
+const cleanDisplayName = (raw: string): string =>
+  raw
+    .trim()
+    .replace(/#\s*\d+\s*$/, '')
+    .replace(/\d{7,}/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+
+// Clave normalizada para agrupar al mismo paciente (sin acentos, dígitos ni símbolos).
+const normalizeKey = (name: string): string =>
+  name
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z\s]/gi, '')
+    .replace(/\s{2,}/g, ' ')
+    .toLowerCase()
+    .trim();
+
+interface Connection {
+  id: string;
+  user_id: string;
+  calendar_id: string | null;
+  token_expires_at: string | null;
+  access_token: string | null;
+  refresh_token: string | null;
+}
+
+// deno-lint-ignore no-explicit-any
+type Supa = any;
+
+// Importa los eventos de UNA conexión de Google Calendar hacia la app:
+// crea/agrupa pacientes por nombre normalizado y mapea color → tipo de sesión.
+const importConnection = async (
+  supabase: Supa,
+  connection: Connection,
+  googleClientId: string,
+  googleClientSecret: string
+): Promise<number> => {
+  let accessToken: string | null = connection.access_token ?? null;
+  const refreshTokenStored: string | null = connection.refresh_token ?? null;
+
+  if (
+    !accessToken ||
+    new Date(connection.token_expires_at || 0) <= new Date(Date.now() + 60_000)
+  ) {
+    if (!refreshTokenStored) throw new Error('Falta refresh token de Google');
+    const refreshed = await refreshGoogleToken({
+      refreshToken: refreshTokenStored,
+      clientId: googleClientId,
+      clientSecret: googleClientSecret
+    });
+    accessToken = refreshed.access_token;
+    await supabase
+      .from('calendar_connections')
+      .update({
+        access_token: accessToken,
+        token_expires_at: new Date(
+          Date.now() + Number(refreshed.expires_in || 3600) * 1000
+        ).toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', connection.id);
+  }
+
+  // Ventana de sincronización rutinaria: 2 meses atrás → 6 meses adelante.
+  const calendarId = encodeURIComponent(connection.calendar_id || 'primary');
+  const timeMin = new Date();
+  timeMin.setMonth(timeMin.getMonth() - 2);
+  const timeMax = new Date();
+  timeMax.setMonth(timeMax.getMonth() + 6);
+
+  const baseEndpoint =
+    `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events` +
+    `?timeMin=${timeMin.toISOString()}&timeMax=${timeMax.toISOString()}` +
+    `&singleEvents=true&orderBy=startTime&maxResults=2500`;
+
+  const events: Array<Record<string, unknown>> = [];
+  let pageToken: string | undefined;
+  do {
+    const endpoint = pageToken
+      ? `${baseEndpoint}&pageToken=${encodeURIComponent(pageToken)}`
+      : baseEndpoint;
+    const googleResponse = await fetch(endpoint, {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
+    const googleData = await googleResponse.json();
+    if (!googleResponse.ok) {
+      throw new Error('Error fetching Google Calendar');
+    }
+    if (Array.isArray(googleData.items)) events.push(...googleData.items);
+    pageToken = googleData.nextPageToken;
+  } while (pageToken);
+
+  let syncedCount = 0;
+
+  // Cargar todos los pacientes una vez (evita N+1) y mapear por clave normalizada.
+  const { data: allPatients } = await supabase
+    .from('patients')
+    .select('id, full_name, created_at');
+  const patientsByKey = new Map<string, { id: string; created_at: string }>();
+  for (const p of allPatients || []) {
+    if (!p.full_name) continue;
+    const key = normalizeKey(p.full_name);
+    const existing = patientsByKey.get(key);
+    if (!existing || new Date(p.created_at) < new Date(existing.created_at)) {
+      patientsByKey.set(key, { id: p.id, created_at: p.created_at });
+    }
+  }
+
+  for (const event of events) {
+    if (event.status === 'cancelled') continue;
+
+    const rawTitle = (event.summary as string | undefined)?.trim();
+    if (!rawTitle) continue;
+
+    const start = event.start as Record<string, string> | undefined;
+    const end = event.end as Record<string, string> | undefined;
+    const startsAt = start?.dateTime || start?.date;
+    const endsAt = end?.dateTime || end?.date;
+    if (!startsAt || !endsAt) continue;
+
+    const displayName = cleanDisplayName(rawTitle);
+    const phone = extractPhone(rawTitle);
+    const nameKey = normalizeKey(displayName);
+
+    // Resolver o crear paciente por clave normalizada (misma persona = misma ficha).
+    let patientId: string;
+    const existingEntry = patientsByKey.get(nameKey);
+
+    if (existingEntry) {
+      patientId = existingEntry.id;
+      if (phone) {
+        await supabase.from('patients').update({ phone }).eq('id', patientId).is('phone', null);
+      }
+    } else {
+      const { data: newPatient, error: pError } = await supabase
+        .from('patients')
+        .insert({ full_name: displayName, phone: phone ?? null, created_by: connection.user_id })
+        .select('id, created_at')
+        .single();
+
+      if (pError) {
+        console.error('Error creating patient', pError);
+        continue;
+      }
+      patientId = newPatient.id;
+      patientsByKey.set(nameKey, { id: newPatient.id, created_at: newPatient.created_at });
+    }
+
+    const colorId = (event.colorId as string | undefined) || null;
+
+    const { data: existingAppt } = await supabase
+      .from('appointments')
+      .select('id')
+      .eq('google_event_id', event.id as string)
+      .limit(1);
+
+    if (existingAppt && existingAppt.length > 0) {
+      // En UPDATEs solo tocar metadatos de Google + color/tipo: NO reescribir los
+      // campos clínicos para no disparar el trigger de autosync en bucle.
+      await supabase
+        .from('appointments')
+        .update({
+          google_html_link: event.htmlLink as string | undefined,
+          sync_status: 'synced',
+          color_id: colorId,
+          session_type: resolveSessionType(colorId ?? undefined),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', existingAppt[0].id);
+    } else {
+      await supabase.from('appointments').insert({
+        patient_id: patientId,
+        title: displayName,
+        description: (event.description as string | undefined) || '',
+        location: (event.location as string | undefined) || '',
+        starts_at: startsAt,
+        ends_at: endsAt,
+        status: 'scheduled',
+        google_calendar_id: connection.calendar_id || 'primary',
+        google_event_id: event.id as string,
+        google_html_link: event.htmlLink as string | undefined,
+        sync_status: 'synced',
+        color_id: colorId,
+        session_type: resolveSessionType(colorId ?? undefined),
+        created_by: connection.user_id
+      });
+    }
+    syncedCount++;
+  }
+
+  return syncedCount;
+};
+
+const CONNECTION_COLUMNS =
+  'id, user_id, calendar_id, token_expires_at, access_token, refresh_token';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: buildCorsHeaders(req) });
@@ -65,157 +274,56 @@ Deno.serve(async (req) => {
     const serviceRoleKey = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
     const googleClientId = requireEnv('GOOGLE_CLIENT_ID');
     const googleClientSecret = requireEnv('GOOGLE_CLIENT_SECRET');
-    const token = getBearerToken(req);
-
-    if (!token) return json(req, 401, { error: 'Falta autorizacion' });
     const supabase = createClient(supabaseUrl, serviceRoleKey);
-    const { data: userData, error: userError } = await supabase.auth.getUser(token);
-    if (userError || !userData.user) return json(req, 401, { error: 'Sesion invalida' });
 
-    const userId = userData.user.id;
+    // --- Autenticación: secret del cron (server-side) o JWT del usuario (app) ---
+    const syncSecret = req.headers.get('x-sync-secret');
+    let connections: Connection[] = [];
 
-    // Read connection + tokens directly (access_token/refresh_token are plain columns)
-    const { data: connection, error: connectionError } = await supabase
-      .from('calendar_connections')
-      .select('id, calendar_id, token_expires_at, access_token, refresh_token')
-      .eq('user_id', userId)
-      .eq('provider', 'google')
-      .single();
-
-    if (connectionError || !connection) {
-      return json(req, 400, { error: 'Google Calendar no conectado' });
-    }
-
-    let accessToken: string | null = connection.access_token ?? null;
-    const refreshTokenStored: string | null = connection.refresh_token ?? null;
-
-    if (
-      !accessToken ||
-      new Date(connection.token_expires_at || 0) <= new Date(Date.now() + 60_000)
-    ) {
-      if (!refreshTokenStored) throw new Error('Falta refresh token de Google');
-      const refreshed = await refreshGoogleToken({
-        refreshToken: refreshTokenStored,
-        clientId: googleClientId,
-        clientSecret: googleClientSecret
-      });
-      accessToken = refreshed.access_token;
-      await supabase
+    if (syncSecret) {
+      const { data: cfg } = await supabase
+        .from('integration_config')
+        .select('value')
+        .eq('key', 'gcal_autosync_secret')
+        .single();
+      if (!cfg || cfg.value !== syncSecret) {
+        return json(req, 401, { error: 'Secret invalido' });
+      }
+      // Modo automático: procesar todas las conexiones de Google.
+      const { data } = await supabase
         .from('calendar_connections')
-        .update({
-          access_token: accessToken,
-          token_expires_at: new Date(
-            Date.now() + Number(refreshed.expires_in || 3600) * 1000
-          ).toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', connection.id);
-    }
+        .select(CONNECTION_COLUMNS)
+        .eq('provider', 'google');
+      connections = (data as Connection[]) || [];
+    } else {
+      const token = getBearerToken(req);
+      if (!token) return json(req, 401, { error: 'Falta autorizacion' });
+      const { data: userData, error: userError } = await supabase.auth.getUser(token);
+      if (userError || !userData.user) return json(req, 401, { error: 'Sesion invalida' });
 
-    // Fetch events from Google
-    const calendarId = encodeURIComponent(connection.calendar_id || 'primary');
-    // Fetch last 3 months and future 6 months
-    const timeMin = new Date();
-    timeMin.setMonth(timeMin.getMonth() - 3);
-    const timeMax = new Date();
-    timeMax.setMonth(timeMax.getMonth() + 6);
+      const { data: connection, error: connectionError } = await supabase
+        .from('calendar_connections')
+        .select(CONNECTION_COLUMNS)
+        .eq('user_id', userData.user.id)
+        .eq('provider', 'google')
+        .single();
 
-    const endpoint = `https://www.googleapis.com/calendar/v3/calendars/${calendarId}/events?timeMin=${timeMin.toISOString()}&timeMax=${timeMax.toISOString()}&singleEvents=true&maxResults=500`;
-
-    const googleResponse = await fetch(endpoint, {
-      headers: { Authorization: `Bearer ${accessToken}` }
-    });
-    const googleData = await googleResponse.json();
-
-    if (!googleResponse.ok) {
-      return json(req, googleResponse.status, { error: 'Error fetching Google Calendar' });
-    }
-
-    const events = googleData.items || [];
-    let syncedCount = 0;
-
-    // Process each event
-    for (const event of events) {
-      if (event.status === 'cancelled') continue;
-
-      const title = event.summary?.trim();
-      if (!title) continue; // Skip events without title
-
-      const startsAt = event.start?.dateTime || event.start?.date;
-      const endsAt = event.end?.dateTime || event.end?.date;
-      if (!startsAt || !endsAt) continue;
-
-      // Ensure patient exists
-      let patientId;
-      const { data: existingPatients } = await supabase
-        .from('patients')
-        .select('id')
-        .ilike('full_name', title)
-        .limit(1);
-
-      if (existingPatients && existingPatients.length > 0) {
-        patientId = existingPatients[0].id;
-      } else {
-        const { data: newPatient, error: pError } = await supabase
-          .from('patients')
-          .insert({ full_name: title, created_by: userId })
-          .select('id')
-          .single();
-
-        if (pError) {
-          console.error('Error creating patient', pError);
-          continue;
-        }
-        patientId = newPatient.id;
+      if (connectionError || !connection) {
+        return json(req, 400, { error: 'Google Calendar no conectado' });
       }
-
-      // Check if appointment exists
-      const { data: existingAppt } = await supabase
-        .from('appointments')
-        .select('id')
-        .eq('google_event_id', event.id)
-        .limit(1);
-
-      if (existingAppt && existingAppt.length > 0) {
-        // En UPDATEs solo tocar metadatos de Google — NO campos clínicos
-        // (title, starts_at, ends_at, description, location) para que el trigger
-        // appointments_autosync no detecte cambios y no llame a google-calendar-sync.
-        await supabase
-          .from('appointments')
-          .update({
-            status: 'scheduled',
-            google_calendar_id: connection.calendar_id || 'primary',
-            google_event_id: event.id,
-            google_html_link: event.htmlLink,
-            sync_status: 'synced',
-            color_id: event.colorId || null,
-            session_type: resolveSessionType(event.colorId),
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', existingAppt[0].id);
-      } else {
-        await supabase.from('appointments').insert({
-          patient_id: patientId,
-          title: title,
-          description: event.description || '',
-          location: event.location || '',
-          starts_at: startsAt,
-          ends_at: endsAt,
-          status: 'scheduled',
-          google_calendar_id: connection.calendar_id || 'primary',
-          google_event_id: event.id,
-          google_html_link: event.htmlLink,
-          sync_status: 'synced',
-          color_id: event.colorId || null,
-          session_type: resolveSessionType(event.colorId),
-          updated_at: new Date().toISOString(),
-          created_by: userId
-        });
-      }
-      syncedCount++;
+      connections = [connection as Connection];
     }
 
-    return json(req, 200, { success: true, count: syncedCount });
+    let total = 0;
+    for (const connection of connections) {
+      try {
+        total += await importConnection(supabase, connection, googleClientId, googleClientSecret);
+      } catch (err) {
+        console.error('import-connection-error', connection.id, err);
+      }
+    }
+
+    return json(req, 200, { success: true, count: total });
   } catch (error) {
     console.error('google-calendar-fetch-error', error);
     return json(req, 500, { error: 'Internal Server Error' });
