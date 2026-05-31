@@ -21,25 +21,46 @@ export interface MonthlyPoint {
   month: string; // 'YYYY-MM'
   income: number;
   expenses: number;
+  net: number;
+  patients: number; // pacientes atendidos ese mes
+  sessions: number; // sesiones (citas) ese mes
 }
 
-export interface ReceivableRow {
+export interface PeriodSummary {
+  income: number;
+  expenses: number;
+  net: number;
+  patients: number;
+  sessions: number;
+}
+
+export interface TopPatientRow {
   patientId: string;
   fullName: string;
-  billed: number;
   paid: number;
-  balance: number;
+}
+
+export interface CategoryRow {
+  category: string;
+  amount: number;
 }
 
 export interface GlobalFinanceSummary {
-  totalIncome: number;
-  totalExpenses: number;
-  net: number;
-  totalBilled: number;
-  pendingReceivables: number;
-  monthly: MonthlyPoint[];
-  receivables: ReceivableRow[];
-  incomeByMethod: Record<string, number>;
+  currentMonth: PeriodSummary; // mes en curso
+  last30d: PeriodSummary; // últimos 30 días
+  monthly: MonthlyPoint[]; // historial mensual (neto y pacientes)
+  caja: { total: number; byMethod: Record<string, number> }; // todo el tiempo
+  ticket: { perSession: number; perPatient: number }; // todo el tiempo
+  growth: { income: number | null; patients: number | null }; // % mes en curso vs mes anterior
+  topPatients: TopPatientRow[]; // por ingreso, todo el tiempo
+  expensesByCategory: CategoryRow[];
+}
+
+interface ApptStats {
+  monthly: Array<{ month: string; patients: number; sessions: number }>;
+  currentMonth: { patients: number; sessions: number };
+  last30d: { patients: number; sessions: number };
+  totalSessions: number;
 }
 
 const unwrap = <T>({ data, error }: { data: unknown; error: unknown }): T => {
@@ -192,92 +213,161 @@ export const financeApi = {
   // ---------- Dashboard global ----------
   async getGlobalFinance(monthsBack = 12): Promise<GlobalFinanceSummary> {
     const db = assertSupabase();
-    const since = new Date();
-    since.setMonth(since.getMonth() - (monthsBack - 1));
-    since.setDate(1);
-    const sinceStr = since.toISOString().slice(0, 10);
 
-    const [payRes, expRes, pkgRes, patRes] = await Promise.all([
-      db.from('payments').select('amount, paid_at, patient_id, method').gte('paid_at', sinceStr),
-      db.from('expenses').select('amount, spent_at').gte('spent_at', sinceStr),
-      db.from('patient_packages').select('total_amount, patient_id'),
+    // Estadísticas de citas (pacientes/sesiones por mes) vía función agregadora.
+    // Las citas son miles de filas, así que la base las agrega por nosotros.
+    const rpc = db.rpc.bind(db) as unknown as (
+      name: string,
+      args?: Record<string, unknown>
+    ) => Promise<{ data: unknown; error: unknown }>;
+    const apptRes = await rpc('finance_appt_stats', { p_months_back: monthsBack });
+    if (apptRes.error) throw apptRes.error;
+    const appt = (apptRes.data as ApptStats | null) ?? {
+      monthly: [],
+      currentMonth: { patients: 0, sessions: 0 },
+      last30d: { patients: 0, sessions: 0 },
+      totalSessions: 0
+    };
+
+    // Pagos y gastos son tablas pequeñas → traemos todo el histórico.
+    const [payRes, expRes, patRes] = await Promise.all([
+      db.from('payments').select('amount, paid_at, patient_id, method'),
+      db.from('expenses').select('amount, spent_at, category'),
       db.from('patients').select('id, full_name')
     ]);
     const payments = unwrap<Array<{ amount: number; paid_at: string; patient_id: string; method: string }>>(payRes);
-    const expenses = unwrap<Array<{ amount: number; spent_at: string }>>(expRes);
-    const packages = unwrap<Array<{ total_amount: number; patient_id: string }>>(pkgRes);
+    const expenses = unwrap<Array<{ amount: number; spent_at: string; category: string }>>(expRes);
     const patients = unwrap<Array<{ id: string; full_name: string }>>(patRes);
+    const nameById = new Map(patients.map((p) => [p.id, p.full_name]));
 
-    // Serie mensual ingresos vs gastos
-    const months: string[] = [];
-    for (let i = 0; i < monthsBack; i += 1) {
-      const d = new Date(since);
-      d.setMonth(d.getMonth() + i);
-      months.push(d.toISOString().slice(0, 7));
-    }
+    // Claves de fecha (calculadas en horario local)
+    const now = new Date();
+    const curMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const prevMonthKey = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
+    const since30 = new Date(now);
+    since30.setDate(since30.getDate() - 30);
+    const since30Str = since30.toISOString().slice(0, 10);
+
+    // Ingresos / gastos por mes
     const incomeByMonth = new Map<string, number>();
     const expenseByMonth = new Map<string, number>();
-    const incomeByMethod: Record<string, number> = {};
     for (const p of payments) {
       const k = monthKey(p.paid_at);
       incomeByMonth.set(k, (incomeByMonth.get(k) ?? 0) + Number(p.amount ?? 0));
-      const m = p.method ?? 'otro';
-      incomeByMethod[m] = (incomeByMethod[m] ?? 0) + Number(p.amount ?? 0);
     }
     for (const e of expenses) {
       const k = monthKey(e.spent_at);
       expenseByMonth.set(k, (expenseByMonth.get(k) ?? 0) + Number(e.amount ?? 0));
     }
-    const monthly: MonthlyPoint[] = months.map((m) => ({
-      month: m,
-      income: incomeByMonth.get(m) ?? 0,
-      expenses: expenseByMonth.get(m) ?? 0
-    }));
 
-    // Totales globales (todo el histórico de facturación vs pagos para por-cobrar)
-    const allPaymentsRes = await db.from('payments').select('amount, patient_id');
-    const allPayments =
-      unwrap<Array<{ amount: number; patient_id: string }>>(allPaymentsRes);
+    // Serie mensual combinada: la columna vertebral son los meses de la función,
+    // más cualquier mes con pagos/gastos.
+    const apptByMonth = new Map(appt.monthly.map((m) => [m.month, m]));
+    const monthSet = new Set<string>([
+      ...apptByMonth.keys(),
+      ...incomeByMonth.keys(),
+      ...expenseByMonth.keys()
+    ]);
+    const monthly: MonthlyPoint[] = Array.from(monthSet)
+      .sort()
+      .map((m) => {
+        const income = incomeByMonth.get(m) ?? 0;
+        const exp = expenseByMonth.get(m) ?? 0;
+        const a = apptByMonth.get(m);
+        return {
+          month: m,
+          income,
+          expenses: exp,
+          net: income - exp,
+          patients: a?.patients ?? 0,
+          sessions: a?.sessions ?? 0
+        };
+      });
 
-    const totalIncome = monthly.reduce((a, m) => a + m.income, 0);
-    const totalExpenses = monthly.reduce((a, m) => a + m.expenses, 0);
+    // Periodo: mes en curso
+    const curIncome = payments
+      .filter((p) => monthKey(p.paid_at) === curMonthKey)
+      .reduce((a, p) => a + Number(p.amount ?? 0), 0);
+    const curExpense = expenses
+      .filter((e) => monthKey(e.spent_at) === curMonthKey)
+      .reduce((a, e) => a + Number(e.amount ?? 0), 0);
+    const currentMonth: PeriodSummary = {
+      income: curIncome,
+      expenses: curExpense,
+      net: curIncome - curExpense,
+      patients: appt.currentMonth?.patients ?? 0,
+      sessions: appt.currentMonth?.sessions ?? 0
+    };
 
-    const billedByPatient = new Map<string, number>();
-    for (const p of packages)
-      billedByPatient.set(p.patient_id, (billedByPatient.get(p.patient_id) ?? 0) + Number(p.total_amount ?? 0));
-    const paidByPatient = new Map<string, number>();
-    for (const p of allPayments)
-      paidByPatient.set(p.patient_id, (paidByPatient.get(p.patient_id) ?? 0) + Number(p.amount ?? 0));
+    // Periodo: últimos 30 días
+    const d30Income = payments
+      .filter((p) => p.paid_at >= since30Str)
+      .reduce((a, p) => a + Number(p.amount ?? 0), 0);
+    const d30Expense = expenses
+      .filter((e) => e.spent_at >= since30Str)
+      .reduce((a, e) => a + Number(e.amount ?? 0), 0);
+    const last30d: PeriodSummary = {
+      income: d30Income,
+      expenses: d30Expense,
+      net: d30Income - d30Expense,
+      patients: appt.last30d?.patients ?? 0,
+      sessions: appt.last30d?.sessions ?? 0
+    };
 
-    const nameById = new Map(patients.map((p) => [p.id, p.full_name]));
-    const totalBilled = Array.from(billedByPatient.values()).reduce((a, b) => a + b, 0);
-
-    const receivables: ReceivableRow[] = [];
-    for (const [pid, billed] of billedByPatient.entries()) {
-      const paid = paidByPatient.get(pid) ?? 0;
-      const balance = billed - paid;
-      if (balance > 0.5) {
-        receivables.push({
-          patientId: pid,
-          fullName: nameById.get(pid) ?? 'Paciente',
-          billed,
-          paid,
-          balance
-        });
-      }
+    // Caja (todo el tiempo) por método
+    const cajaByMethod: Record<string, number> = {};
+    let cajaTotal = 0;
+    for (const p of payments) {
+      const amt = Number(p.amount ?? 0);
+      cajaTotal += amt;
+      const m = p.method ?? 'otro';
+      cajaByMethod[m] = (cajaByMethod[m] ?? 0) + amt;
     }
-    receivables.sort((a, b) => b.balance - a.balance);
-    const pendingReceivables = receivables.reduce((a, r) => a + r.balance, 0);
+
+    // Ticket promedio (todo el tiempo)
+    const payingPatients = new Set(payments.map((p) => p.patient_id)).size;
+    const ticket = {
+      perSession: appt.totalSessions > 0 ? cajaTotal / appt.totalSessions : 0,
+      perPatient: payingPatients > 0 ? cajaTotal / payingPatients : 0
+    };
+
+    // Crecimiento del mes en curso vs mes anterior
+    const curM = monthly.find((m) => m.month === curMonthKey);
+    const prevM = monthly.find((m) => m.month === prevMonthKey);
+    const pct = (cur: number, prev: number): number | null =>
+      prev > 0 ? ((cur - prev) / prev) * 100 : null;
+    const growth = {
+      income: pct(curM?.income ?? 0, prevM?.income ?? 0),
+      patients: pct(curM?.patients ?? 0, prevM?.patients ?? 0)
+    };
+
+    // Top pacientes por ingreso (todo el tiempo)
+    const paidByPatient = new Map<string, number>();
+    for (const p of payments)
+      paidByPatient.set(p.patient_id, (paidByPatient.get(p.patient_id) ?? 0) + Number(p.amount ?? 0));
+    const topPatients: TopPatientRow[] = Array.from(paidByPatient.entries())
+      .map(([patientId, paid]) => ({ patientId, fullName: nameById.get(patientId) ?? 'Paciente', paid }))
+      .sort((a, b) => b.paid - a.paid)
+      .slice(0, 8);
+
+    // Gastos por categoría
+    const byCat = new Map<string, number>();
+    for (const e of expenses)
+      byCat.set(e.category ?? 'otro', (byCat.get(e.category ?? 'otro') ?? 0) + Number(e.amount ?? 0));
+    const expensesByCategory: CategoryRow[] = Array.from(byCat.entries())
+      .map(([category, amount]) => ({ category, amount }))
+      .sort((a, b) => b.amount - a.amount);
 
     return {
-      totalIncome,
-      totalExpenses,
-      net: totalIncome - totalExpenses,
-      totalBilled,
-      pendingReceivables,
+      currentMonth,
+      last30d,
       monthly,
-      receivables,
-      incomeByMethod
+      caja: { total: cajaTotal, byMethod: cajaByMethod },
+      ticket,
+      growth,
+      topPatients,
+      expensesByCategory
     };
   }
 };

@@ -21,65 +21,100 @@ const monthLabel = (ym: string) => {
 const today = () => new Date().toISOString().slice(0, 10);
 
 // ------------------------------------------------------------------
-// Gráfica de barras ligera (sin dependencias): ingresos vs gastos
+// Gráfica de barras ligera (sin dependencias). Una serie por mes.
+// Soporta valores negativos con línea base al centro (útil para neto).
 // ------------------------------------------------------------------
-function MonthlyChart({ data }: { data: Array<{ month: string; income: number; expenses: number }> }) {
-  const max = Math.max(1, ...data.map((d) => Math.max(d.income, d.expenses)));
+function BarChart({
+  data,
+  format,
+  positiveColor = '#1f9d57',
+  negativeColor = '#c0392b'
+}: {
+  data: Array<{ month: string; value: number }>;
+  format: (n: number) => string;
+  positiveColor?: string;
+  negativeColor?: string;
+}) {
+  const maxAbs = Math.max(1, ...data.map((d) => Math.abs(d.value)));
+  const hasNeg = data.some((d) => d.value < 0);
+  const H = 130;
+  const zeroBand = hasNeg ? H / 2 : H; // alto disponible hacia arriba
+
+  if (data.length === 0) {
+    return <p className="muted">Aún no hay datos para graficar.</p>;
+  }
+
   return (
-    <div>
-      <div style={{ display: 'flex', gap: 16, marginBottom: 12, fontSize: '0.85rem' }}>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ width: 12, height: 12, borderRadius: 3, background: '#1f9d57' }} /> Ingresos
-        </span>
-        <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ width: 12, height: 12, borderRadius: 3, background: '#e05656' }} /> Gastos
-        </span>
-      </div>
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'flex-end',
-          gap: 8,
-          height: 160,
-          overflowX: 'auto',
-          paddingBottom: 4
-        }}
-      >
-        {data.map((d) => (
+    <div style={{ display: 'flex', alignItems: 'stretch', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+      {data.map((d) => {
+        const pos = d.value >= 0;
+        const h = (Math.abs(d.value) / maxAbs) * zeroBand;
+        return (
           <div
             key={d.month}
-            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 38, flex: 1 }}
-            title={`${monthLabel(d.month)}: ingresos ${money(d.income)} · gastos ${money(d.expenses)}`}
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 34, flex: 1 }}
+            title={`${monthLabel(d.month)}: ${format(d.value)}`}
           >
-            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 130 }}>
-              <div
-                style={{
-                  width: 12,
-                  height: `${(d.income / max) * 100}%`,
-                  background: '#1f9d57',
-                  borderRadius: '3px 3px 0 0',
-                  minHeight: d.income > 0 ? 3 : 0
-                }}
-              />
-              <div
-                style={{
-                  width: 12,
-                  height: `${(d.expenses / max) * 100}%`,
-                  background: '#e05656',
-                  borderRadius: '3px 3px 0 0',
-                  minHeight: d.expenses > 0 ? 3 : 0
-                }}
-              />
+            <div style={{ position: 'relative', height: H, width: 16, display: 'flex', flexDirection: 'column' }}>
+              {/* zona superior (positivos) */}
+              <div style={{ flex: hasNeg ? 1 : 'none', height: hasNeg ? undefined : H, display: 'flex', alignItems: 'flex-end' }}>
+                {pos && (
+                  <div
+                    style={{
+                      width: '100%',
+                      height: h,
+                      background: positiveColor,
+                      borderRadius: '3px 3px 0 0',
+                      minHeight: d.value > 0 ? 3 : 0
+                    }}
+                  />
+                )}
+              </div>
+              {/* zona inferior (negativos) */}
+              {hasNeg && (
+                <div style={{ flex: 1, display: 'flex', alignItems: 'flex-start' }}>
+                  {!pos && (
+                    <div
+                      style={{
+                        width: '100%',
+                        height: h,
+                        background: negativeColor,
+                        borderRadius: '0 0 3px 3px',
+                        minHeight: d.value < 0 ? 3 : 0
+                      }}
+                    />
+                  )}
+                </div>
+              )}
             </div>
             <span className="muted" style={{ fontSize: '0.7rem', marginTop: 4 }}>
               {monthLabel(d.month)}
             </span>
           </div>
-        ))}
-      </div>
+        );
+      })}
     </div>
   );
 }
+
+// Insignia de crecimiento (% vs mes anterior)
+function GrowthBadge({ value }: { value: number | null }) {
+  if (value === null) return null;
+  const up = value >= 0;
+  return (
+    <span style={{ color: up ? '#1f9d57' : '#c0392b', fontSize: '0.8rem', fontWeight: 600 }}>
+      {up ? '▲' : '▼'} {Math.abs(value).toFixed(0)}% vs mes pasado
+    </span>
+  );
+}
+
+const CATEGORY_COLORS: Record<string, string> = {
+  renta: '#8e44ad',
+  material: '#2980b9',
+  servicios: '#16a085',
+  nomina: '#d35400',
+  otro: '#7f8c8d'
+};
 
 // ------------------------------------------------------------------
 // Gastos: alta + lista
@@ -456,13 +491,15 @@ export function FinanceView(_props: FinanceViewProps) {
     enabled: query.trim().length >= 2
   });
 
-  const kpis = useMemo(
-    () => [
-      { label: 'Ingresos (12m)', value: summary?.totalIncome ?? 0, color: '#1f9d57' },
-      { label: 'Gastos (12m)', value: summary?.totalExpenses ?? 0, color: '#c0392b' },
-      { label: 'Ganancia neta', value: summary?.net ?? 0, color: (summary?.net ?? 0) >= 0 ? '#1f9d57' : '#c0392b' },
-      { label: 'Por cobrar', value: summary?.pendingReceivables ?? 0, color: '#b9770e' }
-    ],
+  const cm = summary?.currentMonth;
+  const d30 = summary?.last30d;
+  const caja = summary?.caja;
+  const netChart = useMemo(
+    () => (summary?.monthly ?? []).map((m) => ({ month: m.month, value: m.net })),
+    [summary]
+  );
+  const patientsChart = useMemo(
+    () => (summary?.monthly ?? []).map((m) => ({ month: m.month, value: m.patients })),
     [summary]
   );
 
@@ -470,9 +507,9 @@ export function FinanceView(_props: FinanceViewProps) {
     <div className="record-stack">
       <header className="hero" style={{ padding: 24, borderRadius: 22 }}>
         <p className="eyebrow" style={{ color: 'rgba(255,255,255,0.7)' }}>
-          Control financiero
+          Control financiero y métricas
         </p>
-        <h1 style={{ fontSize: 30, color: 'white', margin: 0 }}>Finanzas</h1>
+        <h1 style={{ fontSize: 30, color: 'white', margin: 0 }}>Finanzas y métricas</h1>
       </header>
 
       {isLoading ? (
@@ -481,24 +518,159 @@ export function FinanceView(_props: FinanceViewProps) {
         </section>
       ) : (
         <>
-          <div className="summary-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
-            {kpis.map((k) => (
-              <div className="card" key={k.label}>
-                <span>{k.label}</span>
-                <strong style={{ color: k.color }}>{money(k.value)}</strong>
-              </div>
-            ))}
-          </div>
-
+          {/* === Mes en curso === */}
           <section className="card">
             <div className="form-header">
               <div>
-                <p className="eyebrow">Últimos 12 meses</p>
-                <h2>Ingresos vs Gastos</h2>
+                <p className="eyebrow">Mes en curso</p>
+                <h2>¿Cómo vamos este mes?</h2>
+              </div>
+            </div>
+            <div
+              className="summary-grid"
+              style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', marginTop: 12 }}
+            >
+              <div className="card">
+                <span>Ingresos</span>
+                <strong style={{ color: '#1f9d57' }}>{money(cm?.income ?? 0)}</strong>
+                <GrowthBadge value={summary?.growth.income ?? null} />
+              </div>
+              <div className="card">
+                <span>Gastos</span>
+                <strong style={{ color: '#c0392b' }}>{money(cm?.expenses ?? 0)}</strong>
+              </div>
+              <div className="card">
+                <span>Ganancia neta</span>
+                <strong style={{ color: (cm?.net ?? 0) >= 0 ? '#1f9d57' : '#c0392b' }}>
+                  {money(cm?.net ?? 0)}
+                </strong>
+              </div>
+              <div className="card" style={{ background: 'var(--bg-sunken)' }}>
+                <span>Pacientes atendidos</span>
+                <strong>{cm?.patients ?? 0}</strong>
+                <GrowthBadge value={summary?.growth.patients ?? null} />
+              </div>
+              <div className="card" style={{ background: 'var(--bg-sunken)' }}>
+                <span>Sesiones</span>
+                <strong>{cm?.sessions ?? 0}</strong>
+              </div>
+            </div>
+          </section>
+
+          {/* === Últimos 30 días === */}
+          <section className="card">
+            <div className="form-header">
+              <div>
+                <p className="eyebrow">Últimos 30 días</p>
+                <h2>Ventana móvil</h2>
+              </div>
+            </div>
+            <div
+              className="summary-grid"
+              style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', marginTop: 12 }}
+            >
+              <div className="card">
+                <span>Ingresos</span>
+                <strong style={{ color: '#1f9d57' }}>{money(d30?.income ?? 0)}</strong>
+              </div>
+              <div className="card">
+                <span>Gastos</span>
+                <strong style={{ color: '#c0392b' }}>{money(d30?.expenses ?? 0)}</strong>
+              </div>
+              <div className="card">
+                <span>Ganancia neta</span>
+                <strong style={{ color: (d30?.net ?? 0) >= 0 ? '#1f9d57' : '#c0392b' }}>
+                  {money(d30?.net ?? 0)}
+                </strong>
+              </div>
+              <div className="card" style={{ background: 'var(--bg-sunken)' }}>
+                <span>Pacientes atendidos</span>
+                <strong>{d30?.patients ?? 0}</strong>
+              </div>
+              <div className="card" style={{ background: 'var(--bg-sunken)' }}>
+                <span>Sesiones</span>
+                <strong>{d30?.sessions ?? 0}</strong>
+              </div>
+            </div>
+          </section>
+
+          {/* === Ticket promedio === */}
+          <section className="card">
+            <div className="form-header">
+              <div>
+                <p className="eyebrow">Promedios (todo el tiempo)</p>
+                <h2>Ticket promedio</h2>
+              </div>
+            </div>
+            <div
+              className="summary-grid"
+              style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', marginTop: 12 }}
+            >
+              <div className="card">
+                <span>Por sesión</span>
+                <strong>{money(summary?.ticket.perSession ?? 0)}</strong>
+              </div>
+              <div className="card">
+                <span>Por paciente</span>
+                <strong>{money(summary?.ticket.perPatient ?? 0)}</strong>
+              </div>
+            </div>
+          </section>
+
+          {/* === Historial: ganancia neta por mes === */}
+          <section className="card">
+            <div className="form-header">
+              <div>
+                <p className="eyebrow">Historial mensual</p>
+                <h2>Ganancia neta por mes</h2>
               </div>
             </div>
             <div style={{ marginTop: 12 }}>
-              <MonthlyChart data={summary?.monthly ?? []} />
+              <BarChart data={netChart} format={money} />
+            </div>
+          </section>
+
+          {/* === Historial: pacientes atendidos por mes === */}
+          <section className="card">
+            <div className="form-header">
+              <div>
+                <p className="eyebrow">Historial mensual</p>
+                <h2>Pacientes atendidos por mes</h2>
+              </div>
+            </div>
+            <div style={{ marginTop: 12 }}>
+              <BarChart data={patientsChart} format={(n) => `${n} pac.`} positiveColor="#2980b9" />
+            </div>
+          </section>
+
+          {/* === Caja (todo el tiempo) === */}
+          <section className="card">
+            <div className="form-header">
+              <div>
+                <p className="eyebrow">Acumulado de todo el tiempo</p>
+                <h2>¿Cuánto hay en caja?</h2>
+              </div>
+            </div>
+            <div
+              className="summary-grid"
+              style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', marginTop: 12 }}
+            >
+              <div className="card">
+                <span>Total en caja</span>
+                <strong style={{ color: '#1f9d57' }}>{money(caja?.total ?? 0)}</strong>
+              </div>
+              <div className="card" style={{ background: 'var(--bg-sunken)' }}>
+                <span>Efectivo</span>
+                <strong>{money(caja?.byMethod?.efectivo ?? 0)}</strong>
+              </div>
+              <div className="card" style={{ background: 'var(--bg-sunken)' }}>
+                <span>Transferencia</span>
+                <strong>{money(caja?.byMethod?.transferencia ?? 0)}</strong>
+              </div>
+              <div className="card" style={{ background: 'var(--bg-sunken)' }}>
+                <span>Tarjeta</span>
+                <strong>{money(caja?.byMethod?.tarjeta ?? 0)}</strong>
+              </div>
             </div>
           </section>
 
@@ -542,36 +714,72 @@ export function FinanceView(_props: FinanceViewProps) {
 
           {selectedPatient && <PatientFinancePanel patient={selectedPatient} />}
 
-          {/* Cuánto hay en caja */}
+          {/* === Top pacientes por ingreso === */}
           <section className="card">
             <div className="form-header">
               <div>
-                <p className="eyebrow">Ingresos recibidos (últimos 12m)</p>
-                <h2>¿Cuánto hay en caja?</h2>
+                <p className="eyebrow">Todo el tiempo</p>
+                <h2>Top pacientes por ingreso</h2>
               </div>
             </div>
-            <div
-              className="summary-grid"
-              style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', marginTop: 12 }}
-            >
-              <div className="card">
-                <span>Total cobrado</span>
-                <strong style={{ color: '#1f9d57' }}>{money(summary?.totalIncome ?? 0)}</strong>
-              </div>
-              <div className="card" style={{ background: 'var(--bg-sunken)' }}>
-                <span>Efectivo</span>
-                <strong>{money(summary?.incomeByMethod?.efectivo ?? 0)}</strong>
-              </div>
-              <div className="card" style={{ background: 'var(--bg-sunken)' }}>
-                <span>Transferencia</span>
-                <strong>{money(summary?.incomeByMethod?.transferencia ?? 0)}</strong>
-              </div>
-              <div className="card" style={{ background: 'var(--bg-sunken)' }}>
-                <span>Tarjeta</span>
-                <strong>{money(summary?.incomeByMethod?.tarjeta ?? 0)}</strong>
-              </div>
-            </div>
+            <ul className="list-stack" style={{ marginTop: 12, listStyle: 'none', padding: 0 }}>
+              {(summary?.topPatients ?? []).map((t, i) => (
+                <li
+                  key={t.patientId}
+                  className="note-row"
+                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}
+                >
+                  <button
+                    type="button"
+                    className="secondary"
+                    style={{ textAlign: 'left', flex: 1 }}
+                    onClick={() => setSelectedPatient({ id: t.patientId, full_name: t.fullName } as Patient)}
+                  >
+                    <span style={{ opacity: 0.6, marginRight: 6 }}>{i + 1}.</span>
+                    {t.fullName}
+                  </button>
+                  <strong style={{ color: '#1f9d57' }}>{money(t.paid)}</strong>
+                </li>
+              ))}
+              {summary && summary.topPatients.length === 0 && (
+                <p className="muted">Aún no hay pagos registrados.</p>
+              )}
+            </ul>
           </section>
+
+          {/* === Gastos por categoría === */}
+          {summary && summary.expensesByCategory.length > 0 && (
+            <section className="card">
+              <div className="form-header">
+                <div>
+                  <p className="eyebrow">Egresos</p>
+                  <h2>Gastos por categoría</h2>
+                </div>
+              </div>
+              <ul className="list-stack" style={{ marginTop: 12, listStyle: 'none', padding: 0 }}>
+                {summary.expensesByCategory.map((c) => (
+                  <li
+                    key={c.category}
+                    className="note-row"
+                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}
+                  >
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 8, textTransform: 'capitalize' }}>
+                      <span
+                        style={{
+                          width: 12,
+                          height: 12,
+                          borderRadius: 3,
+                          background: CATEGORY_COLORS[c.category] ?? CATEGORY_COLORS.otro
+                        }}
+                      />
+                      {c.category}
+                    </span>
+                    <strong style={{ color: '#c0392b' }}>-{money(c.amount)}</strong>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
           <ExpensesPanel />
         </>
