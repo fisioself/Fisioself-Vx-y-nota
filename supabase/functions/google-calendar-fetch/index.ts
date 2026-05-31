@@ -162,6 +162,8 @@ const importConnection = async (
   } while (pageToken);
 
   let syncedCount = 0;
+  // IDs de eventos de Google vigentes en la ventana (para detectar borrados).
+  const seenEventIds = new Set<string>();
 
   // Cargar todos los pacientes una vez (evita N+1) y mapear por clave normalizada.
   const { data: allPatients } = await supabase
@@ -188,6 +190,8 @@ const importConnection = async (
     const startsAt = start?.dateTime || start?.date;
     const endsAt = end?.dateTime || end?.date;
     if (!startsAt || !endsAt) continue;
+
+    seenEventIds.add(event.id as string);
 
     const displayName = cleanDisplayName(rawTitle);
     const phone = extractPhone(rawTitle);
@@ -257,6 +261,28 @@ const importConnection = async (
       });
     }
     syncedCount++;
+  }
+
+  // Borrado: si una cita que vino de Google ya no existe en Google (dentro de la
+  // ventana), se elimina de la app — "como si no hubiera existido". Solo afecta
+  // citas con google_event_id de ESTE calendario; las creadas localmente (sin
+  // google_event_id) nunca se tocan. No hay datos clínicos colgando de la cita.
+  const { data: appAppts } = await supabase
+    .from('appointments')
+    .select('id, google_event_id')
+    .eq('google_calendar_id', connection.calendar_id || 'primary')
+    .not('google_event_id', 'is', null)
+    .gte('starts_at', timeMin.toISOString())
+    .lt('starts_at', timeMax.toISOString());
+
+  const toDelete = (appAppts || [])
+    .filter((a: { id: string; google_event_id: string | null }) =>
+      a.google_event_id && !seenEventIds.has(a.google_event_id)
+    )
+    .map((a: { id: string }) => a.id);
+
+  if (toDelete.length > 0) {
+    await supabase.from('appointments').delete().in('id', toDelete);
   }
 
   return syncedCount;
