@@ -906,6 +906,46 @@ export function FinanceView(_props: FinanceViewProps) {
         </section>
       ) : (
         <>
+          {/* Cobros y paquetes — al inicio para acceso rápido */}
+          <section className="card">
+            <div className="form-header">
+              <div>
+                <p className="eyebrow">Por paciente</p>
+                <h2>Cobros y paquetes</h2>
+              </div>
+            </div>
+            <input
+              type="search"
+              placeholder="Buscar paciente por nombre o teléfono…"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              style={{ marginTop: 12, width: '100%' }}
+            />
+            {query.trim().length >= 2 && (
+              <ul className="list-stack" style={{ marginTop: 10, listStyle: 'none', padding: 0 }}>
+                {results.map((p) => (
+                  <li key={p.id}>
+                    <button
+                      type="button"
+                      className="secondary"
+                      style={{ width: '100%', textAlign: 'left' }}
+                      onClick={() => {
+                        setSelectedPatient(p);
+                        setQuery('');
+                      }}
+                    >
+                      {p.full_name}
+                      {p.phone ? ` · ${p.phone}` : ''}
+                    </button>
+                  </li>
+                ))}
+                {results.length === 0 && <p className="muted">Sin resultados.</p>}
+              </ul>
+            )}
+          </section>
+
+          {selectedPatient && <PatientFinancePanel patient={selectedPatient} />}
+
           {/* === Mes en curso === */}
           <section className="card">
             <div className="form-header">
@@ -1017,46 +1057,6 @@ export function FinanceView(_props: FinanceViewProps) {
 
           {/* === Caja (todo el tiempo) + ajustes manuales === */}
           <CajaPanel caja={caja} />
-
-          {/* Buscador de paciente para gestionar sus finanzas */}
-          <section className="card">
-            <div className="form-header">
-              <div>
-                <p className="eyebrow">Por paciente</p>
-                <h2>Cobros y paquetes</h2>
-              </div>
-            </div>
-            <input
-              type="search"
-              placeholder="Buscar paciente por nombre o teléfono…"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              style={{ marginTop: 12, width: '100%' }}
-            />
-            {query.trim().length >= 2 && (
-              <ul className="list-stack" style={{ marginTop: 10, listStyle: 'none', padding: 0 }}>
-                {results.map((p) => (
-                  <li key={p.id}>
-                    <button
-                      type="button"
-                      className="secondary"
-                      style={{ width: '100%', textAlign: 'left' }}
-                      onClick={() => {
-                        setSelectedPatient(p);
-                        setQuery('');
-                      }}
-                    >
-                      {p.full_name}
-                      {p.phone ? ` · ${p.phone}` : ''}
-                    </button>
-                  </li>
-                ))}
-                {results.length === 0 && <p className="muted">Sin resultados.</p>}
-              </ul>
-            )}
-          </section>
-
-          {selectedPatient && <PatientFinancePanel patient={selectedPatient} />}
 
           {/* === Top pacientes por ingreso === */}
           <section className="card">

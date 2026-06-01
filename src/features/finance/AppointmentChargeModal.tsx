@@ -110,6 +110,14 @@ export function AppointmentChargeModal({
     enabled: !!patientId && showNote
   });
 
+  // Resumen financiero del paciente: para mostrar, si tiene paquete, cuánto ha
+  // pagado y cuánto debe directamente al abrir la cita desde la agenda.
+  const { data: patientFinance } = useQuery({
+    queryKey: ['patient-finance', patientId],
+    queryFn: () => financeApi.getPatientFinance(patientId),
+    enabled: !!patientId
+  });
+
   // Al cambiar de cita, limpia el formulario para no arrastrar datos previos.
   useEffect(() => {
     setMode('suelta');
@@ -304,6 +312,21 @@ export function AppointmentChargeModal({
             Cerrar
           </button>
         </div>
+
+        {patientFinance && patientFinance.packages.length > 0 && (
+          <div className="charge-pkg-info">
+            <strong>Paquete activo</strong>
+            <span>
+              Pagado {money(patientFinance.totalPaid)} de {money(patientFinance.totalBilled)}
+              {patientFinance.balance > 0
+                ? ` · debe ${money(patientFinance.balance)}`
+                : ' · al corriente'}
+            </span>
+            <span className="muted" style={{ fontSize: '0.85rem' }}>
+              Sesiones usadas {patientFinance.sessionsUsed}/{patientFinance.sessionsTotal}
+            </span>
+          </div>
+        )}
 
         {alreadyCharged ? (
           <div className="charge-paid-box">

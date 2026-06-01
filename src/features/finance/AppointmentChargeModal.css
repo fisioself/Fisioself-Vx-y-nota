@@ -59,6 +59,15 @@
   background: #fff;
 }
 
+.charge-pkg-info {
+  display: grid;
+  gap: 2px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: #eef4ff;
+  border: 1px solid rgba(63, 81, 181, 0.35);
+}
+
 .charge-note-section {
   border-top: 1px solid rgba(18, 55, 42, 0.12);
   padding-top: 14px;

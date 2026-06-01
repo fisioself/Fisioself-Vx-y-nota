@@ -1,0 +1,48 @@
+.appt-create-backdrop {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(18, 55, 42, 0.42);
+  z-index: 950;
+}
+
+.appt-create-card {
+  width: min(440px, 100%);
+  max-height: min(820px, calc(100vh - 40px));
+  overflow: auto;
+  display: grid;
+  gap: 14px;
+  padding: 22px;
+  border-radius: 24px;
+  background: #fffaf0;
+  border: 1px solid rgba(18, 55, 42, 0.18);
+  box-shadow: 0 24px 80px rgba(18, 55, 42, 0.3);
+}
+
+.appt-create-patient {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: #eefbf2;
+  border: 1px solid rgba(11, 128, 67, 0.4);
+}
+
+.appt-create-results {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+  display: grid;
+  gap: 6px;
+  max-height: 220px;
+  overflow: auto;
+}
+
+.appt-create-results button {
+  width: 100%;
+  text-align: left;
+}

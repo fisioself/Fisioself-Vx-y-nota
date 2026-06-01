@@ -3,31 +3,10 @@ import { useQuery } from '@tanstack/react-query';
 import { clinicalApi } from '../../services/clinicalApi';
 import { calendarService } from '../../services/calendarService';
 import { NativeCalendar } from '../../components/calendar/NativeCalendar';
-import type { ClinicStatsActivityItem } from '../../types/clinical';
 
 interface ClinicDashboardProps {
   onPatientSelect?: (patientId: string) => void;
 }
-
-const getActivityPatientName = (patients: ClinicStatsActivityItem['patients']): string => {
-  const ref = Array.isArray(patients) ? patients[0] : patients;
-  return ref?.full_name || 'Paciente desconocido';
-};
-
-const cdmxDateLabel = (iso: string | null): string => {
-  if (!iso) return '';
-  try {
-    return new Intl.DateTimeFormat('es-MX', {
-      timeZone: 'America/Mexico_City',
-      day: '2-digit',
-      month: 'short',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(new Date(iso));
-  } catch {
-    return '';
-  }
-};
 
 export function ClinicDashboard({ onPatientSelect }: ClinicDashboardProps) {
   const [calStatus, setCalStatus] = useState({ loading: true, connected: false });
@@ -106,43 +85,6 @@ export function ClinicDashboard({ onPatientSelect }: ClinicDashboardProps) {
           <strong>{stats.upcomingAppointments}</strong>
         </div>
       </div>
-
-      <section className="card">
-        <div className="form-header">
-          <div>
-            <p className="eyebrow">Historial</p>
-            <h2>Actividad reciente</h2>
-          </div>
-        </div>
-
-        <ul className="list-stack" style={{ marginTop: '16px', listStyle: 'none', padding: 0 }}>
-          {stats.latestActivity.map((item) => (
-            <li
-              key={item.id}
-              className="note-row"
-              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
-            >
-              <div>
-                <strong style={{ display: 'block' }}>
-                  {getActivityPatientName(item.patients)}
-                </strong>
-                <span className="muted" style={{ fontSize: '0.85rem' }}>
-                  {item.session_type || item.title} · {cdmxDateLabel(item.starts_at)}
-                </span>
-              </div>
-              <span
-                className="pill"
-                style={{ background: 'var(--secondary)', color: 'var(--primary)' }}
-              >
-                Atendida
-              </span>
-            </li>
-          ))}
-          {stats.latestActivity.length === 0 && (
-            <p className="muted">No hay actividad reciente registrada.</p>
-          )}
-        </ul>
-      </section>
     </div>
   );
 }
