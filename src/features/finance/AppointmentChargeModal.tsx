@@ -161,7 +161,7 @@ export function AppointmentChargeModal({
         usePackage: mode === 'paquete',
         patientPackageId: mode === 'paquete' ? packageId : null,
         amount: mode === 'suelta' ? Number(amount) : Number(abonoAmount || 0),
-        method: mode === 'suelta' ? method : (abonoAmount ? abonoMethod : undefined)
+        method: mode === 'suelta' ? method : abonoAmount ? abonoMethod : undefined
       });
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['appt-charge', apptId] }),
@@ -274,13 +274,18 @@ export function AppointmentChargeModal({
   };
 
   return (
-    <div className="charge-backdrop" role="presentation" onClick={onClose}>
+    <div
+      className="charge-backdrop"
+      role="presentation"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
       <section
         className="charge-card"
         role="dialog"
         aria-modal="true"
         aria-labelledby="charge-title"
-        onClick={(e) => e.stopPropagation()}
       >
         <div className="form-header">
           <div>
@@ -291,7 +296,8 @@ export function AppointmentChargeModal({
             <span className="muted" style={{ fontSize: '0.85rem' }}>
               {appointment.sessionType || 'Sesión'}
               {sessionNum > 0 && ` · Sesión #${sessionNum}`}
-              {' · '}{cdmxLabel(appointment.startsAt)}
+              {' · '}
+              {cdmxLabel(appointment.startsAt)}
             </span>
           </div>
           <button type="button" className="secondary" onClick={onClose}>
@@ -444,7 +450,10 @@ export function AppointmentChargeModal({
                 </label>
                 <label>
                   Método
-                  <select value={method} onChange={(e) => setMethod(e.target.value as PaymentMethod)}>
+                  <select
+                    value={method}
+                    onChange={(e) => setMethod(e.target.value as PaymentMethod)}
+                  >
                     {PAYMENT_METHODS.map((m) => (
                       <option key={m} value={m}>
                         {m.charAt(0).toUpperCase() + m.slice(1)}

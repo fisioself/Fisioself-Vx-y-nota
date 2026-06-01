@@ -568,8 +568,15 @@ pre {
 
 /* Animación de pulso para el logo en pantalla de carga */
 @keyframes logo-pulse {
-  0%, 100% { opacity: 1; filter: drop-shadow(0 0 8px #00ff8866); }
-  50%       { opacity: 0.7; filter: drop-shadow(0 0 24px #00ff88cc); }
+  0%,
+  100% {
+    opacity: 1;
+    filter: drop-shadow(0 0 8px #00ff8866);
+  }
+  50% {
+    opacity: 0.7;
+    filter: drop-shadow(0 0 24px #00ff88cc);
+  }
 }
 
 .app-loading {

@@ -103,6 +103,7 @@ interface Connection {
 }
 
 // deno-lint-ignore no-explicit-any
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Supa = any;
 
 // Importa los eventos de UNA conexión de Google Calendar hacia la app:
@@ -116,10 +117,7 @@ const importConnection = async (
   let accessToken: string | null = connection.access_token ?? null;
   const refreshTokenStored: string | null = connection.refresh_token ?? null;
 
-  if (
-    !accessToken ||
-    new Date(connection.token_expires_at || 0) <= new Date(Date.now() + 60_000)
-  ) {
+  if (!accessToken || new Date(connection.token_expires_at || 0) <= new Date(Date.now() + 60_000)) {
     if (!refreshTokenStored) throw new Error('Falta refresh token de Google');
     const refreshed = await refreshGoogleToken({
       refreshToken: refreshTokenStored,
@@ -173,9 +171,7 @@ const importConnection = async (
   const seenEventIds = new Set<string>();
 
   // Cargar todos los pacientes una vez (evita N+1) y mapear por clave normalizada.
-  const { data: allPatients } = await supabase
-    .from('patients')
-    .select('id, full_name, created_at');
+  const { data: allPatients } = await supabase.from('patients').select('id, full_name, created_at');
   const patientsByKey = new Map<string, { id: string; created_at: string }>();
   for (const p of allPatients || []) {
     if (!p.full_name) continue;
@@ -283,8 +279,9 @@ const importConnection = async (
     .lt('starts_at', timeMax.toISOString());
 
   const toDelete = (appAppts || [])
-    .filter((a: { id: string; google_event_id: string | null }) =>
-      a.google_event_id && !seenEventIds.has(a.google_event_id)
+    .filter(
+      (a: { id: string; google_event_id: string | null }) =>
+        a.google_event_id && !seenEventIds.has(a.google_event_id)
     )
     .map((a: { id: string }) => a.id);
 
