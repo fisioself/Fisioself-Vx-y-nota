@@ -318,6 +318,21 @@ export const financeApi = {
     if (error) throw error;
   },
 
+  // Número de sesión del paciente — cuántas citas (no canceladas) tiene hasta
+  // la fecha de la cita actual, inclusive. Útil para mostrar "Sesión #N".
+  async getPatientSessionCount(patientId: string, upToDate?: string | null): Promise<number> {
+    const db = assertSupabase();
+    let q = db
+      .from('appointments')
+      .select('id', { count: 'exact', head: true })
+      .eq('patient_id', patientId)
+      .neq('status', 'cancelled');
+    if (upToDate) q = q.lte('starts_at', upToDate);
+    const { count, error } = await q;
+    if (error) throw error;
+    return count ?? 0;
+  },
+
   // Precio sugerido del catálogo según el tipo de sesión de la cita.
   async suggestPriceForSessionType(sessionType: string | null): Promise<number | null> {
     if (!sessionType) return null;

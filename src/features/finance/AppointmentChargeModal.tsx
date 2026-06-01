@@ -76,6 +76,12 @@ export function AppointmentChargeModal({
     enabled: !!appointment
   });
 
+  const { data: sessionNum = 0 } = useQuery({
+    queryKey: ['patient-session-count', patientId, appointment?.startsAt],
+    queryFn: () => financeApi.getPatientSessionCount(patientId, appointment?.startsAt),
+    enabled: !!patientId && !!appointment
+  });
+
   // Prefill del monto sugerido y selección del primer paquete disponible.
   useEffect(() => {
     if (suggested != null && amount === '') setAmount(String(suggested));
@@ -163,7 +169,9 @@ export function AppointmentChargeModal({
               {appointment.patientName}
             </h2>
             <span className="muted" style={{ fontSize: '0.85rem' }}>
-              {appointment.sessionType || 'Sesión'} · {cdmxLabel(appointment.startsAt)}
+              {appointment.sessionType || 'Sesión'}
+              {sessionNum > 0 && ` · Sesión #${sessionNum}`}
+              {' · '}{cdmxLabel(appointment.startsAt)}
             </span>
           </div>
           <button type="button" className="secondary" onClick={onClose}>
@@ -212,11 +220,20 @@ export function AppointmentChargeModal({
                 className={mode === 'paquete' ? 'active' : ''}
                 onClick={() => setMode('paquete')}
                 disabled={packages.length === 0}
-                title={packages.length === 0 ? 'Sin paquetes con sesiones disponibles' : undefined}
+                title={
+                  packages.length === 0
+                    ? 'Sin paquetes activos. Asigna uno desde el expediente del paciente (Finanzas).'
+                    : undefined
+                }
               >
                 Con paquete
               </button>
             </div>
+            {packages.length === 0 && (
+              <p className="muted" style={{ fontSize: '0.8rem', margin: '4px 0 0' }}>
+                Sin paquetes activos — ve al expediente del paciente para asignarle uno.
+              </p>
+            )}
 
             {mode === 'suelta' ? (
               <>

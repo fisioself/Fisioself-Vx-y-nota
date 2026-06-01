@@ -124,7 +124,6 @@ export function NativeCalendar({ onEventClick }: NativeCalendarProps) {
       } catch {
         // sessionStorage no disponible (privado/iframe) — ignorar
       }
-      notify({ tone: 'success', message: `Sincronizados ${data.count || 0} eventos de Google.` });
       queryClient.invalidateQueries({ queryKey: ['all_appointments'] });
       queryClient.invalidateQueries({ queryKey: ['patients'] });
     } catch (err) {
@@ -132,7 +131,7 @@ export function NativeCalendar({ onEventClick }: NativeCalendarProps) {
     } finally {
       setSyncing(false);
     }
-  }, [notify, queryClient]);
+  }, [queryClient]);
 
   // Sincronizacion inicial al montar — con cooldown de 3 min para evitar
   // llamadas redundantes al navegar entre vistas del mismo panel.
