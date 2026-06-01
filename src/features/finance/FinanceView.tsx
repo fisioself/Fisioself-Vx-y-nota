@@ -5,6 +5,9 @@ import { clinicalApi } from '../../services/clinicalApi';
 import { useToast } from '../../app/ToastProvider';
 import type { Patient } from '../../types/clinical';
 
+const CARD_COMMISSION = 0.0406;
+const netAfterCommission = (gross: number) => Math.round(gross * (1 - CARD_COMMISSION) * 100) / 100;
+
 const money = (n: number) =>
   new Intl.NumberFormat('es-MX', {
     style: 'currency',
@@ -436,10 +439,11 @@ function PatientFinancePanel({ patient }: { patient: Patient }) {
         sessionsTotal: chosen.sessions_included
       });
       if (initAmt > 0) {
+        const initNet = initPayMethod === 'tarjeta' ? netAfterCommission(initAmt) : initAmt;
         await financeApi.addPayment({
           patientId: patient.id!,
           patientPackageId: created.id,
-          amount: initAmt,
+          amount: initNet,
           method: initPayMethod
         });
       }
@@ -463,7 +467,8 @@ function PatientFinancePanel({ patient }: { patient: Patient }) {
     }
     setBusy(true);
     try {
-      await financeApi.addPayment({ patientId: patient.id!, amount: value, method: payMethod });
+      const netValue = payMethod === 'tarjeta' ? netAfterCommission(value) : value;
+      await financeApi.addPayment({ patientId: patient.id!, amount: netValue, method: payMethod });
       setPayAmount('');
       refresh();
       notify({ tone: 'success', message: 'Pago registrado.' });
@@ -669,6 +674,11 @@ function PatientFinancePanel({ patient }: { patient: Patient }) {
         <button type="button" className="secondary" onClick={registerPayment} disabled={busy}>
           Registrar abono
         </button>
+        {payMethod === 'tarjeta' && Number(payAmount) > 0 && (
+          <span style={{ fontSize: '0.8rem', color: '#c0392b' }}>
+            Recibes {money(netAfterCommission(Number(payAmount)))} (−4.06 % comisión)
+          </span>
+        )}
       </div>
     </section>
   );
