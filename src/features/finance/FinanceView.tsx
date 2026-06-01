@@ -97,6 +97,73 @@ function BarChart({
   );
 }
 
+// ------------------------------------------------------------------
+// Gráfica de barras agrupadas: dos series por mes (atendidos + nuevos).
+// ------------------------------------------------------------------
+function GroupedBarChart({
+  data,
+  seriesA,
+  seriesB
+}: {
+  data: Array<{ month: string; a: number; b: number }>;
+  seriesA: { label: string; color: string };
+  seriesB: { label: string; color: string };
+}) {
+  const maxVal = Math.max(1, ...data.map((d) => Math.max(d.a, d.b)));
+  const H = 130;
+
+  if (data.length === 0) {
+    return <p className="muted">Aún no hay datos para graficar.</p>;
+  }
+
+  return (
+    <>
+      {/* leyenda */}
+      <div style={{ display: 'flex', gap: 16, marginBottom: 10, flexWrap: 'wrap' }}>
+        {[seriesA, seriesB].map((s) => (
+          <span key={s.label} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8rem' }}>
+            <span style={{ width: 12, height: 12, borderRadius: 3, background: s.color }} />
+            {s.label}
+          </span>
+        ))}
+      </div>
+      <div style={{ display: 'flex', alignItems: 'stretch', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+        {data.map((d) => (
+          <div
+            key={d.month}
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 38, flex: 1 }}
+            title={`${monthLabel(d.month)}: ${seriesA.label} ${d.a} · ${seriesB.label} ${d.b}`}
+          >
+            <div style={{ height: H, display: 'flex', alignItems: 'flex-end', gap: 3 }}>
+              <div
+                style={{
+                  width: 12,
+                  height: (d.a / maxVal) * H,
+                  background: seriesA.color,
+                  borderRadius: '3px 3px 0 0',
+                  minHeight: d.a > 0 ? 3 : 0
+                }}
+              />
+              <div
+                style={{
+                  width: 12,
+                  height: (d.b / maxVal) * H,
+                  background: seriesB.color,
+                  borderRadius: '3px 3px 0 0',
+                  minHeight: d.b > 0 ? 3 : 0
+                }}
+              />
+            </div>
+            <span className="muted" style={{ fontSize: '0.7rem', marginTop: 4 }}>
+              {monthLabel(d.month)}
+            </span>
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
+
 // Insignia de crecimiento (% vs mes anterior)
 function GrowthBadge({ value }: { value: number | null }) {
   if (value === null) return null;
@@ -499,7 +566,12 @@ export function FinanceView(_props: FinanceViewProps) {
     [summary]
   );
   const patientsChart = useMemo(
-    () => (summary?.monthly ?? []).map((m) => ({ month: m.month, value: m.patients })),
+    () =>
+      (summary?.monthly ?? []).map((m) => ({
+        month: m.month,
+        a: m.patients,
+        b: m.newPatients
+      })),
     [summary]
   );
 
@@ -630,16 +702,23 @@ export function FinanceView(_props: FinanceViewProps) {
             </div>
           </section>
 
-          {/* === Historial: pacientes atendidos por mes === */}
+          {/* === Historial: pacientes atendidos + nuevos por mes === */}
           <section className="card">
             <div className="form-header">
               <div>
                 <p className="eyebrow">Historial mensual</p>
-                <h2>Pacientes atendidos por mes</h2>
+                <h2>Pacientes por mes</h2>
               </div>
             </div>
+            <p className="muted" style={{ fontSize: '0.85rem', marginTop: 4 }}>
+              Nuevo = valoración (morado) que además tomó sesión.
+            </p>
             <div style={{ marginTop: 12 }}>
-              <BarChart data={patientsChart} format={(n) => `${n} pac.`} positiveColor="#2980b9" />
+              <GroupedBarChart
+                data={patientsChart}
+                seriesA={{ label: 'Atendidos', color: '#2980b9' }}
+                seriesB={{ label: 'Nuevos', color: '#8e44ad' }}
+              />
             </div>
           </section>
 

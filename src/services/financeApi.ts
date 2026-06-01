@@ -24,6 +24,8 @@ export interface MonthlyPoint {
   net: number;
   patients: number; // pacientes atendidos ese mes
   sessions: number; // sesiones (citas) ese mes
+  newPatients: number; // pacientes nuevos convertidos (valoración + sesión)
+  valoraciones: number; // valoraciones (color morado) ese mes
 }
 
 export interface PeriodSummary {
@@ -57,7 +59,13 @@ export interface GlobalFinanceSummary {
 }
 
 interface ApptStats {
-  monthly: Array<{ month: string; patients: number; sessions: number }>;
+  monthly: Array<{
+    month: string;
+    patients: number;
+    sessions: number;
+    newPatients: number;
+    valoraciones: number;
+  }>;
   currentMonth: { patients: number; sessions: number };
   last30d: { patients: number; sessions: number };
   totalSessions: number;
@@ -281,7 +289,9 @@ export const financeApi = {
           expenses: exp,
           net: income - exp,
           patients: a?.patients ?? 0,
-          sessions: a?.sessions ?? 0
+          sessions: a?.sessions ?? 0,
+          newPatients: a?.newPatients ?? 0,
+          valoraciones: a?.valoraciones ?? 0
         };
       });
 
