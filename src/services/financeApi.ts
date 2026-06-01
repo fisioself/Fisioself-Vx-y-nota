@@ -5,6 +5,11 @@ export type Package = Tables<'packages'>;
 export type PatientPackage = Tables<'patient_packages'>;
 export type Payment = Tables<'payments'>;
 export type Expense = Tables<'expenses'>;
+export type CajaMovement = Tables<'caja_movements'>;
+
+// Métodos de pago/caja soportados (transferencia retirada).
+export const PAYMENT_METHODS = ['efectivo', 'tarjeta'] as const;
+export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
 export interface PatientFinanceSummary {
   totalBilled: number;
@@ -228,6 +233,41 @@ export const financeApi = {
     if (error) throw error;
   },
 
+  // ---------- Movimientos manuales de caja ----------
+  async listCajaMovements(limit = 100): Promise<CajaMovement[]> {
+    const db = assertSupabase();
+    return unwrap(
+      await db
+        .from('caja_movements')
+        .select('*')
+        .order('occurred_at', { ascending: false })
+        .order('created_at', { ascending: false })
+        .limit(limit)
+    );
+  },
+
+  async addCajaMovement(input: {
+    amount: number; // + entrada, − salida
+    method?: PaymentMethod;
+    description?: string;
+    occurredAt?: string;
+  }): Promise<CajaMovement> {
+    const db = assertSupabase();
+    const payload: TablesInsert<'caja_movements'> = {
+      amount: input.amount,
+      method: input.method ?? 'efectivo',
+      description: input.description ?? null,
+      occurred_at: input.occurredAt
+    };
+    return unwrap(await db.from('caja_movements').insert(payload).select('*').single());
+  },
+
+  async deleteCajaMovement(id: string): Promise<void> {
+    const db = assertSupabase();
+    const { error } = await db.from('caja_movements').delete().eq('id', id);
+    if (error) throw error;
+  },
+
   // ---------- Dashboard global ----------
   async getGlobalFinance(monthsBack = 12): Promise<GlobalFinanceSummary> {
     const db = assertSupabase();
@@ -247,15 +287,17 @@ export const financeApi = {
       totalSessions: 0
     };
 
-    // Pagos y gastos son tablas pequeñas → traemos todo el histórico.
-    const [payRes, expRes, patRes] = await Promise.all([
+    // Pagos, gastos y movimientos de caja son tablas pequeñas → todo el histórico.
+    const [payRes, expRes, patRes, cajaRes] = await Promise.all([
       db.from('payments').select('amount, paid_at, patient_id, method'),
       db.from('expenses').select('amount, spent_at, category'),
-      db.from('patients').select('id, full_name')
+      db.from('patients').select('id, full_name'),
+      db.from('caja_movements').select('amount, method')
     ]);
     const payments = unwrap<Array<{ amount: number; paid_at: string; patient_id: string; method: string }>>(payRes);
     const expenses = unwrap<Array<{ amount: number; spent_at: string; category: string }>>(expRes);
     const patients = unwrap<Array<{ id: string; full_name: string }>>(patRes);
+    const cajaMovements = unwrap<Array<{ amount: number; method: string }>>(cajaRes);
     const nameById = new Map(patients.map((p) => [p.id, p.full_name]));
 
     // Claves de fecha (calculadas en horario de CDMX, igual que la función SQL)
@@ -334,13 +376,20 @@ export const financeApi = {
       sessions: appt.last30d?.sessions ?? 0
     };
 
-    // Caja (todo el tiempo) por método
+    // Caja (todo el tiempo) por método = cobros a pacientes + ajustes manuales.
+    // Los movimientos manuales pueden ser negativos (salidas de caja).
     const cajaByMethod: Record<string, number> = {};
     let cajaTotal = 0;
     for (const p of payments) {
       const amt = Number(p.amount ?? 0);
       cajaTotal += amt;
       const m = p.method ?? 'otro';
+      cajaByMethod[m] = (cajaByMethod[m] ?? 0) + amt;
+    }
+    for (const mv of cajaMovements) {
+      const amt = Number(mv.amount ?? 0);
+      cajaTotal += amt;
+      const m = mv.method ?? 'efectivo';
       cajaByMethod[m] = (cajaByMethod[m] ?? 0) + amt;
     }
 

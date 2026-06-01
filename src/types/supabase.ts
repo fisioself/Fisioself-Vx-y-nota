@@ -206,6 +206,47 @@ export type Database = {
         }
         Relationships: []
       }
+      caja_movements: {
+        Row: {
+          amount: number
+          clinic_id: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          method: string
+          occurred_at: string
+        }
+        Insert: {
+          amount: number
+          clinic_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          method?: string
+          occurred_at?: string
+        }
+        Update: {
+          amount?: number
+          clinic_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          method?: string
+          occurred_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "caja_movements_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       calendar_connections: {
         Row: {
           access_token: string | null
@@ -959,6 +1000,7 @@ export type Database = {
       cleanup_google_oauth_states: { Args: never; Returns: number }
       current_profile_role: { Args: never; Returns: string }
       default_clinic_id: { Args: never; Returns: string }
+      finance_appt_stats: { Args: { p_months_back?: number }; Returns: Json }
       is_active_clinical_user: { Args: never; Returns: boolean }
       is_admin: { Args: never; Returns: boolean }
       is_admin_or_therapist: { Args: never; Returns: boolean }

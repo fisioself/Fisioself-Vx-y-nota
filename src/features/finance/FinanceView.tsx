@@ -532,13 +532,164 @@ function PatientFinancePanel({ patient }: { patient: Patient }) {
         />
         <select value={payMethod} onChange={(e) => setPayMethod(e.target.value)} style={{ maxWidth: 150 }}>
           <option value="efectivo">Efectivo</option>
-          <option value="transferencia">Transferencia</option>
           <option value="tarjeta">Tarjeta</option>
         </select>
         <button type="button" className="secondary" onClick={registerPayment} disabled={busy}>
           Registrar abono
         </button>
       </div>
+    </section>
+  );
+}
+
+// ------------------------------------------------------------------
+// Caja: total acumulado + ajustes manuales (entradas/salidas) con borrado
+// ------------------------------------------------------------------
+function CajaPanel({ caja }: { caja?: { total: number; byMethod: Record<string, number> } }) {
+  const queryClient = useQueryClient();
+  const { notify } = useToast();
+  const [direction, setDirection] = useState<'in' | 'out'>('in');
+  const [amount, setAmount] = useState('');
+  const [method, setMethod] = useState('efectivo');
+  const [description, setDescription] = useState('');
+  const [occurredAt, setOccurredAt] = useState(today());
+  const [busy, setBusy] = useState(false);
+
+  const { data: movements = [] } = useQuery({
+    queryKey: ['caja-movements'],
+    queryFn: () => financeApi.listCajaMovements()
+  });
+
+  const refresh = () => {
+    queryClient.invalidateQueries({ queryKey: ['caja-movements'] });
+    queryClient.invalidateQueries({ queryKey: ['finance-global'] });
+  };
+
+  const submit = async () => {
+    const value = Number(amount);
+    if (!value || value <= 0) {
+      notify({ tone: 'error', message: 'Indica un monto válido.' });
+      return;
+    }
+    setBusy(true);
+    try {
+      await financeApi.addCajaMovement({
+        amount: direction === 'out' ? -Math.abs(value) : Math.abs(value),
+        method: method as 'efectivo' | 'tarjeta',
+        description,
+        occurredAt
+      });
+      setAmount('');
+      setDescription('');
+      refresh();
+      notify({ tone: 'success', message: 'Movimiento registrado.' });
+    } catch {
+      notify({ tone: 'error', message: 'No se pudo registrar el movimiento.' });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const remove = async (id: string) => {
+    try {
+      await financeApi.deleteCajaMovement(id);
+      refresh();
+    } catch {
+      notify({ tone: 'error', message: 'No se pudo eliminar.' });
+    }
+  };
+
+  return (
+    <section className="card">
+      <div className="form-header">
+        <div>
+          <p className="eyebrow">Acumulado de todo el tiempo</p>
+          <h2>¿Cuánto hay en caja?</h2>
+        </div>
+      </div>
+      <div
+        className="summary-grid"
+        style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', marginTop: 12 }}
+      >
+        <div className="card">
+          <span>Total en caja</span>
+          <strong style={{ color: '#1f9d57' }}>{money(caja?.total ?? 0)}</strong>
+        </div>
+        <div className="card" style={{ background: 'var(--bg-sunken)' }}>
+          <span>Efectivo</span>
+          <strong>{money(caja?.byMethod?.efectivo ?? 0)}</strong>
+        </div>
+        <div className="card" style={{ background: 'var(--bg-sunken)' }}>
+          <span>Tarjeta</span>
+          <strong>{money(caja?.byMethod?.tarjeta ?? 0)}</strong>
+        </div>
+      </div>
+
+      {/* Ajuste manual de caja */}
+      <div style={{ marginTop: 16 }}>
+        <p className="eyebrow">Ajustar caja manualmente</p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 10, marginTop: 8 }}>
+          <select value={direction} onChange={(e) => setDirection(e.target.value as 'in' | 'out')} aria-label="Tipo de movimiento">
+            <option value="in">Entrada (+)</option>
+            <option value="out">Salida (−)</option>
+          </select>
+          <input
+            type="number"
+            inputMode="decimal"
+            placeholder="Monto $"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+          />
+          <select value={method} onChange={(e) => setMethod(e.target.value)} aria-label="Método">
+            <option value="efectivo">Efectivo</option>
+            <option value="tarjeta">Tarjeta</option>
+          </select>
+          <input
+            type="text"
+            placeholder="Concepto (opcional)"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+          />
+          <input type="date" value={occurredAt} onChange={(e) => setOccurredAt(e.target.value)} />
+          <button type="button" onClick={submit} disabled={busy}>
+            {busy ? 'Guardando…' : 'Registrar movimiento'}
+          </button>
+        </div>
+      </div>
+
+      {/* Historial de ajustes manuales */}
+      <ul className="list-stack" style={{ marginTop: 16, listStyle: 'none', padding: 0 }}>
+        {movements.map((m) => {
+          const amt = Number(m.amount);
+          const positive = amt >= 0;
+          return (
+            <li
+              key={m.id}
+              className="note-row"
+              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}
+            >
+              <div>
+                <strong style={{ display: 'block' }}>{m.description || (positive ? 'Entrada' : 'Salida')}</strong>
+                <span className="muted" style={{ fontSize: '0.85rem', textTransform: 'capitalize' }}>
+                  {m.method} · {m.occurred_at}
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <strong style={{ color: positive ? '#1f9d57' : '#c0392b' }}>
+                  {positive ? '+' : '−'}
+                  {money(Math.abs(amt))}
+                </strong>
+                <button type="button" className="secondary" onClick={() => remove(m.id)} title="Eliminar">
+                  ✕
+                </button>
+              </div>
+            </li>
+          );
+        })}
+        {movements.length === 0 && (
+          <p className="muted">Sin ajustes manuales. La caja refleja los cobros registrados.</p>
+        )}
+      </ul>
     </section>
   );
 }
@@ -706,36 +857,8 @@ export function FinanceView(_props: FinanceViewProps) {
             </div>
           </section>
 
-          {/* === Caja (todo el tiempo) === */}
-          <section className="card">
-            <div className="form-header">
-              <div>
-                <p className="eyebrow">Acumulado de todo el tiempo</p>
-                <h2>¿Cuánto hay en caja?</h2>
-              </div>
-            </div>
-            <div
-              className="summary-grid"
-              style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', marginTop: 12 }}
-            >
-              <div className="card">
-                <span>Total en caja</span>
-                <strong style={{ color: '#1f9d57' }}>{money(caja?.total ?? 0)}</strong>
-              </div>
-              <div className="card" style={{ background: 'var(--bg-sunken)' }}>
-                <span>Efectivo</span>
-                <strong>{money(caja?.byMethod?.efectivo ?? 0)}</strong>
-              </div>
-              <div className="card" style={{ background: 'var(--bg-sunken)' }}>
-                <span>Transferencia</span>
-                <strong>{money(caja?.byMethod?.transferencia ?? 0)}</strong>
-              </div>
-              <div className="card" style={{ background: 'var(--bg-sunken)' }}>
-                <span>Tarjeta</span>
-                <strong>{money(caja?.byMethod?.tarjeta ?? 0)}</strong>
-              </div>
-            </div>
-          </section>
+          {/* === Caja (todo el tiempo) + ajustes manuales === */}
+          <CajaPanel caja={caja} />
 
           {/* Buscador de paciente para gestionar sus finanzas */}
           <section className="card">
