@@ -30,6 +30,13 @@ interface CalendarEventChangeArg {
   revert: () => void;
 }
 
+// FullCalendar dispara `datesSet` cuando cambia el rango visible (navegar,
+// cambiar de vista). startStr/endStr cubren toda la rejilla visible.
+interface CalendarDatesSetArg {
+  startStr: string;
+  endStr: string;
+}
+
 // Colores oficiales de Google Calendar (mismos hex que usa Google), para que
 // la agenda se vea idéntica a Google. Texto blanco para legibilidad.
 const colorMap: Record<string, string> = {
@@ -71,43 +78,33 @@ interface NativeCalendarProps {
 export function NativeCalendar({ onEventClick }: NativeCalendarProps) {
   const [syncing, setSyncing] = useState(false);
   const [chargeTarget, setChargeTarget] = useState<ChargeAppointmentTarget | null>(null);
+  // Rango de fechas visible en el calendario. Solo cargamos las citas de ese
+  // rango (no las 2000+ históricas), así abrir la agenda es rápido y ligero.
+  const [range, setRange] = useState<{ start: string; end: string } | null>(null);
   const { notify } = useToast();
   const queryClient = useQueryClient();
 
   const {
     data: appointments = [],
-    isLoading,
+    isFetching,
     error
   } = useQuery({
-    queryKey: ['all_appointments'],
+    queryKey: ['appointments', range],
+    enabled: !!range,
     queryFn: async () => {
+      if (!range) return [];
       const db = assertSupabase();
-      // Supabase/PostgREST limita a 1000 filas por defecto. Con >2000 citas
-      // historicas eso dejaba meses recientes vacios. Paginamos en lotes de
-      // 1000 con .range() hasta traer todas las citas.
-      const PAGE = 1000;
-      const all: Array<{
-        id: string;
-        title: string;
-        starts_at: string;
-        ends_at: string;
-        color_id: string | null;
-        session_type: string | null;
-        patient_id: string | null;
-      }> = [];
-      for (let from = 0; ; from += PAGE) {
-        const { data, error } = await db
-          .from('appointments')
-          .select('id, title, starts_at, ends_at, color_id, session_type, patient_id')
-          .neq('status', 'cancelled')
-          .order('starts_at', { ascending: true })
-          .range(from, from + PAGE - 1);
-        if (error) throw error;
-        if (!data || data.length === 0) break;
-        all.push(...data);
-        if (data.length < PAGE) break;
-      }
-      return all;
+      // Solo el rango visible (una semana/mes/día), nunca todo el histórico.
+      // Un rango de ~6 semanas jamás se acerca al límite de 1000 filas.
+      const { data, error } = await db
+        .from('appointments')
+        .select('id, title, starts_at, ends_at, color_id, session_type, patient_id')
+        .neq('status', 'cancelled')
+        .gte('starts_at', range.start)
+        .lt('starts_at', range.end)
+        .order('starts_at', { ascending: true });
+      if (error) throw error;
+      return data ?? [];
     }
   });
 
@@ -124,7 +121,7 @@ export function NativeCalendar({ onEventClick }: NativeCalendarProps) {
       } catch {
         // sessionStorage no disponible (privado/iframe) — ignorar
       }
-      queryClient.invalidateQueries({ queryKey: ['all_appointments'] });
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
       queryClient.invalidateQueries({ queryKey: ['patients'] });
     } catch (err) {
       console.warn('Google Calendar Sync Error (Non-fatal):', err);
@@ -209,46 +206,54 @@ export function NativeCalendar({ onEventClick }: NativeCalendarProps) {
   return (
     <div className="native-calendar-wrapper">
       <div className="calendar-header-actions">
+        {isFetching && (
+          <span className="muted" style={{ marginRight: 'auto', fontSize: '0.85rem' }}>
+            Actualizando…
+          </span>
+        )}
         <button onClick={syncWithGoogle} disabled={syncing} className="secondary">
           {syncing ? 'Sincronizando...' : 'Sincronizar Calendar'}
         </button>
       </div>
 
       <div className="fc-container">
-        {isLoading ? (
-          <p className="muted">Cargando agenda...</p>
-        ) : (
-          <FullCalendar
-            plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-            initialView="timeGridWeek"
-            headerToolbar={{
-              left: 'prev,next today',
-              center: 'title',
-              right: 'timeGridDay,timeGridWeek,dayGridMonth'
-            }}
-            events={events}
-            editable={true}
-            selectable={true}
-            selectMirror={true}
-            dayMaxEvents={true}
-            weekends={true}
-            eventClick={handleEventClick}
-            eventDrop={handleEventDrop}
-            eventResize={handleEventDrop} // Same logic for resize
-            height="auto"
-            slotMinTime="08:00:00"
-            slotMaxTime="20:00:00"
-            allDaySlot={false}
-            locales={[esLocale]}
-            locale="es"
-            buttonText={{
-              today: 'Hoy',
-              month: 'Mes',
-              week: 'Semana',
-              day: 'Día'
-            }}
-          />
-        )}
+        <FullCalendar
+          plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+          initialView="timeGridWeek"
+          headerToolbar={{
+            left: 'prev,next today',
+            center: 'title',
+            right: 'timeGridDay,timeGridWeek,dayGridMonth'
+          }}
+          datesSet={(arg: CalendarDatesSetArg) =>
+            setRange((prev) =>
+              prev && prev.start === arg.startStr && prev.end === arg.endStr
+                ? prev
+                : { start: arg.startStr, end: arg.endStr }
+            )
+          }
+          events={events}
+          editable={true}
+          selectable={true}
+          selectMirror={true}
+          dayMaxEvents={true}
+          weekends={true}
+          eventClick={handleEventClick}
+          eventDrop={handleEventDrop}
+          eventResize={handleEventDrop} // Same logic for resize
+          height="auto"
+          slotMinTime="08:00:00"
+          slotMaxTime="20:00:00"
+          allDaySlot={false}
+          locales={[esLocale]}
+          locale="es"
+          buttonText={{
+            today: 'Hoy',
+            month: 'Mes',
+            week: 'Semana',
+            day: 'Día'
+          }}
+        />
       </div>
 
       <AppointmentChargeModal
