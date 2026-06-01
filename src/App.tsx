@@ -4,7 +4,6 @@ import type { Session } from '@supabase/supabase-js';
 import { authService } from './services/authService';
 import { isSupabaseConfigured } from './lib/supabaseClient';
 import { draftStorage } from './shared/draftStorage';
-import { useTheme } from './shared/useTheme';
 import { AppLogo } from './components/AppLogo';
 import type { Patient } from './types/clinical';
 
@@ -71,7 +70,11 @@ export function App() {
   const [showFinance, setShowFinance] = useState(false);
   const [showDashboard, setShowDashboard] = useState(true);
 
-  const { theme, toggleTheme } = useTheme();
+  // Siempre tema claro.
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', 'light');
+    localStorage.removeItem('fisioself-theme');
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -150,9 +153,6 @@ export function App() {
           </div>
         </div>
         <div className="hero-actions">
-          <button type="button" className="secondary" onClick={toggleTheme} title="Cambiar tema">
-            {theme === 'light' ? 'Modo Oscuro' : 'Modo Claro'}
-          </button>
           <span className="pill">{session.user?.email}</span>
           <button type="button" className="secondary" onClick={logout}>
             Salir
