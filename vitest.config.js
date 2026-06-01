@@ -20,10 +20,12 @@ export default defineConfig({
       include: ['src/**/*.{js,jsx,ts,tsx}'],
       exclude: ['src/types/**', 'e2e/**'],
       thresholds: {
-        statements: 35,
-        branches: 30,
-        functions: 35,
-        lines: 35
+        // Umbrales con ~1.5-2 puntos de colchón bajo la cobertura real, para que
+        // un cambio pequeño no rompa el CI pero la cobertura no pueda regresar.
+        statements: 38,
+        branches: 33,
+        functions: 36,
+        lines: 39
       }
     }
   }
