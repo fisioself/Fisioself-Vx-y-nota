@@ -9,6 +9,16 @@
 }
 
 .appt-create-card {
+  /* Fondo claro fijo: forzamos la paleta clara para que el texto sea legible
+     también en modo oscuro. */
+  --text-main: #12372a;
+  --bg-card: #fff;
+  --bg-sunken: #fffaf0;
+  --muted: #425e53;
+  --primary: #12372a;
+  --secondary: #dfece5;
+  --border: #eaebec;
+  color: var(--text-main);
   width: min(440px, 100%);
   max-height: min(820px, calc(100vh - 40px));
   overflow: auto;
