@@ -1,0 +1,51 @@
+.charge-backdrop {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(18, 55, 42, 0.42);
+  z-index: 950;
+}
+
+.charge-card {
+  width: min(440px, 100%);
+  max-height: min(820px, calc(100vh - 40px));
+  overflow: auto;
+  display: grid;
+  gap: 14px;
+  padding: 22px;
+  border-radius: 24px;
+  background: #fffaf0;
+  border: 1px solid rgba(18, 55, 42, 0.18);
+  box-shadow: 0 24px 80px rgba(18, 55, 42, 0.3);
+}
+
+.charge-segmented {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.charge-segmented button {
+  padding: 10px;
+  border-radius: 14px;
+  border: 1px solid rgba(18, 55, 42, 0.2);
+  background: #fff;
+  color: var(--primary, #12372a);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.charge-segmented button.active {
+  background: var(--primary, #12372a);
+  color: #fff;
+  border-color: var(--primary, #12372a);
+}
+
+.charge-paid-box {
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(11, 128, 67, 0.4);
+  background: #eefbf2;
+}

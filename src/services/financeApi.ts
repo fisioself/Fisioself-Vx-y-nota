@@ -180,6 +180,7 @@ export const financeApi = {
   async addPayment(input: {
     patientId: string;
     patientPackageId?: string | null;
+    appointmentId?: string | null;
     amount: number;
     method?: string;
     paidAt?: string;
@@ -189,6 +190,7 @@ export const financeApi = {
     const payload: TablesInsert<'payments'> = {
       patient_id: input.patientId,
       patient_package_id: input.patientPackageId ?? null,
+      appointment_id: input.appointmentId ?? null,
       amount: input.amount,
       method: input.method ?? 'efectivo',
       paid_at: input.paidAt,
@@ -201,6 +203,118 @@ export const financeApi = {
     const db = assertSupabase();
     const { error } = await db.from('payments').delete().eq('id', id);
     if (error) throw error;
+  },
+
+  // ---------- Cobro desde la cita ----------
+  // Paquetes del paciente con sesiones disponibles (para cobrar "con paquete").
+  async listActivePatientPackages(patientId: string): Promise<PatientPackage[]> {
+    const db = assertSupabase();
+    const all = unwrap<PatientPackage[]>(
+      await db
+        .from('patient_packages')
+        .select('*')
+        .eq('patient_id', patientId)
+        .order('purchased_at', { ascending: false })
+    );
+    return all.filter((p) => Number(p.sessions_used ?? 0) < Number(p.sessions_total ?? 0));
+  },
+
+  // Cobro(s) ya registrado(s) para una cita (para saber si ya se cobró).
+  async getAppointmentCharge(appointmentId: string): Promise<Payment[]> {
+    const db = assertSupabase();
+    return unwrap(
+      await db
+        .from('payments')
+        .select('*')
+        .eq('appointment_id', appointmentId)
+        .order('created_at', { ascending: false })
+    );
+  },
+
+  // Registra el cobro de una cita. Dos modalidades:
+  //  • Suelta: crea un pago con monto y método (efectivo/tarjeta).
+  //  • Con paquete: descuenta una sesión del paquete y deja un pago de $0
+  //    con método 'paquete' (no afecta la caja; la sesión ya estaba pagada).
+  async chargeAppointment(input: {
+    appointmentId: string;
+    patientId: string;
+    usePackage: boolean;
+    patientPackageId?: string | null;
+    amount?: number;
+    method?: PaymentMethod;
+    paidAt?: string;
+    notes?: string;
+  }): Promise<Payment> {
+    const db = assertSupabase();
+
+    if (input.usePackage) {
+      if (!input.patientPackageId) throw new Error('Falta seleccionar el paquete.');
+      const pkg = unwrap<PatientPackage>(
+        await db.from('patient_packages').select('*').eq('id', input.patientPackageId).single()
+      );
+      const used = Number(pkg.sessions_used ?? 0);
+      const total = Number(pkg.sessions_total ?? 0);
+      if (used >= total) throw new Error('Ese paquete ya no tiene sesiones disponibles.');
+
+      const { error: upErr } = await db
+        .from('patient_packages')
+        .update({ sessions_used: used + 1, updated_at: new Date().toISOString() })
+        .eq('id', input.patientPackageId);
+      if (upErr) throw upErr;
+
+      return this.addPayment({
+        patientId: input.patientId,
+        patientPackageId: input.patientPackageId,
+        appointmentId: input.appointmentId,
+        amount: 0,
+        method: 'paquete',
+        paidAt: input.paidAt,
+        notes: input.notes ?? `Sesión de paquete: ${pkg.name}`
+      });
+    }
+
+    return this.addPayment({
+      patientId: input.patientId,
+      appointmentId: input.appointmentId,
+      amount: input.amount ?? 0,
+      method: input.method ?? 'efectivo',
+      paidAt: input.paidAt,
+      notes: input.notes
+    });
+  },
+
+  // Elimina el cobro de una cita; si fue con paquete, devuelve la sesión.
+  async deleteAppointmentCharge(payment: Payment): Promise<void> {
+    const db = assertSupabase();
+    if (payment.patient_package_id && payment.method === 'paquete') {
+      const pkg = unwrap<PatientPackage>(
+        await db.from('patient_packages').select('*').eq('id', payment.patient_package_id).single()
+      );
+      const used = Number(pkg.sessions_used ?? 0);
+      const { error: upErr } = await db
+        .from('patient_packages')
+        .update({ sessions_used: Math.max(0, used - 1), updated_at: new Date().toISOString() })
+        .eq('id', payment.patient_package_id);
+      if (upErr) throw upErr;
+    }
+    const { error } = await db.from('payments').delete().eq('id', payment.id);
+    if (error) throw error;
+  },
+
+  // Precio sugerido del catálogo según el tipo de sesión de la cita.
+  async suggestPriceForSessionType(sessionType: string | null): Promise<number | null> {
+    if (!sessionType) return null;
+    const db = assertSupabase();
+    const rows = unwrap<Array<{ price: number; sessions_included: number }>>(
+      await db
+        .from('packages')
+        .select('price, sessions_included')
+        .eq('active', true)
+        .eq('session_type', sessionType)
+        .eq('sessions_included', 1)
+        .order('price', { ascending: true })
+    );
+    return rows.length ? Number(rows[0].price) : null;
   },
 
   // ---------- Gastos ----------

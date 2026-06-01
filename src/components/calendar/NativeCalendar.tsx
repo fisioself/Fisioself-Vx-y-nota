@@ -8,12 +8,21 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { assertSupabase } from '../../lib/supabaseClient';
 import { calendarService } from '../../services/calendarService';
 import { useToast } from '../../app/ToastProvider';
+import {
+  AppointmentChargeModal,
+  type ChargeAppointmentTarget
+} from '../../features/finance/AppointmentChargeModal';
 import './NativeCalendar.css';
 
 // Formas minimas y estructurales de los argumentos que FullCalendar pasa a
 // los handlers; evitan `any` sin acoplarnos a los tipos internos de la libreria.
 interface CalendarEventClickArg {
-  event: { extendedProps: { patientId?: string } };
+  event: {
+    id: string;
+    title: string;
+    startStr: string;
+    extendedProps: { patientId?: string; sessionType?: string | null };
+  };
 }
 
 interface CalendarEventChangeArg {
@@ -46,6 +55,7 @@ interface NativeCalendarProps {
 
 export function NativeCalendar({ onEventClick }: NativeCalendarProps) {
   const [syncing, setSyncing] = useState(false);
+  const [chargeTarget, setChargeTarget] = useState<ChargeAppointmentTarget | null>(null);
   const { notify } = useToast();
   const queryClient = useQueryClient();
 
@@ -138,9 +148,15 @@ export function NativeCalendar({ onEventClick }: NativeCalendarProps) {
 
   const handleEventClick = (clickInfo: CalendarEventClickArg) => {
     const patientId = clickInfo.event.extendedProps.patientId;
-    if (patientId && onEventClick) {
-      onEventClick(patientId);
-    }
+    if (!patientId) return;
+    // Al tocar una cita se abre el cobro; desde ahí se puede ir al expediente.
+    setChargeTarget({
+      id: clickInfo.event.id,
+      patientId,
+      patientName: clickInfo.event.title,
+      sessionType: clickInfo.event.extendedProps.sessionType ?? null,
+      startsAt: clickInfo.event.startStr
+    });
   };
 
   const handleEventDrop = async (dropInfo: CalendarEventChangeArg) => {
@@ -216,6 +232,12 @@ export function NativeCalendar({ onEventClick }: NativeCalendarProps) {
           />
         )}
       </div>
+
+      <AppointmentChargeModal
+        appointment={chargeTarget}
+        onClose={() => setChargeTarget(null)}
+        onViewPatient={onEventClick}
+      />
     </div>
   );
 }
