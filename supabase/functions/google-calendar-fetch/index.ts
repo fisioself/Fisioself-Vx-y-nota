@@ -39,24 +39,31 @@ const refreshGoogleToken = async ({
   return data;
 };
 
-// Color → tipo de sesión (código de color de Google Calendar):
-//   3 (Morado)            → Valoración
-//   5 (Amarillo)          → Descarga muscular
-//   4/6 (Naranja)         → Terapia a domicilio
-//   1/7/9 (Azul)          → Sesión clínica (rehabilitación)
+// Color → tipo de sesión (código de color de Google Calendar).
+// Mapa confirmado contra el calendario real de la clínica:
+//   9 (Arándano/morado) y 1 (Lavanda) → Valoración (primera visita)
+//   5 (Amarillo)                       → Descarga muscular
+//   6 (Mandarina/naranja)              → Terapia a domicilio
+//   4 (Flamingo/rosa)                  → Dermatofuncional
+//   8 (Grafito/gris), 2 (Salvia), 10 (Albahaca) → Cortesía (no se cobra)
+//   7 (Pavo real), 11 (Tomate), sin color → Sesión clínica (rehabilitación)
 const resolveSessionType = (colorId?: string) => {
   switch (colorId) {
-    case '3':
+    case '9':
+    case '1':
       return 'Valoración';
     case '5':
       return 'Descarga muscular';
-    case '4':
     case '6':
       return 'Terapia a domicilio';
-    case '1':
+    case '4':
+      return 'Dermatofuncional';
+    case '8':
+    case '2':
+    case '10':
+      return 'Cortesía';
     case '7':
-    case '9':
-      return 'Sesión clínica';
+    case '11':
     default:
       return 'Sesión clínica';
   }
