@@ -152,6 +152,29 @@ export function AppointmentChargeModal({
 
   const alreadyCharged = existing.length > 0;
 
+  // Resumen por paquete: sesiones consumidas (cuentan hacia adelante conforme se
+  // cobra "con paquete") y cuánto se ha abonado / falta de cada paquete.
+  const packageInfos = (patientFinance?.packages ?? [])
+    .map((pkg) => {
+      const paid = (patientFinance?.payments ?? [])
+        .filter((p) => p.patient_package_id === pkg.id)
+        .reduce((acc, p) => acc + Number(p.amount ?? 0), 0);
+      const total = Number(pkg.total_amount ?? 0);
+      const usedSessions = Number(pkg.sessions_used ?? 0);
+      const totalSessions = Number(pkg.sessions_total ?? 0);
+      return {
+        id: pkg.id,
+        name: pkg.name,
+        paid,
+        total,
+        balance: total - paid,
+        usedSessions,
+        totalSessions
+      };
+    })
+    // Solo paquetes vigentes: con sesiones pendientes o saldo por cobrar.
+    .filter((p) => p.usedSessions < p.totalSessions || p.balance > 0.01);
+
   const save = async () => {
     setError('');
     if (mode === 'suelta') {
@@ -334,20 +357,19 @@ export function AppointmentChargeModal({
           </button>
         </div>
 
-        {patientFinance && patientFinance.packages.length > 0 && (
-          <div className="charge-pkg-info">
-            <strong>Paquete activo</strong>
+        {packageInfos.map((pkg) => (
+          <div className="charge-pkg-info" key={pkg.id}>
+            <strong>{pkg.name}</strong>
             <span>
-              Pagado {money(patientFinance.totalPaid)} de {money(patientFinance.totalBilled)}
-              {patientFinance.balance > 0
-                ? ` · debe ${money(patientFinance.balance)}`
-                : ' · al corriente'}
+              Sesiones {pkg.usedSessions}/{pkg.totalSessions} ·{' '}
+              {pkg.totalSessions - pkg.usedSessions} por tomar
             </span>
             <span className="muted" style={{ fontSize: '0.85rem' }}>
-              Sesiones usadas {patientFinance.sessionsUsed}/{patientFinance.sessionsTotal}
+              Abonado {money(pkg.paid)} de {money(pkg.total)}
+              {pkg.balance > 0.01 ? ` · debe ${money(pkg.balance)}` : ' · pagado'}
             </span>
           </div>
-        )}
+        ))}
 
         {alreadyCharged ? (
           <div className="charge-paid-box">
