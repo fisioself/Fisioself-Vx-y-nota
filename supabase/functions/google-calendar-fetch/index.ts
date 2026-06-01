@@ -199,8 +199,39 @@ const importConnection = async (
     const displayName = cleanDisplayName(rawTitle);
     const phone = extractPhone(rawTitle);
     const nameKey = normalizeKey(displayName);
+    const colorId = (event.colorId as string | undefined) || null;
 
-    // Resolver o crear paciente por clave normalizada (misma persona = misma ficha).
+    const { data: existingAppt } = await supabase
+      .from('appointments')
+      .select('id')
+      .eq('google_event_id', event.id as string)
+      .limit(1);
+
+    if (existingAppt && existingAppt.length > 0) {
+      // La cita YA existe: solo actualizar fecha/hora, color, tipo y metadatos.
+      // NO tocamos patient_id: si el usuario unió pacientes manualmente, la cita
+      // debe quedarse con su paciente. Tampoco resolvemos/creamos paciente aquí,
+      // para no recrear fichas duplicadas que el usuario ya fusionó.
+      // El trigger handle_appointment_autosync hace un PATCH de vuelta a Google
+      // (no-op en tiempos) pero NO genera bucle: solo toca sync_status/google_*.
+      await supabase
+        .from('appointments')
+        .update({
+          title: displayName,
+          starts_at: startsAt,
+          ends_at: endsAt,
+          google_html_link: event.htmlLink as string | undefined,
+          sync_status: 'synced',
+          color_id: colorId,
+          session_type: resolveSessionType(colorId ?? undefined),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', existingAppt[0].id);
+      syncedCount++;
+      continue;
+    }
+
+    // Cita nueva: recién aquí resolvemos o creamos el paciente por nombre.
     let patientId: string;
     const existingEntry = patientsByKey.get(nameKey);
 
@@ -224,50 +255,22 @@ const importConnection = async (
       patientsByKey.set(nameKey, { id: newPatient.id, created_at: newPatient.created_at });
     }
 
-    const colorId = (event.colorId as string | undefined) || null;
-
-    const { data: existingAppt } = await supabase
-      .from('appointments')
-      .select('id')
-      .eq('google_event_id', event.id as string)
-      .limit(1);
-
-    if (existingAppt && existingAppt.length > 0) {
-      // Actualizar fecha/hora, color, tipo y metadatos de Google.
-      // El trigger handle_appointment_autosync detecta cambios en starts_at/ends_at
-      // y hace un PATCH de vuelta a Google (no-op en tiempos), pero NO genera bucle
-      // porque el PATCH de vuelta solo toca sync_status/google_* (campos no monitoreados).
-      await supabase
-        .from('appointments')
-        .update({
-          title: displayName,
-          starts_at: startsAt,
-          ends_at: endsAt,
-          google_html_link: event.htmlLink as string | undefined,
-          sync_status: 'synced',
-          color_id: colorId,
-          session_type: resolveSessionType(colorId ?? undefined),
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', existingAppt[0].id);
-    } else {
-      await supabase.from('appointments').insert({
-        patient_id: patientId,
-        title: displayName,
-        description: (event.description as string | undefined) || '',
-        location: (event.location as string | undefined) || '',
-        starts_at: startsAt,
-        ends_at: endsAt,
-        status: 'scheduled',
-        google_calendar_id: connection.calendar_id || 'primary',
-        google_event_id: event.id as string,
-        google_html_link: event.htmlLink as string | undefined,
-        sync_status: 'synced',
-        color_id: colorId,
-        session_type: resolveSessionType(colorId ?? undefined),
-        created_by: connection.user_id
-      });
-    }
+    await supabase.from('appointments').insert({
+      patient_id: patientId,
+      title: displayName,
+      description: (event.description as string | undefined) || '',
+      location: (event.location as string | undefined) || '',
+      starts_at: startsAt,
+      ends_at: endsAt,
+      status: 'scheduled',
+      google_calendar_id: connection.calendar_id || 'primary',
+      google_event_id: event.id as string,
+      google_html_link: event.htmlLink as string | undefined,
+      sync_status: 'synced',
+      color_id: colorId,
+      session_type: resolveSessionType(colorId ?? undefined),
+      created_by: connection.user_id
+    });
     syncedCount++;
   }
 
