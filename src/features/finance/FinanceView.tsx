@@ -12,7 +12,10 @@ const money = (n: number) =>
   new Intl.NumberFormat('es-MX', {
     style: 'currency',
     currency: 'MXN',
-    maximumFractionDigits: 0
+    // Sin decimales para montos enteros, pero hasta 2 para cobros con decimales
+    // (p. ej. tarjeta tras descontar la comisión: $335.79).
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2
   }).format(Number.isFinite(n) ? n : 0);
 
 const MONTH_ABBR = [
