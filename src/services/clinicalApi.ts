@@ -217,13 +217,15 @@ export const clinicalApi = {
       .select('*', { count: 'exact', head: true });
     if (pError) throw pError;
 
-    // 2. Sesiones de los ultimos 30 dias
+    // 2. Sesiones de los ultimos 30 dias (citas del calendario)
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     const { count: recentSessions, error: sError } = await db
-      .from('session_notes')
+      .from('appointments')
       .select('*', { count: 'exact', head: true })
-      .gte('session_date', thirtyDaysAgo.toISOString().split('T')[0]);
+      .gte('starts_at', thirtyDaysAgo.toISOString())
+      .lte('starts_at', new Date().toISOString())
+      .neq('status', 'cancelled');
     if (sError) throw sError;
 
     // 3. Citas proximas
