@@ -6,6 +6,10 @@ import { useToast } from '../../app/ToastProvider';
 import { getErrorMessage } from '../../shared/errors';
 import './AppointmentChargeModal.css';
 
+const CARD_COMMISSION = 0.0406; // 4.06 % comisión terminal
+
+const netAfterCommission = (gross: number) => Math.round(gross * (1 - CARD_COMMISSION) * 100) / 100;
+
 export interface ChargeAppointmentTarget {
   id: string;
   patientId: string;
@@ -110,6 +114,14 @@ export function AppointmentChargeModal({
     enabled: !!patientId && showNote
   });
 
+  // Resumen financiero del paciente: para mostrar, si tiene paquete, cuánto ha
+  // pagado y cuánto debe directamente al abrir la cita desde la agenda.
+  const { data: patientFinance } = useQuery({
+    queryKey: ['patient-finance', patientId],
+    queryFn: () => financeApi.getPatientFinance(patientId),
+    enabled: !!patientId
+  });
+
   // Al cambiar de cita, limpia el formulario para no arrastrar datos previos.
   useEffect(() => {
     setMode('suelta');
@@ -144,8 +156,8 @@ export function AppointmentChargeModal({
     setError('');
     if (mode === 'suelta') {
       const amt = Number(amount);
-      if (!Number.isFinite(amt) || amt < 0) {
-        setError('Ingresa un monto válido.');
+      if (!Number.isFinite(amt) || amt <= 0) {
+        setError('Ingresa un monto mayor a $0.');
         return;
       }
     } else if (!packageId) {
@@ -155,24 +167,38 @@ export function AppointmentChargeModal({
 
     setSaving(true);
     try {
+      // Con tarjeta se guarda el monto neto (descontada la comisión de la terminal).
+      const grossSuelta = Number(amount);
+      const grossAbono = Number(abonoAmount || 0);
+      const netSuelta = method === 'tarjeta' ? netAfterCommission(grossSuelta) : grossSuelta;
+      const netAbono = abonoMethod === 'tarjeta' ? netAfterCommission(grossAbono) : grossAbono;
+
       await financeApi.chargeAppointment({
         appointmentId: appointment.id,
         patientId: appointment.patientId,
         usePackage: mode === 'paquete',
         patientPackageId: mode === 'paquete' ? packageId : null,
-        amount: mode === 'suelta' ? Number(amount) : Number(abonoAmount || 0),
+        amount: mode === 'suelta' ? netSuelta : netAbono,
         method: mode === 'suelta' ? method : abonoAmount ? abonoMethod : undefined
       });
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['appt-charge', apptId] }),
         queryClient.invalidateQueries({ queryKey: ['active-packages', patientId] }),
         queryClient.invalidateQueries({ queryKey: ['finance-global'] }),
+        queryClient.invalidateQueries({ queryKey: ['caja-payments'] }),
         queryClient.invalidateQueries({ queryKey: ['patient-finance', patientId] })
       ]);
       notify({ tone: 'success', message: 'Cobro registrado.' });
       onClose();
     } catch (err) {
-      setError(getErrorMessage(err, 'No se pudo registrar el cobro.'));
+      console.error('[AppointmentChargeModal] chargeAppointment failed:', err);
+      const raw = err as Record<string, unknown>;
+      const detail =
+        (raw?.message as string) ||
+        (raw?.details as string) ||
+        (raw?.hint as string) ||
+        JSON.stringify(raw);
+      setError(`No se pudo registrar el cobro. ${detail}`);
     } finally {
       setSaving(false);
     }
@@ -189,6 +215,7 @@ export function AppointmentChargeModal({
         queryClient.invalidateQueries({ queryKey: ['appt-charge', apptId] }),
         queryClient.invalidateQueries({ queryKey: ['active-packages', patientId] }),
         queryClient.invalidateQueries({ queryKey: ['finance-global'] }),
+        queryClient.invalidateQueries({ queryKey: ['caja-payments'] }),
         queryClient.invalidateQueries({ queryKey: ['patient-finance', patientId] })
       ]);
       notify({ tone: 'success', message: 'Cobro eliminado.' });
@@ -219,17 +246,19 @@ export function AppointmentChargeModal({
         sessionsTotal: chosenCatalog.sessions_included
       });
       if (initAmt > 0) {
+        const initNet = assignInitMethod === 'tarjeta' ? netAfterCommission(initAmt) : initAmt;
         await financeApi.addPayment({
           patientId,
           patientPackageId: created.id,
-          amount: initAmt,
+          amount: initNet,
           method: assignInitMethod
         });
       }
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['active-packages', patientId] }),
         queryClient.invalidateQueries({ queryKey: ['patient-finance', patientId] }),
-        queryClient.invalidateQueries({ queryKey: ['finance-global'] })
+        queryClient.invalidateQueries({ queryKey: ['finance-global'] }),
+        queryClient.invalidateQueries({ queryKey: ['caja-payments'] })
       ]);
       setAssignPkgId('');
       setAssignAmount('');
@@ -304,6 +333,21 @@ export function AppointmentChargeModal({
             Cerrar
           </button>
         </div>
+
+        {patientFinance && patientFinance.packages.length > 0 && (
+          <div className="charge-pkg-info">
+            <strong>Paquete activo</strong>
+            <span>
+              Pagado {money(patientFinance.totalPaid)} de {money(patientFinance.totalBilled)}
+              {patientFinance.balance > 0
+                ? ` · debe ${money(patientFinance.balance)}`
+                : ' · al corriente'}
+            </span>
+            <span className="muted" style={{ fontSize: '0.85rem' }}>
+              Sesiones usadas {patientFinance.sessionsUsed}/{patientFinance.sessionsTotal}
+            </span>
+          </div>
+        )}
 
         {alreadyCharged ? (
           <div className="charge-paid-box">
@@ -405,19 +449,30 @@ export function AppointmentChargeModal({
                   />
                 </label>
                 {assignInitPay && Number(assignInitPay) > 0 && (
-                  <label>
-                    Método del pago inicial
-                    <select
-                      value={assignInitMethod}
-                      onChange={(e) => setAssignInitMethod(e.target.value as PaymentMethod)}
-                    >
-                      {PAYMENT_METHODS.map((m) => (
-                        <option key={m} value={m}>
-                          {m.charAt(0).toUpperCase() + m.slice(1)}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                  <>
+                    <label>
+                      Método del pago inicial
+                      <select
+                        value={assignInitMethod}
+                        onChange={(e) => setAssignInitMethod(e.target.value as PaymentMethod)}
+                      >
+                        {PAYMENT_METHODS.map((m) => (
+                          <option key={m} value={m}>
+                            {m.charAt(0).toUpperCase() + m.slice(1)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    {assignInitMethod === 'tarjeta' && (
+                      <div className="charge-commission-info">
+                        <span>
+                          Comisión terminal (4.06 %): −
+                          {money(Number(assignInitPay) - netAfterCommission(Number(assignInitPay)))}
+                        </span>
+                        <strong>Recibes: {money(netAfterCommission(Number(assignInitPay)))}</strong>
+                      </div>
+                    )}
+                  </>
                 )}
                 <div className="actions" style={{ gap: 8 }}>
                   <button type="button" onClick={assignPackage} disabled={assigning}>
@@ -438,7 +493,7 @@ export function AppointmentChargeModal({
             {mode === 'suelta' ? (
               <>
                 <label>
-                  Monto
+                  Monto cobrado al paciente
                   <input
                     type="number"
                     min="0"
@@ -461,6 +516,15 @@ export function AppointmentChargeModal({
                     ))}
                   </select>
                 </label>
+                {method === 'tarjeta' && Number(amount) > 0 && (
+                  <div className="charge-commission-info">
+                    <span>
+                      Comisión terminal (4.06 %): −
+                      {money(Number(amount) - netAfterCommission(Number(amount)))}
+                    </span>
+                    <strong>Recibes: {money(netAfterCommission(Number(amount)))}</strong>
+                  </div>
+                )}
               </>
             ) : (
               <>
@@ -487,19 +551,30 @@ export function AppointmentChargeModal({
                   />
                 </label>
                 {abonoAmount && Number(abonoAmount) > 0 && (
-                  <label>
-                    Método del abono
-                    <select
-                      value={abonoMethod}
-                      onChange={(e) => setAbonoMethod(e.target.value as PaymentMethod)}
-                    >
-                      {PAYMENT_METHODS.map((m) => (
-                        <option key={m} value={m}>
-                          {m.charAt(0).toUpperCase() + m.slice(1)}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                  <>
+                    <label>
+                      Método del abono
+                      <select
+                        value={abonoMethod}
+                        onChange={(e) => setAbonoMethod(e.target.value as PaymentMethod)}
+                      >
+                        {PAYMENT_METHODS.map((m) => (
+                          <option key={m} value={m}>
+                            {m.charAt(0).toUpperCase() + m.slice(1)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    {abonoMethod === 'tarjeta' && (
+                      <div className="charge-commission-info">
+                        <span>
+                          Comisión terminal (4.06 %): −
+                          {money(Number(abonoAmount) - netAfterCommission(Number(abonoAmount)))}
+                        </span>
+                        <strong>Recibes: {money(netAfterCommission(Number(abonoAmount)))}</strong>
+                      </div>
+                    )}
+                  </>
                 )}
               </>
             )}

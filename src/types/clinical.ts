@@ -87,6 +87,8 @@ export interface Appointment {
   starts_at: string;
   ends_at?: string | null;
   status?: string | null;
+  session_type?: string | null;
+  color_id?: string | null;
   sync_status?: string | null;
   google_html_link?: string | null;
   google_event_id?: string | null;

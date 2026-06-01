@@ -1,9 +1,12 @@
 import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { financeApi } from '../../services/financeApi';
+import { financeApi, type Payment } from '../../services/financeApi';
 import { clinicalApi } from '../../services/clinicalApi';
 import { useToast } from '../../app/ToastProvider';
 import type { Patient } from '../../types/clinical';
+
+const CARD_COMMISSION = 0.0406;
+const netAfterCommission = (gross: number) => Math.round(gross * (1 - CARD_COMMISSION) * 100) / 100;
 
 const money = (n: number) =>
   new Intl.NumberFormat('es-MX', {
@@ -415,6 +418,7 @@ function PatientFinancePanel({ patient }: { patient: Patient }) {
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ['patient-finance', patient.id] });
     queryClient.invalidateQueries({ queryKey: ['finance-global'] });
+    queryClient.invalidateQueries({ queryKey: ['caja-payments'] });
   };
 
   const chosen = catalog.find((c) => c.id === selectedPkg);
@@ -436,10 +440,11 @@ function PatientFinancePanel({ patient }: { patient: Patient }) {
         sessionsTotal: chosen.sessions_included
       });
       if (initAmt > 0) {
+        const initNet = initPayMethod === 'tarjeta' ? netAfterCommission(initAmt) : initAmt;
         await financeApi.addPayment({
           patientId: patient.id!,
           patientPackageId: created.id,
-          amount: initAmt,
+          amount: initNet,
           method: initPayMethod
         });
       }
@@ -463,7 +468,8 @@ function PatientFinancePanel({ patient }: { patient: Patient }) {
     }
     setBusy(true);
     try {
-      await financeApi.addPayment({ patientId: patient.id!, amount: value, method: payMethod });
+      const netValue = payMethod === 'tarjeta' ? netAfterCommission(value) : value;
+      await financeApi.addPayment({ patientId: patient.id!, amount: netValue, method: payMethod });
       setPayAmount('');
       refresh();
       notify({ tone: 'success', message: 'Pago registrado.' });
@@ -669,6 +675,11 @@ function PatientFinancePanel({ patient }: { patient: Patient }) {
         <button type="button" className="secondary" onClick={registerPayment} disabled={busy}>
           Registrar abono
         </button>
+        {payMethod === 'tarjeta' && Number(payAmount) > 0 && (
+          <span style={{ fontSize: '0.8rem', color: '#c0392b' }}>
+            Recibes {money(netAfterCommission(Number(payAmount)))} (−4.06 % comisión)
+          </span>
+        )}
       </div>
     </section>
   );
@@ -692,10 +703,53 @@ function CajaPanel({ caja }: { caja?: { total: number; byMethod: Record<string, 
     queryFn: () => financeApi.listCajaMovements()
   });
 
+  const { data: payments = [] } = useQuery({
+    queryKey: ['caja-payments'],
+    queryFn: () => financeApi.listRecentPayments()
+  });
+
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ['caja-movements'] });
+    queryClient.invalidateQueries({ queryKey: ['caja-payments'] });
     queryClient.invalidateQueries({ queryKey: ['finance-global'] });
+    queryClient.invalidateQueries({ queryKey: ['patient-finance'] });
   };
+
+  // Línea unificada: cobros de pacientes + ajustes manuales, ordenados por fecha.
+  const patientName = (p: (typeof payments)[number]): string => {
+    const rel = p.patients;
+    const obj = Array.isArray(rel) ? rel[0] : rel;
+    return obj?.full_name || 'Paciente';
+  };
+  type CajaEntry = {
+    id: string;
+    kind: 'payment' | 'movement';
+    label: string;
+    method: string;
+    date: string;
+    amount: number; // firmado: + entrada, − salida
+    raw: (typeof payments)[number] | (typeof movements)[number];
+  };
+  const entries: CajaEntry[] = [
+    ...payments.map((p) => ({
+      id: p.id,
+      kind: 'payment' as const,
+      label: patientName(p),
+      method: p.method,
+      date: p.paid_at,
+      amount: Number(p.amount),
+      raw: p
+    })),
+    ...movements.map((m) => ({
+      id: m.id,
+      kind: 'movement' as const,
+      label: m.description || (Number(m.amount) >= 0 ? 'Entrada' : 'Salida'),
+      method: m.method,
+      date: m.occurred_at,
+      amount: Number(m.amount),
+      raw: m
+    }))
+  ].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
 
   const submit = async () => {
     const value = Number(amount);
@@ -722,9 +776,15 @@ function CajaPanel({ caja }: { caja?: { total: number; byMethod: Record<string, 
     }
   };
 
-  const remove = async (id: string) => {
+  const remove = async (entry: CajaEntry) => {
     try {
-      await financeApi.deleteCajaMovement(id);
+      if (entry.kind === 'movement') {
+        await financeApi.deleteCajaMovement(entry.id);
+      } else {
+        // Cobro de paciente: deleteAppointmentCharge devuelve la sesión del
+        // paquete si aplica, además de borrar el pago.
+        await financeApi.deleteAppointmentCharge(entry.raw as Payment);
+      }
       refresh();
     } catch {
       notify({ tone: 'error', message: 'No se pudo eliminar.' });
@@ -800,14 +860,13 @@ function CajaPanel({ caja }: { caja?: { total: number; byMethod: Record<string, 
         </div>
       </div>
 
-      {/* Historial de ajustes manuales */}
+      {/* Historial: cobros de pacientes + ajustes manuales */}
       <ul className="list-stack" style={{ marginTop: 16, listStyle: 'none', padding: 0 }}>
-        {movements.map((m) => {
-          const amt = Number(m.amount);
-          const positive = amt >= 0;
+        {entries.map((e) => {
+          const positive = e.amount >= 0;
           return (
             <li
-              key={m.id}
+              key={`${e.kind}-${e.id}`}
               className="note-row"
               style={{
                 display: 'flex',
@@ -818,24 +877,29 @@ function CajaPanel({ caja }: { caja?: { total: number; byMethod: Record<string, 
             >
               <div>
                 <strong style={{ display: 'block' }}>
-                  {m.description || (positive ? 'Entrada' : 'Salida')}
+                  {e.label}
+                  {e.kind === 'payment' && (
+                    <span className="pill" style={{ marginLeft: 8, fontSize: '0.7rem' }}>
+                      Cobro
+                    </span>
+                  )}
                 </strong>
                 <span
                   className="muted"
                   style={{ fontSize: '0.85rem', textTransform: 'capitalize' }}
                 >
-                  {m.method} · {m.occurred_at}
+                  {e.method} · {e.date}
                 </span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <strong style={{ color: positive ? '#1f9d57' : '#c0392b' }}>
                   {positive ? '+' : '−'}
-                  {money(Math.abs(amt))}
+                  {money(Math.abs(e.amount))}
                 </strong>
                 <button
                   type="button"
                   className="secondary"
-                  onClick={() => remove(m.id)}
+                  onClick={() => remove(e)}
                   title="Eliminar"
                 >
                   ✕
@@ -844,9 +908,7 @@ function CajaPanel({ caja }: { caja?: { total: number; byMethod: Record<string, 
             </li>
           );
         })}
-        {movements.length === 0 && (
-          <p className="muted">Sin ajustes manuales. La caja refleja los cobros registrados.</p>
-        )}
+        {entries.length === 0 && <p className="muted">Aún no hay cobros ni ajustes de caja.</p>}
       </ul>
     </section>
   );
@@ -906,6 +968,46 @@ export function FinanceView(_props: FinanceViewProps) {
         </section>
       ) : (
         <>
+          {/* Cobros y paquetes — al inicio para acceso rápido */}
+          <section className="card">
+            <div className="form-header">
+              <div>
+                <p className="eyebrow">Por paciente</p>
+                <h2>Cobros y paquetes</h2>
+              </div>
+            </div>
+            <input
+              type="search"
+              placeholder="Buscar paciente por nombre o teléfono…"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              style={{ marginTop: 12, width: '100%' }}
+            />
+            {query.trim().length >= 2 && (
+              <ul className="list-stack" style={{ marginTop: 10, listStyle: 'none', padding: 0 }}>
+                {results.map((p) => (
+                  <li key={p.id}>
+                    <button
+                      type="button"
+                      className="secondary"
+                      style={{ width: '100%', textAlign: 'left' }}
+                      onClick={() => {
+                        setSelectedPatient(p);
+                        setQuery('');
+                      }}
+                    >
+                      {p.full_name}
+                      {p.phone ? ` · ${p.phone}` : ''}
+                    </button>
+                  </li>
+                ))}
+                {results.length === 0 && <p className="muted">Sin resultados.</p>}
+              </ul>
+            )}
+          </section>
+
+          {selectedPatient && <PatientFinancePanel patient={selectedPatient} />}
+
           {/* === Mes en curso === */}
           <section className="card">
             <div className="form-header">
@@ -1017,46 +1119,6 @@ export function FinanceView(_props: FinanceViewProps) {
 
           {/* === Caja (todo el tiempo) + ajustes manuales === */}
           <CajaPanel caja={caja} />
-
-          {/* Buscador de paciente para gestionar sus finanzas */}
-          <section className="card">
-            <div className="form-header">
-              <div>
-                <p className="eyebrow">Por paciente</p>
-                <h2>Cobros y paquetes</h2>
-              </div>
-            </div>
-            <input
-              type="search"
-              placeholder="Buscar paciente por nombre o teléfono…"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              style={{ marginTop: 12, width: '100%' }}
-            />
-            {query.trim().length >= 2 && (
-              <ul className="list-stack" style={{ marginTop: 10, listStyle: 'none', padding: 0 }}>
-                {results.map((p) => (
-                  <li key={p.id}>
-                    <button
-                      type="button"
-                      className="secondary"
-                      style={{ width: '100%', textAlign: 'left' }}
-                      onClick={() => {
-                        setSelectedPatient(p);
-                        setQuery('');
-                      }}
-                    >
-                      {p.full_name}
-                      {p.phone ? ` · ${p.phone}` : ''}
-                    </button>
-                  </li>
-                ))}
-                {results.length === 0 && <p className="muted">Sin resultados.</p>}
-              </ul>
-            )}
-          </section>
-
-          {selectedPatient && <PatientFinancePanel patient={selectedPatient} />}
 
           {/* === Top pacientes por ingreso === */}
           <section className="card">

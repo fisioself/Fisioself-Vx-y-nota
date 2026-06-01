@@ -152,13 +152,27 @@ Deno.serve(async (req) => {
     const safeLocation =
       rawLocation && rawLocation.length <= MAX_LOCATION_LEN ? rawLocation : undefined;
 
-    const eventPayload = {
-      summary: SAFE_EVENT_SUMMARY,
-      location: safeLocation,
-      description: SAFE_EVENT_DESCRIPTION,
-      start: { dateTime: appointment.starts_at },
-      end: { dateTime: appointment.ends_at }
-    };
+    // Al CREAR desde la app, el evento de Google muestra exactamente el título
+    // que el usuario escribió (appointment.title). Seguimos SIN enviar notas
+    // clínicas: la descripción permanece genérica. En updates (mover/
+    // redimensionar) NO reescribimos el título para no pisar lo que el usuario
+    // tenga en Google.
+    const isCreate = !appointment.google_event_id;
+    const userTitle = typeof appointment.title === 'string' ? appointment.title.trim() : '';
+
+    const eventPayload = isCreate
+      ? {
+          summary: userTitle || SAFE_EVENT_SUMMARY,
+          location: safeLocation,
+          description: SAFE_EVENT_DESCRIPTION,
+          start: { dateTime: appointment.starts_at },
+          end: { dateTime: appointment.ends_at }
+        }
+      : {
+          location: safeLocation,
+          start: { dateTime: appointment.starts_at },
+          end: { dateTime: appointment.ends_at }
+        };
 
     const calendarId = encodeURIComponent(connection.calendar_id || 'primary');
     const method = appointment.google_event_id ? 'PATCH' : 'POST';

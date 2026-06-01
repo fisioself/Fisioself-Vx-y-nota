@@ -7,6 +7,12 @@ export type Payment = Tables<'payments'>;
 export type Expense = Tables<'expenses'>;
 export type CajaMovement = Tables<'caja_movements'>;
 
+// Pago con el nombre del paciente embebido (relación payments → patients).
+// Supabase devuelve la relación como objeto o arreglo según el tipado del cliente.
+export type PaymentWithPatient = Payment & {
+  patients?: { full_name: string | null } | { full_name: string | null }[] | null;
+};
+
 // Métodos de pago/caja soportados (transferencia retirada).
 export const PAYMENT_METHODS = ['efectivo', 'tarjeta'] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
@@ -377,6 +383,21 @@ export const financeApi = {
     const db = assertSupabase();
     const { error } = await db.from('expenses').delete().eq('id', id);
     if (error) throw error;
+  },
+
+  // Cobros recientes de pacientes (para mostrarlos como líneas en la caja).
+  // Incluye el nombre del paciente vía la relación payments → patients.
+  async listRecentPayments(limit = 100): Promise<PaymentWithPatient[]> {
+    const db = assertSupabase();
+    return unwrap(
+      await db
+        .from('payments')
+        .select('*, patients(full_name)')
+        .gt('amount', 0)
+        .order('paid_at', { ascending: false })
+        .order('created_at', { ascending: false })
+        .limit(limit)
+    );
   },
 
   // ---------- Movimientos manuales de caja ----------

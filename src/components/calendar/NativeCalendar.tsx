@@ -12,6 +12,10 @@ import {
   AppointmentChargeModal,
   type ChargeAppointmentTarget
 } from '../../features/finance/AppointmentChargeModal';
+import {
+  AppointmentCreateModal,
+  type NewAppointmentSlot
+} from '../../features/appointments/AppointmentCreateModal';
 import './NativeCalendar.css';
 
 // Formas minimas y estructurales de los argumentos que FullCalendar pasa a
@@ -33,6 +37,13 @@ interface CalendarEventChangeArg {
 // FullCalendar dispara `datesSet` cuando cambia el rango visible (navegar,
 // cambiar de vista). startStr/endStr cubren toda la rejilla visible.
 interface CalendarDatesSetArg {
+  startStr: string;
+  endStr: string;
+}
+
+// `select` se dispara al hacer click/arrastrar sobre un hueco libre del
+// calendario; lo usamos para agendar una cita nueva en ese horario.
+interface CalendarSelectArg {
   startStr: string;
   endStr: string;
 }
@@ -78,6 +89,7 @@ interface NativeCalendarProps {
 export function NativeCalendar({ onEventClick }: NativeCalendarProps) {
   const [syncing, setSyncing] = useState(false);
   const [chargeTarget, setChargeTarget] = useState<ChargeAppointmentTarget | null>(null);
+  const [newSlot, setNewSlot] = useState<NewAppointmentSlot | null>(null);
   // Rango de fechas visible en el calendario. Solo cargamos las citas de ese
   // rango (no las 2000+ históricas), así abrir la agenda es rápido y ligero.
   const [range, setRange] = useState<{ start: string; end: string } | null>(null);
@@ -236,6 +248,7 @@ export function NativeCalendar({ onEventClick }: NativeCalendarProps) {
           editable={true}
           selectable={true}
           selectMirror={true}
+          select={(arg: CalendarSelectArg) => setNewSlot({ start: arg.startStr, end: arg.endStr })}
           dayMaxEvents={true}
           weekends={true}
           eventClick={handleEventClick}
@@ -261,6 +274,8 @@ export function NativeCalendar({ onEventClick }: NativeCalendarProps) {
         onClose={() => setChargeTarget(null)}
         onViewPatient={onEventClick}
       />
+
+      <AppointmentCreateModal slot={newSlot} onClose={() => setNewSlot(null)} />
     </div>
   );
 }

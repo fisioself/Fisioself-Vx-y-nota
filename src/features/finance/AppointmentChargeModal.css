@@ -9,6 +9,16 @@
 }
 
 .charge-card {
+  /* El modal siempre usa fondo claro fijo; forzamos la paleta clara aquí para
+     que en modo oscuro el texto no quede casi blanco sobre fondo claro. */
+  --text-main: #12372a;
+  --bg-card: #fff;
+  --bg-sunken: #fffaf0;
+  --muted: #425e53;
+  --primary: #12372a;
+  --secondary: #dfece5;
+  --border: #eaebec;
+  color: var(--text-main);
   width: min(440px, 100%);
   max-height: min(820px, calc(100vh - 40px));
   overflow: auto;
@@ -59,6 +69,15 @@
   background: #fff;
 }
 
+.charge-pkg-info {
+  display: grid;
+  gap: 2px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: #eef4ff;
+  border: 1px solid rgba(63, 81, 181, 0.35);
+}
+
 .charge-note-section {
   border-top: 1px solid rgba(18, 55, 42, 0.12);
   padding-top: 14px;
@@ -74,4 +93,16 @@
   cursor: pointer;
   padding: 0;
   text-decoration: underline;
+}
+
+.charge-commission-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: #fff8e1;
+  border: 1px solid rgba(230, 124, 115, 0.4);
+  font-size: 0.85rem;
+  gap: 8px;
 }

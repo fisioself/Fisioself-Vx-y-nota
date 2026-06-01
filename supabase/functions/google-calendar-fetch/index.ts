@@ -233,11 +233,16 @@ const importConnection = async (
       .limit(1);
 
     if (existingAppt && existingAppt.length > 0) {
-      // En UPDATEs solo tocar metadatos de Google + color/tipo: NO reescribir los
-      // campos clínicos para no disparar el trigger de autosync en bucle.
+      // Actualizar fecha/hora, color, tipo y metadatos de Google.
+      // El trigger handle_appointment_autosync detecta cambios en starts_at/ends_at
+      // y hace un PATCH de vuelta a Google (no-op en tiempos), pero NO genera bucle
+      // porque el PATCH de vuelta solo toca sync_status/google_* (campos no monitoreados).
       await supabase
         .from('appointments')
         .update({
+          title: displayName,
+          starts_at: startsAt,
+          ends_at: endsAt,
           google_html_link: event.htmlLink as string | undefined,
           sync_status: 'synced',
           color_id: colorId,
