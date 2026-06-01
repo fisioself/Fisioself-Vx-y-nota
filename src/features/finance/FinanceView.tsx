@@ -673,29 +673,6 @@ export function FinanceView(_props: FinanceViewProps) {
             </div>
           </section>
 
-          {/* === Ticket promedio === */}
-          <section className="card">
-            <div className="form-header">
-              <div>
-                <p className="eyebrow">Promedios (todo el tiempo)</p>
-                <h2>Ticket promedio</h2>
-              </div>
-            </div>
-            <div
-              className="summary-grid"
-              style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', marginTop: 12 }}
-            >
-              <div className="card">
-                <span>Por sesión</span>
-                <strong>{money(summary?.ticket.perSession ?? 0)}</strong>
-              </div>
-              <div className="card">
-                <span>Por paciente</span>
-                <strong>{money(summary?.ticket.perPatient ?? 0)}</strong>
-              </div>
-            </div>
-          </section>
-
           {/* === Historial: ganancia neta por mes === */}
           <section className="card">
             <div className="form-header">

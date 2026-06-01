@@ -52,7 +52,6 @@ export interface GlobalFinanceSummary {
   last30d: PeriodSummary; // últimos 30 días
   monthly: MonthlyPoint[]; // historial mensual (neto y pacientes)
   caja: { total: number; byMethod: Record<string, number> }; // todo el tiempo
-  ticket: { perSession: number; perPatient: number }; // todo el tiempo
   growth: { income: number | null; patients: number | null }; // % mes en curso vs mes anterior
   topPatients: TopPatientRow[]; // por ingreso, todo el tiempo
   expensesByCategory: CategoryRow[];
@@ -345,13 +344,6 @@ export const financeApi = {
       cajaByMethod[m] = (cajaByMethod[m] ?? 0) + amt;
     }
 
-    // Ticket promedio (todo el tiempo)
-    const payingPatients = new Set(payments.map((p) => p.patient_id)).size;
-    const ticket = {
-      perSession: appt.totalSessions > 0 ? cajaTotal / appt.totalSessions : 0,
-      perPatient: payingPatients > 0 ? cajaTotal / payingPatients : 0
-    };
-
     // Crecimiento del mes en curso vs mes anterior
     const curM = monthly.find((m) => m.month === curMonthKey);
     const prevM = monthly.find((m) => m.month === prevMonthKey);
@@ -384,7 +376,6 @@ export const financeApi = {
       last30d,
       monthly,
       caja: { total: cajaTotal, byMethod: cajaByMethod },
-      ticket,
       growth,
       topPatients,
       expensesByCategory
