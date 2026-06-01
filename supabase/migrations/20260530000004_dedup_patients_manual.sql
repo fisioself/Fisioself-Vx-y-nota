@@ -1,5 +1,5 @@
 -- Manual dedup of the ambiguous short-name patients that were intentionally
--- left out of 20260530000001_dedup_patients.sql.  Clinic owner confirmed:
+-- left out of 20260530000003_dedup_patients.sql.  Clinic owner confirmed:
 --   • "Iker"        ≡ "Iker Juárez"          (same person)
 --   • "Iker Antonio" is a DIFFERENT person   (left untouched)
 --   • "Fernanda"     ≡ "Fernanda Rauch"      (same person)
