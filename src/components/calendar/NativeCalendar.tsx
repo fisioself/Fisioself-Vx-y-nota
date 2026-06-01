@@ -30,27 +30,38 @@ interface CalendarEventChangeArg {
   revert: () => void;
 }
 
-// Paleta sencilla y legible: tonos sólidos y oscuros que contrastan bien con
-// texto blanco. Sin verdes (chocan con el tema) ni amarillos (ilegibles).
+// Colores oficiales de Google Calendar (mismos hex que usa Google), para que
+// la agenda se vea idéntica a Google. Texto blanco para legibilidad.
 const colorMap: Record<string, string> = {
-  '1': '#3b6fb0', // Azul
-  '2': '#566573', // Gris azulado
-  '3': '#7d4ba0', // Morado (Valoración)
-  '4': '#b9542e', // Naranja quemado (Domicilio)
-  '5': '#a06a1b', // Ámbar oscuro (Descarga)
-  '6': '#b9542e', // Naranja quemado
-  '7': '#3b6fb0', // Azul
-  '8': '#5f6368', // Gris
-  '9': '#34507f', // Azul oscuro (Clínica)
-  '10': '#566573', // Gris azulado
-  '11': '#a83232' // Rojo
+  '1': '#7986cb', // Lavender
+  '2': '#33b679', // Sage
+  '3': '#8e24aa', // Grape (Morado - Valoración)
+  '4': '#e67c73', // Flamingo (Domicilio)
+  '5': '#f6bf26', // Banana (Descarga)
+  '6': '#f4511e', // Tangerine
+  '7': '#039be5', // Peacock
+  '8': '#616161', // Graphite
+  '9': '#3f51b5', // Blueberry (Clínica)
+  '10': '#0b8043', // Basil
+  '11': '#d50000' // Tomato
 };
 
-const DEFAULT_COLOR = '#34507f';
+const DEFAULT_COLOR = '#039be5'; // Peacock (azul Google por defecto)
 
 const resolveColor = (colorId?: string | null) => {
   if (!colorId) return DEFAULT_COLOR;
   return colorMap[colorId] || DEFAULT_COLOR;
+};
+
+// Texto oscuro sobre fondos claros (amarillo, lavanda) y blanco sobre oscuros,
+// igual que Google Calendar. Basado en la luminancia del color de fondo.
+const textColorFor = (hex: string): string => {
+  const c = hex.replace('#', '');
+  const r = parseInt(c.slice(0, 2), 16);
+  const g = parseInt(c.slice(2, 4), 16);
+  const b = parseInt(c.slice(4, 6), 16);
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.6 ? '#1b1b1b' : '#ffffff';
 };
 
 interface NativeCalendarProps {
@@ -136,18 +147,22 @@ export function NativeCalendar({ onEventClick }: NativeCalendarProps) {
   }, [syncWithGoogle]);
 
   const events = useMemo(() => {
-    return appointments.map((appt) => ({
-      id: appt.id,
-      title: appt.title,
-      start: appt.starts_at,
-      end: appt.ends_at,
-      backgroundColor: resolveColor(appt.color_id),
-      borderColor: resolveColor(appt.color_id),
-      extendedProps: {
-        patientId: appt.patient_id,
-        sessionType: appt.session_type
-      }
-    }));
+    return appointments.map((appt) => {
+      const bg = resolveColor(appt.color_id);
+      return {
+        id: appt.id,
+        title: appt.title,
+        start: appt.starts_at,
+        end: appt.ends_at,
+        backgroundColor: bg,
+        borderColor: bg,
+        textColor: textColorFor(bg),
+        extendedProps: {
+          patientId: appt.patient_id,
+          sessionType: appt.session_type
+        }
+      };
+    });
   }, [appointments]);
 
   const handleEventClick = (clickInfo: CalendarEventClickArg) => {
@@ -221,7 +236,6 @@ export function NativeCalendar({ onEventClick }: NativeCalendarProps) {
             eventClick={handleEventClick}
             eventDrop={handleEventDrop}
             eventResize={handleEventDrop} // Same logic for resize
-            eventTextColor="#ffffff"
             height="auto"
             slotMinTime="08:00:00"
             slotMaxTime="20:00:00"
