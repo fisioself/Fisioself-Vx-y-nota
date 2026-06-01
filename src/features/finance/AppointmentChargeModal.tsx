@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { financeApi, PAYMENT_METHODS, type PaymentMethod } from '../../services/financeApi';
+import { clinicalApi } from '../../services/clinicalApi';
 import { useToast } from '../../app/ToastProvider';
 import { getErrorMessage } from '../../shared/errors';
 import './AppointmentChargeModal.css';
@@ -55,6 +56,21 @@ export function AppointmentChargeModal({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
+  // Asignar paquete nuevo desde la agenda
+  const [showAssign, setShowAssign] = useState(false);
+  const [assignPkgId, setAssignPkgId] = useState('');
+  const [assignAmount, setAssignAmount] = useState('');
+  const [assignInitPay, setAssignInitPay] = useState('');
+  const [assignInitMethod, setAssignInitMethod] = useState<PaymentMethod>('efectivo');
+  const [assigning, setAssigning] = useState(false);
+
+  // Nota de sesión desde la agenda
+  const [showNote, setShowNote] = useState(false);
+  const [noteText, setNoteText] = useState('');
+  const [noteEva, setNoteEva] = useState('');
+  const [savingNote, setSavingNote] = useState(false);
+  const [noteSaved, setNoteSaved] = useState(false);
+
   const apptId = appointment?.id ?? '';
   const patientId = appointment?.patientId ?? '';
 
@@ -81,6 +97,36 @@ export function AppointmentChargeModal({
     queryFn: () => financeApi.getPatientSessionCount(patientId, appointment?.startsAt),
     enabled: !!patientId && !!appointment
   });
+
+  const { data: catalog = [] } = useQuery({
+    queryKey: ['packages-catalog'],
+    queryFn: () => financeApi.listPackages(),
+    enabled: !!appointment
+  });
+
+  const { data: nextNoteNum = 1 } = useQuery({
+    queryKey: ['next-session-number', patientId],
+    queryFn: () => clinicalApi.getNextSessionNumber(patientId),
+    enabled: !!patientId && showNote
+  });
+
+  // Al cambiar de cita, limpia el formulario para no arrastrar datos previos.
+  useEffect(() => {
+    setMode('suelta');
+    setAmount('');
+    setMethod('efectivo');
+    setPackageId('');
+    setAbonoAmount('');
+    setError('');
+    setShowAssign(false);
+    setAssignPkgId('');
+    setAssignAmount('');
+    setAssignInitPay('');
+    setShowNote(false);
+    setNoteText('');
+    setNoteEva('');
+    setNoteSaved(false);
+  }, [apptId]);
 
   // Prefill del monto sugerido y selección del primer paquete disponible.
   useEffect(() => {
@@ -150,6 +196,80 @@ export function AppointmentChargeModal({
       setError(getErrorMessage(err, 'No se pudo eliminar el cobro.'));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const chosenCatalog = catalog.find((c) => c.id === assignPkgId);
+
+  const assignPackage = async () => {
+    setError('');
+    if (!chosenCatalog) {
+      setError('Selecciona un paquete del catálogo.');
+      return;
+    }
+    const totalAmount = assignAmount !== '' ? Number(assignAmount) : Number(chosenCatalog.price);
+    const initAmt = assignInitPay !== '' ? Number(assignInitPay) : 0;
+    setAssigning(true);
+    try {
+      const created = await financeApi.addPatientPackage({
+        patientId,
+        packageId: chosenCatalog.id,
+        name: chosenCatalog.name,
+        totalAmount,
+        sessionsTotal: chosenCatalog.sessions_included
+      });
+      if (initAmt > 0) {
+        await financeApi.addPayment({
+          patientId,
+          patientPackageId: created.id,
+          amount: initAmt,
+          method: assignInitMethod
+        });
+      }
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['active-packages', patientId] }),
+        queryClient.invalidateQueries({ queryKey: ['patient-finance', patientId] }),
+        queryClient.invalidateQueries({ queryKey: ['finance-global'] })
+      ]);
+      setAssignPkgId('');
+      setAssignAmount('');
+      setAssignInitPay('');
+      setShowAssign(false);
+      setMode('paquete');
+      notify({ tone: 'success', message: 'Paquete asignado al paciente.' });
+    } catch (err) {
+      setError(getErrorMessage(err, 'No se pudo asignar el paquete.'));
+    } finally {
+      setAssigning(false);
+    }
+  };
+
+  const saveNote = async () => {
+    setError('');
+    if (!noteText.trim()) {
+      setError('Escribe el contenido de la nota.');
+      return;
+    }
+    setSavingNote(true);
+    try {
+      const evaVal = noteEva !== '' ? Number(noteEva) : null;
+      await clinicalApi.addSessionNote({
+        patient_id: patientId,
+        session_number: nextNoteNum,
+        session_date: appointment.startsAt ?? new Date().toISOString(),
+        raw_text: noteText.trim(),
+        eva: evaVal
+      });
+      await queryClient.invalidateQueries({ queryKey: ['next-session-number', patientId] });
+      setNoteText('');
+      setNoteEva('');
+      setNoteSaved(true);
+      setShowNote(false);
+      notify({ tone: 'success', message: `Nota de sesión #${nextNoteNum} guardada.` });
+    } catch (err) {
+      setError(getErrorMessage(err, 'No se pudo guardar la nota.'));
+    } finally {
+      setSavingNote(false);
     }
   };
 
@@ -229,10 +349,84 @@ export function AppointmentChargeModal({
                 Con paquete
               </button>
             </div>
-            {packages.length === 0 && (
-              <p className="muted" style={{ fontSize: '0.8rem', margin: '4px 0 0' }}>
-                Sin paquetes activos — ve al expediente del paciente para asignarle uno.
-              </p>
+            {!showAssign ? (
+              <button
+                type="button"
+                className="link-button"
+                style={{ fontSize: '0.82rem', margin: '2px 0 0', alignSelf: 'flex-start' }}
+                onClick={() => setShowAssign(true)}
+              >
+                {packages.length === 0
+                  ? '+ Asignar un paquete a este paciente'
+                  : '+ Asignar otro paquete'}
+              </button>
+            ) : (
+              <div className="charge-subform">
+                <p className="eyebrow" style={{ margin: 0 }}>
+                  Nuevo paquete
+                </p>
+                <label>
+                  Paquete del catálogo
+                  <select value={assignPkgId} onChange={(e) => setAssignPkgId(e.target.value)}>
+                    <option value="">— Elegir —</option>
+                    {catalog.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name} ({money(Number(c.price))} · {c.sessions_included} ses.)
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Precio total
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={assignAmount}
+                    onChange={(e) => setAssignAmount(e.target.value)}
+                    placeholder={chosenCatalog ? String(chosenCatalog.price) : 'Precio'}
+                  />
+                </label>
+                <label>
+                  Pago inicial (opcional)
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={assignInitPay}
+                    onChange={(e) => setAssignInitPay(e.target.value)}
+                    placeholder="Dejar vacío = queda pendiente"
+                  />
+                </label>
+                {assignInitPay && Number(assignInitPay) > 0 && (
+                  <label>
+                    Método del pago inicial
+                    <select
+                      value={assignInitMethod}
+                      onChange={(e) => setAssignInitMethod(e.target.value as PaymentMethod)}
+                    >
+                      {PAYMENT_METHODS.map((m) => (
+                        <option key={m} value={m}>
+                          {m.charAt(0).toUpperCase() + m.slice(1)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+                <div className="actions" style={{ gap: 8 }}>
+                  <button type="button" onClick={assignPackage} disabled={assigning}>
+                    {assigning ? 'Asignando...' : 'Asignar paquete'}
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={() => setShowAssign(false)}
+                    disabled={assigning}
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
             )}
 
             {mode === 'suelta' ? (
@@ -314,6 +508,67 @@ export function AppointmentChargeModal({
             </div>
           </>
         )}
+
+        {/* Nota de sesión rápida (disponible aunque ya esté cobrada) */}
+        <div className="charge-note-section">
+          {!showNote ? (
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => {
+                setShowNote(true);
+                setError('');
+              }}
+            >
+              {noteSaved ? '✓ Nota guardada · escribir otra' : '+ Nota de sesión'}
+            </button>
+          ) : (
+            <div className="charge-subform">
+              <p className="eyebrow" style={{ margin: 0 }}>
+                Nota de sesión #{nextNoteNum}
+              </p>
+              <label>
+                ¿Qué se trabajó en la sesión?
+                <textarea
+                  rows={4}
+                  value={noteText}
+                  onChange={(e) => setNoteText(e.target.value)}
+                  placeholder="Evolución, técnicas aplicadas, indicaciones…"
+                />
+              </label>
+              <label>
+                Dolor EVA (0-10, opcional)
+                <input
+                  type="number"
+                  min="0"
+                  max="10"
+                  step="1"
+                  value={noteEva}
+                  onChange={(e) => setNoteEva(e.target.value)}
+                  placeholder="Ej. 4"
+                />
+              </label>
+              {error && (
+                <p className="error" role="alert">
+                  {error}
+                </p>
+              )}
+              <div className="actions" style={{ gap: 8 }}>
+                <button type="button" onClick={saveNote} disabled={savingNote}>
+                  {savingNote ? 'Guardando...' : 'Guardar nota'}
+                </button>
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={() => setShowNote(false)}
+                  disabled={savingNote}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
 
         {onViewPatient && (
           <button

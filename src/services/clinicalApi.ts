@@ -136,6 +136,21 @@ export const clinicalApi = {
     );
   },
 
+  // Próximo número de sesión para un paciente (max + 1). Liviano: solo lee la
+  // columna session_number. Usado por el cobro desde la agenda.
+  async getNextSessionNumber(patientId: string): Promise<number> {
+    const db = assertSupabase();
+    const { data, error } = await db
+      .from('session_notes')
+      .select('session_number')
+      .eq('patient_id', patientId)
+      .order('session_number', { ascending: false })
+      .limit(1);
+    if (error) throw error;
+    const max = data && data.length ? Number(data[0].session_number) : 0;
+    return (Number.isFinite(max) ? max : 0) + 1;
+  },
+
   async addSessionNote(payload: Partial<SessionNote>): Promise<SessionNote> {
     const db = assertSupabase();
     const response = await db
