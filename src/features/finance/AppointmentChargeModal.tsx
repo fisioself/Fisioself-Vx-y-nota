@@ -249,6 +249,34 @@ export function AppointmentChargeModal({
     }
   };
 
+  // Borrar un paquete asignado por error (con su abono inicial y registros).
+  const deletePackage = async (patientPackageId: string, name: string) => {
+    if (
+      !window.confirm(
+        `¿Eliminar el paquete "${name}"? Se borrará también lo abonado a este paquete. Esta acción no se puede deshacer.`
+      )
+    ) {
+      return;
+    }
+    setSaving(true);
+    setError('');
+    try {
+      await financeApi.deletePatientPackageFully(patientPackageId);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['appt-charge', apptId] }),
+        queryClient.invalidateQueries({ queryKey: ['active-packages', patientId] }),
+        queryClient.invalidateQueries({ queryKey: ['finance-global'] }),
+        queryClient.invalidateQueries({ queryKey: ['caja-payments'] }),
+        queryClient.invalidateQueries({ queryKey: ['patient-finance', patientId] })
+      ]);
+      notify({ tone: 'success', message: 'Paquete eliminado.' });
+    } catch (err) {
+      setError(getErrorMessage(err, 'No se pudo eliminar el paquete.'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const chosenCatalog = catalog.find((c) => c.id === assignPkgId);
 
   const assignPackage = async () => {
@@ -359,7 +387,18 @@ export function AppointmentChargeModal({
 
         {packageInfos.map((pkg) => (
           <div className="charge-pkg-info" key={pkg.id}>
-            <strong>{pkg.name}</strong>
+            <div className="charge-pkg-head">
+              <strong>{pkg.name}</strong>
+              <button
+                type="button"
+                className="charge-pkg-delete"
+                onClick={() => deletePackage(pkg.id, pkg.name)}
+                disabled={saving}
+                title="Eliminar este paquete (si lo asignaste por error)"
+              >
+                Eliminar
+              </button>
+            </div>
             <span>
               Sesiones {pkg.usedSessions}/{pkg.totalSessions} ·{' '}
               {pkg.totalSessions - pkg.usedSessions} por tomar

@@ -78,6 +78,30 @@
   border: 1px solid rgba(63, 81, 181, 0.35);
 }
 
+.charge-pkg-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.charge-pkg-delete {
+  background: none;
+  border: 1px solid rgba(180, 35, 24, 0.5);
+  color: #b42318;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  flex: none;
+}
+
+.charge-pkg-delete:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 .charge-note-section {
   border-top: 1px solid rgba(18, 55, 42, 0.12);
   padding-top: 14px;

@@ -183,6 +183,20 @@ export const financeApi = {
     if (error) throw error;
   },
 
+  // Borra un paquete del paciente JUNTO con los pagos ligados a él (abono inicial
+  // y registros de sesión). Útil para deshacer un paquete asignado por error,
+  // sin dejar pagos sueltos colgando en la caja.
+  async deletePatientPackageFully(patientPackageId: string): Promise<void> {
+    const db = assertSupabase();
+    const { error: payErr } = await db
+      .from('payments')
+      .delete()
+      .eq('patient_package_id', patientPackageId);
+    if (payErr) throw payErr;
+    const { error } = await db.from('patient_packages').delete().eq('id', patientPackageId);
+    if (error) throw error;
+  },
+
   async addPayment(input: {
     patientId: string;
     patientPackageId?: string | null;
