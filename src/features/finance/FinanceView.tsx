@@ -12,7 +12,20 @@ const money = (n: number) =>
     maximumFractionDigits: 0
   }).format(Number.isFinite(n) ? n : 0);
 
-const MONTH_ABBR = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+const MONTH_ABBR = [
+  'Ene',
+  'Feb',
+  'Mar',
+  'Abr',
+  'May',
+  'Jun',
+  'Jul',
+  'Ago',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dic'
+];
 const monthLabel = (ym: string) => {
   const [, m] = ym.split('-');
   return MONTH_ABBR[Number(m) - 1] ?? ym;
@@ -52,19 +65,48 @@ function BarChart({
   }
 
   return (
-    <div style={{ display: 'flex', alignItems: 'stretch', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'stretch',
+        gap: 8,
+        overflowX: 'auto',
+        paddingBottom: 4
+      }}
+    >
       {data.map((d) => {
         const pos = d.value >= 0;
         const h = (Math.abs(d.value) / maxAbs) * zeroBand;
         return (
           <div
             key={d.month}
-            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 34, flex: 1 }}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              minWidth: 34,
+              flex: 1
+            }}
             title={`${monthLabel(d.month)}: ${format(d.value)}`}
           >
-            <div style={{ position: 'relative', height: H, width: 16, display: 'flex', flexDirection: 'column' }}>
+            <div
+              style={{
+                position: 'relative',
+                height: H,
+                width: 16,
+                display: 'flex',
+                flexDirection: 'column'
+              }}
+            >
               {/* zona superior (positivos) */}
-              <div style={{ flex: hasNeg ? 1 : 'none', height: hasNeg ? undefined : H, display: 'flex', alignItems: 'flex-end' }}>
+              <div
+                style={{
+                  flex: hasNeg ? 1 : 'none',
+                  height: hasNeg ? undefined : H,
+                  display: 'flex',
+                  alignItems: 'flex-end'
+                }}
+              >
                 {pos && (
                   <div
                     style={{
@@ -128,17 +170,34 @@ function GroupedBarChart({
       {/* leyenda */}
       <div style={{ display: 'flex', gap: 16, marginBottom: 10, flexWrap: 'wrap' }}>
         {[seriesA, seriesB].map((s) => (
-          <span key={s.label} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8rem' }}>
+          <span
+            key={s.label}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8rem' }}
+          >
             <span style={{ width: 12, height: 12, borderRadius: 3, background: s.color }} />
             {s.label}
           </span>
         ))}
       </div>
-      <div style={{ display: 'flex', alignItems: 'stretch', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'stretch',
+          gap: 8,
+          overflowX: 'auto',
+          paddingBottom: 4
+        }}
+      >
         {data.map((d) => (
           <div
             key={d.month}
-            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 38, flex: 1 }}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              minWidth: 38,
+              flex: 1
+            }}
             title={`${monthLabel(d.month)}: ${seriesA.label} ${d.a} · ${seriesB.label} ${d.b}`}
           >
             <div style={{ height: H, display: 'flex', alignItems: 'flex-end', gap: 3 }}>
@@ -252,8 +311,19 @@ function ExpensesPanel() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 10, marginTop: 12 }}>
-        <select value={category} onChange={(e) => setCategory(e.target.value)} aria-label="Categoría">
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+          gap: 10,
+          marginTop: 12
+        }}
+      >
+        <select
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+          aria-label="Categoría"
+        >
           {EXPENSE_CATEGORIES.map((c) => (
             <option key={c} value={c}>
               {c.charAt(0).toUpperCase() + c.slice(1)}
@@ -284,17 +354,29 @@ function ExpensesPanel() {
           <li
             key={e.id}
             className="note-row"
-            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: 10
+            }}
           >
             <div>
-              <strong style={{ display: 'block', textTransform: 'capitalize' }}>{e.category}</strong>
+              <strong style={{ display: 'block', textTransform: 'capitalize' }}>
+                {e.category}
+              </strong>
               <span className="muted" style={{ fontSize: '0.85rem' }}>
                 {e.description || 'Sin descripción'} · {e.spent_at}
               </span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <strong style={{ color: '#c0392b' }}>-{money(Number(e.amount))}</strong>
-              <button type="button" className="secondary" onClick={() => remove(e.id)} title="Eliminar">
+              <button
+                type="button"
+                className="secondary"
+                onClick={() => remove(e.id)}
+                title="Eliminar"
+              >
                 ✕
               </button>
             </div>
@@ -450,8 +532,19 @@ function PatientFinancePanel({ patient }: { patient: Patient }) {
       {/* Agregar servicio/paquete */}
       <div style={{ marginTop: 16 }}>
         <p className="eyebrow">Agregar servicio o paquete</p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10, marginTop: 8 }}>
-          <select value={selectedPkg} onChange={(e) => setSelectedPkg(e.target.value)} aria-label="Servicio">
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+            gap: 10,
+            marginTop: 8
+          }}
+        >
+          <select
+            value={selectedPkg}
+            onChange={(e) => setSelectedPkg(e.target.value)}
+            aria-label="Servicio"
+          >
             <option value="">— Elegir —</option>
             {catalog.map((c) => (
               <option key={c.id} value={c.id}>
@@ -469,12 +562,20 @@ function PatientFinancePanel({ patient }: { patient: Patient }) {
           <input
             type="number"
             inputMode="decimal"
-            placeholder={chosen ? `Pago inicial (máx ${money(customAmount !== '' ? Number(customAmount) : Number(chosen?.price ?? 0))})` : 'Pago inicial $'}
+            placeholder={
+              chosen
+                ? `Pago inicial (máx ${money(customAmount !== '' ? Number(customAmount) : Number(chosen?.price ?? 0))})`
+                : 'Pago inicial $'
+            }
             value={initPayAmount}
             onChange={(e) => setInitPayAmount(e.target.value)}
             title="Cuánto paga ahora. Dejar vacío = paga el total. 0 = queda pendiente."
           />
-          <select value={initPayMethod} onChange={(e) => setInitPayMethod(e.target.value)} aria-label="Método pago inicial">
+          <select
+            value={initPayMethod}
+            onChange={(e) => setInitPayMethod(e.target.value)}
+            aria-label="Método pago inicial"
+          >
             <option value="efectivo">Efectivo</option>
             <option value="tarjeta">Tarjeta</option>
           </select>
@@ -487,7 +588,16 @@ function PatientFinancePanel({ patient }: { patient: Patient }) {
       {/* Lista de paquetes con control de sesiones */}
       <ul className="list-stack" style={{ marginTop: 16, listStyle: 'none', padding: 0 }}>
         {(finance?.packages ?? []).map((p) => (
-          <li key={p.id} className="note-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
+          <li
+            key={p.id}
+            className="note-row"
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: 10
+            }}
+          >
             <div>
               <strong style={{ display: 'block' }}>{p.name}</strong>
               <span className="muted" style={{ fontSize: '0.85rem' }}>
@@ -520,7 +630,12 @@ function PatientFinancePanel({ patient }: { patient: Patient }) {
                   </button>
                 </span>
               )}
-              <button type="button" className="secondary" onClick={() => removePackage(p.id)} title="Eliminar">
+              <button
+                type="button"
+                className="secondary"
+                onClick={() => removePackage(p.id)}
+                title="Eliminar"
+              >
                 ✕
               </button>
             </div>
@@ -532,7 +647,9 @@ function PatientFinancePanel({ patient }: { patient: Patient }) {
       </ul>
 
       {/* Registrar abono suelto */}
-      <div style={{ marginTop: 12, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+      <div
+        style={{ marginTop: 12, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}
+      >
         <input
           type="number"
           inputMode="decimal"
@@ -541,7 +658,11 @@ function PatientFinancePanel({ patient }: { patient: Patient }) {
           onChange={(e) => setPayAmount(e.target.value)}
           style={{ maxWidth: 120 }}
         />
-        <select value={payMethod} onChange={(e) => setPayMethod(e.target.value)} style={{ maxWidth: 150 }}>
+        <select
+          value={payMethod}
+          onChange={(e) => setPayMethod(e.target.value)}
+          style={{ maxWidth: 150 }}
+        >
           <option value="efectivo">Efectivo</option>
           <option value="tarjeta">Tarjeta</option>
         </select>
@@ -639,8 +760,19 @@ function CajaPanel({ caja }: { caja?: { total: number; byMethod: Record<string, 
       {/* Ajuste manual de caja */}
       <div style={{ marginTop: 16 }}>
         <p className="eyebrow">Ajustar caja manualmente</p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 10, marginTop: 8 }}>
-          <select value={direction} onChange={(e) => setDirection(e.target.value as 'in' | 'out')} aria-label="Tipo de movimiento">
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+            gap: 10,
+            marginTop: 8
+          }}
+        >
+          <select
+            value={direction}
+            onChange={(e) => setDirection(e.target.value as 'in' | 'out')}
+            aria-label="Tipo de movimiento"
+          >
             <option value="in">Entrada (+)</option>
             <option value="out">Salida (−)</option>
           </select>
@@ -677,11 +809,21 @@ function CajaPanel({ caja }: { caja?: { total: number; byMethod: Record<string, 
             <li
               key={m.id}
               className="note-row"
-              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: 10
+              }}
             >
               <div>
-                <strong style={{ display: 'block' }}>{m.description || (positive ? 'Entrada' : 'Salida')}</strong>
-                <span className="muted" style={{ fontSize: '0.85rem', textTransform: 'capitalize' }}>
+                <strong style={{ display: 'block' }}>
+                  {m.description || (positive ? 'Entrada' : 'Salida')}
+                </strong>
+                <span
+                  className="muted"
+                  style={{ fontSize: '0.85rem', textTransform: 'capitalize' }}
+                >
                   {m.method} · {m.occurred_at}
                 </span>
               </div>
@@ -690,7 +832,12 @@ function CajaPanel({ caja }: { caja?: { total: number; byMethod: Record<string, 
                   {positive ? '+' : '−'}
                   {money(Math.abs(amt))}
                 </strong>
-                <button type="button" className="secondary" onClick={() => remove(m.id)} title="Eliminar">
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={() => remove(m.id)}
+                  title="Eliminar"
+                >
                   ✕
                 </button>
               </div>
@@ -924,13 +1071,20 @@ export function FinanceView(_props: FinanceViewProps) {
                 <li
                   key={t.patientId}
                   className="note-row"
-                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    gap: 10
+                  }}
                 >
                   <button
                     type="button"
                     className="secondary"
                     style={{ textAlign: 'left', flex: 1 }}
-                    onClick={() => setSelectedPatient({ id: t.patientId, full_name: t.fullName } as Patient)}
+                    onClick={() =>
+                      setSelectedPatient({ id: t.patientId, full_name: t.fullName } as Patient)
+                    }
                   >
                     <span style={{ opacity: 0.6, marginRight: 6 }}>{i + 1}.</span>
                     {t.fullName}
@@ -958,9 +1112,21 @@ export function FinanceView(_props: FinanceViewProps) {
                   <li
                     key={c.category}
                     className="note-row"
-                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      gap: 10
+                    }}
                   >
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 8, textTransform: 'capitalize' }}>
+                    <span
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        textTransform: 'capitalize'
+                      }}
+                    >
                       <span
                         style={{
                           width: 12,

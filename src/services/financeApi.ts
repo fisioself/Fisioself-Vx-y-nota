@@ -240,7 +240,7 @@ export const financeApi = {
     patientId: string;
     usePackage: boolean;
     patientPackageId?: string | null;
-    amount?: number;        // sesión suelta: monto cobrado; con paquete: abono parcial (0 = sin abono ahora)
+    amount?: number; // sesión suelta: monto cobrado; con paquete: abono parcial (0 = sin abono ahora)
     method?: PaymentMethod;
     paidAt?: string;
     notes?: string;
@@ -440,7 +440,10 @@ export const financeApi = {
       db.from('patients').select('id, full_name'),
       db.from('caja_movements').select('amount, method')
     ]);
-    const payments = unwrap<Array<{ amount: number; paid_at: string; patient_id: string; method: string }>>(payRes);
+    const payments =
+      unwrap<Array<{ amount: number; paid_at: string; patient_id: string; method: string }>>(
+        payRes
+      );
     const expenses = unwrap<Array<{ amount: number; spent_at: string; category: string }>>(expRes);
     const patients = unwrap<Array<{ id: string; full_name: string }>>(patRes);
     const cajaMovements = unwrap<Array<{ amount: number; method: string }>>(cajaRes);
@@ -552,16 +555,26 @@ export const financeApi = {
     // Top pacientes por ingreso (todo el tiempo)
     const paidByPatient = new Map<string, number>();
     for (const p of payments)
-      paidByPatient.set(p.patient_id, (paidByPatient.get(p.patient_id) ?? 0) + Number(p.amount ?? 0));
+      paidByPatient.set(
+        p.patient_id,
+        (paidByPatient.get(p.patient_id) ?? 0) + Number(p.amount ?? 0)
+      );
     const topPatients: TopPatientRow[] = Array.from(paidByPatient.entries())
-      .map(([patientId, paid]) => ({ patientId, fullName: nameById.get(patientId) ?? 'Paciente', paid }))
+      .map(([patientId, paid]) => ({
+        patientId,
+        fullName: nameById.get(patientId) ?? 'Paciente',
+        paid
+      }))
       .sort((a, b) => b.paid - a.paid)
       .slice(0, 8);
 
     // Gastos por categoría
     const byCat = new Map<string, number>();
     for (const e of expenses)
-      byCat.set(e.category ?? 'otro', (byCat.get(e.category ?? 'otro') ?? 0) + Number(e.amount ?? 0));
+      byCat.set(
+        e.category ?? 'otro',
+        (byCat.get(e.category ?? 'otro') ?? 0) + Number(e.amount ?? 0)
+      );
     const expensesByCategory: CategoryRow[] = Array.from(byCat.entries())
       .map(([category, amount]) => ({ category, amount }))
       .sort((a, b) => b.amount - a.amount);

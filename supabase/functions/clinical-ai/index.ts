@@ -172,7 +172,7 @@ Deno.serve(async (req) => {
       ...buildCorsHeaders(req),
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive'
+      Connection: 'keep-alive'
     });
 
     const sseChunk = `data: ${JSON.stringify({ type: 'content_block_delta', delta: { text: content } })}\n\n`;
