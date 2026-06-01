@@ -1,40 +1,52 @@
 -- Función agregadora de estadísticas de citas para el panel de Finanzas.
 -- Evita traer todas las filas al frontend; agrega en DB y retorna JSONB.
 --
--- Reglas de negocio (confirmadas contra el calendario real):
---   * Valoración (primera visita)  = color_id = '9'  (morado/Blueberry en Google).
---     La duración varía (normalmente 30 min, a veces 60), por eso el color manda.
---   * Sesión normal / tratamiento  = cualquier cita que NO sea valoración.
---   * Paciente nuevo (convertido)  = tuvo una valoración Y además al menos una
---     sesión normal -> "se quedó". Se cuenta en el mes de su valoración.
+-- Mapa de colores de Google (confirmado contra el calendario real):
+--   Valoración (primera visita): color_id 9 (morado) y 1 (lavanda).
+--   No se cobran / se excluyen:   color_id 8 (gris, cortesías), 2 (verde salvia)
+--                                 y 10 (verde albahaca, eventos/notas).
+--   Sesión cobrada (todo lo demás): sin color, 7 (azul claro), 11 (rojo),
+--                                 4 (rosa, dermatofuncional), 5 (descarga),
+--                                 6 (domicilio).
+--
+-- "valoraciones" por mes = nº de citas valoración (incluye re-valoraciones).
+-- "newPatients"  por mes = pacientes nuevos: su PRIMERA cita fue valoración
+--   y además tomaron al menos una sesión cobrada ("se quedaron").
+--
+-- Nota SQL: color_id IN (...) devuelve NULL para citas sin color, por eso se
+-- usa coalesce(color_id,'') para que la prueba sea TRUE/FALSE y nunca NULL.
 CREATE OR REPLACE FUNCTION public.finance_appt_stats(p_months_back int DEFAULT 12)
 RETURNS jsonb
 LANGUAGE sql
 STABLE
 SECURITY INVOKER
 AS $$
-  WITH a AS (
+  -- Citas que cuentan (excluye cortesías/verde/eventos sin cobro).
+  WITH base AS (
     SELECT
       patient_id,
       starts_at,
-      (color_id = '9')             AS is_val,
-      (color_id IS DISTINCT FROM '9') AS is_sesion
+      (coalesce(color_id, '') IN ('9','1')) AS is_val
     FROM public.appointments
     WHERE patient_id IS NOT NULL
+      AND coalesce(color_id, 'x') NOT IN ('8','2','10')
   ),
-  -- Primera valoración (morada) de cada paciente.
-  val AS (
-    SELECT patient_id, min(starts_at) AS first_val
-    FROM a
-    WHERE is_val
-    GROUP BY patient_id
+  -- Primera cita de cada paciente y si esa primera fue valoración.
+  first_appt AS (
+    SELECT DISTINCT ON (patient_id)
+           patient_id,
+           starts_at AS first_at,
+           is_val    AS first_is_val
+    FROM base
+    ORDER BY patient_id, starts_at
   ),
-  -- Convertidos: valorados que además tienen una sesión normal.
+  -- Nuevos: su primera cita fue valoración y además tomaron una sesión cobrada.
   conv AS (
-    SELECT v.patient_id,
-           to_char(date_trunc('month', v.first_val), 'YYYY-MM') AS month
-    FROM val v
-    WHERE EXISTS (SELECT 1 FROM a s WHERE s.patient_id = v.patient_id AND s.is_sesion)
+    SELECT f.patient_id,
+           to_char(date_trunc('month', f.first_at), 'YYYY-MM') AS month
+    FROM first_appt f
+    WHERE f.first_is_val
+      AND EXISTS (SELECT 1 FROM base s WHERE s.patient_id = f.patient_id AND NOT s.is_val)
   ),
   new_by_month AS (
     SELECT month, count(*)::int AS new_patients
@@ -44,7 +56,7 @@ AS $$
   val_by_month AS (
     SELECT to_char(date_trunc('month', starts_at), 'YYYY-MM') AS month,
            count(*)::int AS valoraciones
-    FROM a
+    FROM base
     WHERE is_val
     GROUP BY 1
   ),
@@ -53,7 +65,7 @@ AS $$
       to_char(date_trunc('month', starts_at), 'YYYY-MM') AS month,
       count(DISTINCT patient_id)::int AS patients,
       count(*)::int                   AS sessions
-    FROM public.appointments
+    FROM base
     WHERE starts_at >= date_trunc('month', now())
                        - make_interval(months => greatest(p_months_back - 1, 0))
       AND starts_at <  date_trunc('month', now()) + interval '1 month'
@@ -63,7 +75,7 @@ AS $$
     SELECT
       count(DISTINCT patient_id)::int AS patients,
       count(*)::int                   AS sessions
-    FROM public.appointments
+    FROM base
     WHERE starts_at >= date_trunc('month', now())
       AND starts_at <  date_trunc('month', now()) + interval '1 month'
   ),
@@ -71,12 +83,12 @@ AS $$
     SELECT
       count(DISTINCT patient_id)::int AS patients,
       count(*)::int                   AS sessions
-    FROM public.appointments
+    FROM base
     WHERE starts_at >= now() - interval '30 days'
       AND starts_at <  now() + interval '1 day'
   ),
   tot AS (
-    SELECT count(*)::int AS sessions FROM public.appointments
+    SELECT count(*)::int AS sessions FROM base
   )
   SELECT jsonb_build_object(
     'monthly',       coalesce(
