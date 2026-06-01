@@ -185,6 +185,7 @@ export function AppointmentChargeModal({
         queryClient.invalidateQueries({ queryKey: ['appt-charge', apptId] }),
         queryClient.invalidateQueries({ queryKey: ['active-packages', patientId] }),
         queryClient.invalidateQueries({ queryKey: ['finance-global'] }),
+        queryClient.invalidateQueries({ queryKey: ['caja-payments'] }),
         queryClient.invalidateQueries({ queryKey: ['patient-finance', patientId] })
       ]);
       notify({ tone: 'success', message: 'Cobro registrado.' });
@@ -214,6 +215,7 @@ export function AppointmentChargeModal({
         queryClient.invalidateQueries({ queryKey: ['appt-charge', apptId] }),
         queryClient.invalidateQueries({ queryKey: ['active-packages', patientId] }),
         queryClient.invalidateQueries({ queryKey: ['finance-global'] }),
+        queryClient.invalidateQueries({ queryKey: ['caja-payments'] }),
         queryClient.invalidateQueries({ queryKey: ['patient-finance', patientId] })
       ]);
       notify({ tone: 'success', message: 'Cobro eliminado.' });
@@ -255,7 +257,8 @@ export function AppointmentChargeModal({
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['active-packages', patientId] }),
         queryClient.invalidateQueries({ queryKey: ['patient-finance', patientId] }),
-        queryClient.invalidateQueries({ queryKey: ['finance-global'] })
+        queryClient.invalidateQueries({ queryKey: ['finance-global'] }),
+        queryClient.invalidateQueries({ queryKey: ['caja-payments'] })
       ]);
       setAssignPkgId('');
       setAssignAmount('');

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { financeApi } from '../../services/financeApi';
+import { financeApi, type Payment } from '../../services/financeApi';
 import { clinicalApi } from '../../services/clinicalApi';
 import { useToast } from '../../app/ToastProvider';
 import type { Patient } from '../../types/clinical';
@@ -418,6 +418,7 @@ function PatientFinancePanel({ patient }: { patient: Patient }) {
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ['patient-finance', patient.id] });
     queryClient.invalidateQueries({ queryKey: ['finance-global'] });
+    queryClient.invalidateQueries({ queryKey: ['caja-payments'] });
   };
 
   const chosen = catalog.find((c) => c.id === selectedPkg);
@@ -702,10 +703,53 @@ function CajaPanel({ caja }: { caja?: { total: number; byMethod: Record<string, 
     queryFn: () => financeApi.listCajaMovements()
   });
 
+  const { data: payments = [] } = useQuery({
+    queryKey: ['caja-payments'],
+    queryFn: () => financeApi.listRecentPayments()
+  });
+
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ['caja-movements'] });
+    queryClient.invalidateQueries({ queryKey: ['caja-payments'] });
     queryClient.invalidateQueries({ queryKey: ['finance-global'] });
+    queryClient.invalidateQueries({ queryKey: ['patient-finance'] });
   };
+
+  // Línea unificada: cobros de pacientes + ajustes manuales, ordenados por fecha.
+  const patientName = (p: (typeof payments)[number]): string => {
+    const rel = p.patients;
+    const obj = Array.isArray(rel) ? rel[0] : rel;
+    return obj?.full_name || 'Paciente';
+  };
+  type CajaEntry = {
+    id: string;
+    kind: 'payment' | 'movement';
+    label: string;
+    method: string;
+    date: string;
+    amount: number; // firmado: + entrada, − salida
+    raw: (typeof payments)[number] | (typeof movements)[number];
+  };
+  const entries: CajaEntry[] = [
+    ...payments.map((p) => ({
+      id: p.id,
+      kind: 'payment' as const,
+      label: patientName(p),
+      method: p.method,
+      date: p.paid_at,
+      amount: Number(p.amount),
+      raw: p
+    })),
+    ...movements.map((m) => ({
+      id: m.id,
+      kind: 'movement' as const,
+      label: m.description || (Number(m.amount) >= 0 ? 'Entrada' : 'Salida'),
+      method: m.method,
+      date: m.occurred_at,
+      amount: Number(m.amount),
+      raw: m
+    }))
+  ].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
 
   const submit = async () => {
     const value = Number(amount);
@@ -732,9 +776,15 @@ function CajaPanel({ caja }: { caja?: { total: number; byMethod: Record<string, 
     }
   };
 
-  const remove = async (id: string) => {
+  const remove = async (entry: CajaEntry) => {
     try {
-      await financeApi.deleteCajaMovement(id);
+      if (entry.kind === 'movement') {
+        await financeApi.deleteCajaMovement(entry.id);
+      } else {
+        // Cobro de paciente: deleteAppointmentCharge devuelve la sesión del
+        // paquete si aplica, además de borrar el pago.
+        await financeApi.deleteAppointmentCharge(entry.raw as Payment);
+      }
       refresh();
     } catch {
       notify({ tone: 'error', message: 'No se pudo eliminar.' });
@@ -810,14 +860,13 @@ function CajaPanel({ caja }: { caja?: { total: number; byMethod: Record<string, 
         </div>
       </div>
 
-      {/* Historial de ajustes manuales */}
+      {/* Historial: cobros de pacientes + ajustes manuales */}
       <ul className="list-stack" style={{ marginTop: 16, listStyle: 'none', padding: 0 }}>
-        {movements.map((m) => {
-          const amt = Number(m.amount);
-          const positive = amt >= 0;
+        {entries.map((e) => {
+          const positive = e.amount >= 0;
           return (
             <li
-              key={m.id}
+              key={`${e.kind}-${e.id}`}
               className="note-row"
               style={{
                 display: 'flex',
@@ -828,24 +877,29 @@ function CajaPanel({ caja }: { caja?: { total: number; byMethod: Record<string, 
             >
               <div>
                 <strong style={{ display: 'block' }}>
-                  {m.description || (positive ? 'Entrada' : 'Salida')}
+                  {e.label}
+                  {e.kind === 'payment' && (
+                    <span className="pill" style={{ marginLeft: 8, fontSize: '0.7rem' }}>
+                      Cobro
+                    </span>
+                  )}
                 </strong>
                 <span
                   className="muted"
                   style={{ fontSize: '0.85rem', textTransform: 'capitalize' }}
                 >
-                  {m.method} · {m.occurred_at}
+                  {e.method} · {e.date}
                 </span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <strong style={{ color: positive ? '#1f9d57' : '#c0392b' }}>
                   {positive ? '+' : '−'}
-                  {money(Math.abs(amt))}
+                  {money(Math.abs(e.amount))}
                 </strong>
                 <button
                   type="button"
                   className="secondary"
-                  onClick={() => remove(m.id)}
+                  onClick={() => remove(e)}
                   title="Eliminar"
                 >
                   ✕
@@ -854,9 +908,7 @@ function CajaPanel({ caja }: { caja?: { total: number; byMethod: Record<string, 
             </li>
           );
         })}
-        {movements.length === 0 && (
-          <p className="muted">Sin ajustes manuales. La caja refleja los cobros registrados.</p>
-        )}
+        {entries.length === 0 && <p className="muted">Aún no hay cobros ni ajustes de caja.</p>}
       </ul>
     </section>
   );
