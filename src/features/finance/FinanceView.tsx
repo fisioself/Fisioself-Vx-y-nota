@@ -314,7 +314,8 @@ function PatientFinancePanel({ patient }: { patient: Patient }) {
   const { notify } = useToast();
   const [selectedPkg, setSelectedPkg] = useState('');
   const [customAmount, setCustomAmount] = useState('');
-  const [markPaid, setMarkPaid] = useState(true);
+  const [initPayAmount, setInitPayAmount] = useState('');
+  const [initPayMethod, setInitPayMethod] = useState('efectivo');
   const [payAmount, setPayAmount] = useState('');
   const [payMethod, setPayMethod] = useState('efectivo');
   const [busy, setBusy] = useState(false);
@@ -341,26 +342,28 @@ function PatientFinancePanel({ patient }: { patient: Patient }) {
       notify({ tone: 'error', message: 'Selecciona un servicio o paquete.' });
       return;
     }
-    const amount = customAmount !== '' ? Number(customAmount) : Number(chosen.price);
+    const totalAmount = customAmount !== '' ? Number(customAmount) : Number(chosen.price);
+    const initAmt = initPayAmount !== '' ? Number(initPayAmount) : totalAmount;
     setBusy(true);
     try {
       const created = await financeApi.addPatientPackage({
         patientId: patient.id!,
         packageId: chosen.id,
         name: chosen.name,
-        totalAmount: amount,
+        totalAmount,
         sessionsTotal: chosen.sessions_included
       });
-      if (markPaid && amount > 0) {
+      if (initAmt > 0) {
         await financeApi.addPayment({
           patientId: patient.id!,
           patientPackageId: created.id,
-          amount,
-          method: 'efectivo'
+          amount: initAmt,
+          method: initPayMethod
         });
       }
       setSelectedPkg('');
       setCustomAmount('');
+      setInitPayAmount('');
       refresh();
       notify({ tone: 'success', message: 'Servicio agregado.' });
     } catch {
@@ -459,14 +462,22 @@ function PatientFinancePanel({ patient }: { patient: Patient }) {
           <input
             type="number"
             inputMode="decimal"
-            placeholder={chosen ? `Precio ${money(Number(chosen.price))}` : 'Precio'}
+            placeholder={chosen ? `Precio total ${money(Number(chosen.price))}` : 'Precio total'}
             value={customAmount}
             onChange={(e) => setCustomAmount(e.target.value)}
           />
-          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.9rem' }}>
-            <input type="checkbox" checked={markPaid} onChange={(e) => setMarkPaid(e.target.checked)} />
-            Marcar pagado
-          </label>
+          <input
+            type="number"
+            inputMode="decimal"
+            placeholder={chosen ? `Pago inicial (máx ${money(customAmount !== '' ? Number(customAmount) : Number(chosen?.price ?? 0))})` : 'Pago inicial $'}
+            value={initPayAmount}
+            onChange={(e) => setInitPayAmount(e.target.value)}
+            title="Cuánto paga ahora. Dejar vacío = paga el total. 0 = queda pendiente."
+          />
+          <select value={initPayMethod} onChange={(e) => setInitPayMethod(e.target.value)} aria-label="Método pago inicial">
+            <option value="efectivo">Efectivo</option>
+            <option value="tarjeta">Tarjeta</option>
+          </select>
           <button type="button" onClick={addPackage} disabled={busy}>
             Agregar
           </button>

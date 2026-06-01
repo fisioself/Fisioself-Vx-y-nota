@@ -240,7 +240,7 @@ export const financeApi = {
     patientId: string;
     usePackage: boolean;
     patientPackageId?: string | null;
-    amount?: number;
+    amount?: number;        // sesión suelta: monto cobrado; con paquete: abono parcial (0 = sin abono ahora)
     method?: PaymentMethod;
     paidAt?: string;
     notes?: string;
@@ -262,7 +262,8 @@ export const financeApi = {
         .eq('id', input.patientPackageId);
       if (upErr) throw upErr;
 
-      return this.addPayment({
+      // Registro de sesión usada (amount=0, method='paquete') — siempre.
+      const tracking = await this.addPayment({
         patientId: input.patientId,
         patientPackageId: input.patientPackageId,
         appointmentId: input.appointmentId,
@@ -271,6 +272,22 @@ export const financeApi = {
         paidAt: input.paidAt,
         notes: input.notes ?? `Sesión de paquete: ${pkg.name}`
       });
+
+      // Abono parcial adicional (si el usuario indicó un monto > 0).
+      const abono = Number(input.amount ?? 0);
+      if (abono > 0) {
+        await this.addPayment({
+          patientId: input.patientId,
+          patientPackageId: input.patientPackageId,
+          appointmentId: input.appointmentId,
+          amount: abono,
+          method: input.method ?? 'efectivo',
+          paidAt: input.paidAt,
+          notes: input.notes
+        });
+      }
+
+      return tracking;
     }
 
     return this.addPayment({

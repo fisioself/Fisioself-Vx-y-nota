@@ -50,6 +50,8 @@ export function AppointmentChargeModal({
   const [amount, setAmount] = useState('');
   const [method, setMethod] = useState<PaymentMethod>('efectivo');
   const [packageId, setPackageId] = useState('');
+  const [abonoAmount, setAbonoAmount] = useState('');
+  const [abonoMethod, setAbonoMethod] = useState<PaymentMethod>('efectivo');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -106,8 +108,8 @@ export function AppointmentChargeModal({
         patientId: appointment.patientId,
         usePackage: mode === 'paquete',
         patientPackageId: mode === 'paquete' ? packageId : null,
-        amount: mode === 'suelta' ? Number(amount) : 0,
-        method: mode === 'suelta' ? method : undefined
+        amount: mode === 'suelta' ? Number(amount) : Number(abonoAmount || 0),
+        method: mode === 'suelta' ? method : (abonoAmount ? abonoMethod : undefined)
       });
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['appt-charge', apptId] }),
@@ -241,17 +243,45 @@ export function AppointmentChargeModal({
                 </label>
               </>
             ) : (
-              <label>
-                Paquete
-                <select value={packageId} onChange={(e) => setPackageId(e.target.value)}>
-                  {packages.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} — quedan {Number(p.sessions_total) - Number(p.sessions_used)} de{' '}
-                      {p.sessions_total}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <>
+                <label>
+                  Paquete
+                  <select value={packageId} onChange={(e) => setPackageId(e.target.value)}>
+                    {packages.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} — quedan {Number(p.sessions_total) - Number(p.sessions_used)} de{' '}
+                        {p.sessions_total}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Abono ahora (opcional)
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={abonoAmount}
+                    onChange={(e) => setAbonoAmount(e.target.value)}
+                    placeholder="Dejar vacío si ya está cubierto o paga después"
+                  />
+                </label>
+                {abonoAmount && Number(abonoAmount) > 0 && (
+                  <label>
+                    Método del abono
+                    <select
+                      value={abonoMethod}
+                      onChange={(e) => setAbonoMethod(e.target.value as PaymentMethod)}
+                    >
+                      {PAYMENT_METHODS.map((m) => (
+                        <option key={m} value={m}>
+                          {m.charAt(0).toUpperCase() + m.slice(1)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+              </>
             )}
 
             {error && (
