@@ -1,8 +1,64 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="FISIOSELF VX">
-  <rect width="512" height="512" rx="112" fill="#12372a"/>
-  <circle cx="256" cy="256" r="170" fill="#f7f3ea" opacity="0.96"/>
-  <path d="M160 260c42-86 150-86 192 0" fill="none" stroke="#1f5d45" stroke-width="34" stroke-linecap="round"/>
-  <path d="M176 310h160" stroke="#12372a" stroke-width="30" stroke-linecap="round"/>
-  <path d="M256 146v220" stroke="#12372a" stroke-width="34" stroke-linecap="round"/>
-  <circle cx="256" cy="256" r="34" fill="#d99b30"/>
+  <rect width="512" height="512" fill="#000"/>
+
+  <!-- Brillo ambiental de fondo -->
+  <radialGradient id="glow-bg" cx="50%" cy="52%" r="40%">
+    <stop offset="0%" stop-color="#0b4d3a" stop-opacity="0.65"/>
+    <stop offset="100%" stop-color="#000" stop-opacity="0"/>
+  </radialGradient>
+  <rect width="512" height="512" fill="url(#glow-bg)"/>
+
+  <!-- Orejas puntiagudas (detrás del capuchón) -->
+  <ellipse cx="178" cy="160" rx="34" ry="44" fill="#0d3d2e" transform="rotate(-12 178 160)"/>
+  <ellipse cx="334" cy="160" rx="34" ry="44" fill="#0d3d2e" transform="rotate(12 334 160)"/>
+  <ellipse cx="178" cy="165" rx="16" ry="23" fill="#071f16" transform="rotate(-12 178 165)"/>
+  <ellipse cx="334" cy="165" rx="16" ry="23" fill="#071f16" transform="rotate(12 334 165)"/>
+
+  <!-- Cuerpo / manto -->
+  <ellipse cx="256" cy="375" rx="192" ry="178" fill="#0d3d2e"/>
+
+  <!-- Cara -->
+  <ellipse cx="256" cy="282" rx="118" ry="122" fill="#0f4a38"/>
+
+  <!-- Borde oscuro del capuchón -->
+  <path d="M128 248 Q256 96 384 248" stroke="#071f16" stroke-width="30" fill="none" stroke-linecap="round"/>
+
+  <!-- Hocico -->
+  <ellipse cx="256" cy="314" rx="54" ry="40" fill="#0b3c2c"/>
+  <!-- Nariz -->
+  <ellipse cx="256" cy="300" rx="14" ry="10" fill="#050e0a"/>
+
+  <!-- Cola a la derecha -->
+  <path d="M388 372 Q452 318 446 275 Q440 248 418 268 Q408 292 413 324 Q418 354 388 382Z" fill="#0d3d2e"/>
+  <path d="M412 297 Q438 278 434 265" stroke="#071f16" stroke-width="9" fill="none" stroke-linecap="round"/>
+
+  <!-- Patas -->
+  <ellipse cx="200" cy="424" rx="58" ry="28" fill="#0a3026" transform="rotate(-8 200 424)"/>
+  <ellipse cx="316" cy="424" rx="58" ry="28" fill="#0a3026" transform="rotate(8 316 424)"/>
+
+  <!-- Filtros de brillo -->
+  <filter id="eye-glow" x="-40%" y="-40%" width="180%" height="180%">
+    <feGaussianBlur stdDeviation="5" result="blur"/>
+    <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+
+  <!-- OJO IZQUIERDO -->
+  <g filter="url(#eye-glow)">
+    <rect x="163" y="254" width="76" height="48" rx="12" fill="#010a04"/>
+    <rect x="167" y="261" width="68" height="6" rx="2" fill="#00ff88" opacity="0.95"/>
+    <rect x="167" y="271" width="68" height="6" rx="2" fill="#00ff88" opacity="0.78"/>
+    <rect x="167" y="281" width="68" height="6" rx="2" fill="#00ff88" opacity="0.55"/>
+    <rect x="167" y="291" width="68" height="6" rx="2" fill="#00ff88" opacity="0.28"/>
+    <rect x="163" y="254" width="76" height="48" rx="12" fill="none" stroke="#00ff88" stroke-width="1.5" opacity="0.5"/>
+  </g>
+
+  <!-- OJO DERECHO -->
+  <g filter="url(#eye-glow)">
+    <rect x="273" y="254" width="76" height="48" rx="12" fill="#010a04"/>
+    <rect x="277" y="261" width="68" height="6" rx="2" fill="#00ff88" opacity="0.95"/>
+    <rect x="277" y="271" width="68" height="6" rx="2" fill="#00ff88" opacity="0.78"/>
+    <rect x="277" y="281" width="68" height="6" rx="2" fill="#00ff88" opacity="0.55"/>
+    <rect x="277" y="291" width="68" height="6" rx="2" fill="#00ff88" opacity="0.28"/>
+    <rect x="273" y="254" width="76" height="48" rx="12" fill="none" stroke="#00ff88" stroke-width="1.5" opacity="0.5"/>
+  </g>
 </svg>

@@ -565,3 +565,34 @@ pre {
     padding-bottom: 10px;
   }
 }
+
+/* Animación de pulso para el logo en pantalla de carga */
+@keyframes logo-pulse {
+  0%, 100% { opacity: 1; filter: drop-shadow(0 0 8px #00ff8866); }
+  50%       { opacity: 0.7; filter: drop-shadow(0 0 24px #00ff88cc); }
+}
+
+.app-loading {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: #000;
+  z-index: 9999;
+}
+
+.app-loading-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.app-loading-inner p {
+  color: #00ff88;
+  font-size: 0.9rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.7;
+  margin: 0;
+}

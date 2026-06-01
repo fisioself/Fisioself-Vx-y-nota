@@ -5,6 +5,7 @@ import { authService } from './services/authService';
 import { isSupabaseConfigured } from './lib/supabaseClient';
 import { draftStorage } from './shared/draftStorage';
 import { useTheme } from './shared/useTheme';
+import { AppLogo } from './components/AppLogo';
 import type { Patient } from './types/clinical';
 
 interface LoginScreenProps {
@@ -120,9 +121,12 @@ export function App() {
 
   if (checkingAuth) {
     return (
-      <main className="shell">
-        <section className="card">Verificando sesion...</section>
-      </main>
+      <div className="app-loading">
+        <div className="app-loading-inner">
+          <AppLogo size={110} pulse />
+          <p>FISIOSELF VX</p>
+        </div>
+      </div>
     );
   }
 
@@ -138,19 +142,7 @@ export function App() {
     <main className="shell app-grid">
       <header className="hero app-hero">
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <img
-            src="/logo.jpg"
-            alt="FISIOSELF"
-            width="56"
-            height="56"
-            style={{
-              width: 56,
-              height: 56,
-              borderRadius: 14,
-              objectFit: 'cover',
-              flexShrink: 0
-            }}
-          />
+          <AppLogo size={56} />
           <div>
             <p className="eyebrow">FISIOSELF App Notas VX</p>
             <h1>Expediente clinico</h1>
