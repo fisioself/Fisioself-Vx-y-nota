@@ -116,8 +116,11 @@ type ClinicStatsPatientRef = { full_name: string | null };
 
 export interface ClinicStatsActivityItem {
   id: string;
-  session_number: number;
-  session_date: string | null;
+  // Titulo de la cita (o tipo de sesion) tal como viene del calendario.
+  title: string;
+  // Fecha/hora de inicio de la cita (ISO). Se formatea en la vista.
+  starts_at: string | null;
+  session_type: string | null;
   // Supabase devuelve la relacion `patients(full_name)` como arreglo cuando el
   // cliente no esta tipado con el esquema; admitimos ambas formas.
   patients?: ClinicStatsPatientRef | ClinicStatsPatientRef[] | null;

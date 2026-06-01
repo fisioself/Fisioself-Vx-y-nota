@@ -236,11 +236,13 @@ export const clinicalApi = {
       .eq('status', 'scheduled');
     if (aError) throw aError;
 
-    // 4. Actividad reciente (ultimas 5 notas)
-    const { data: latestNotes, error: lnError } = await db
-      .from('session_notes')
-      .select('id, session_number, session_date, patients(full_name)')
-      .order('created_at', { ascending: false })
+    // 4. Actividad reciente (ultimas 5 citas atendidas del calendario)
+    const { data: latestAppts, error: lnError } = await db
+      .from('appointments')
+      .select('id, title, starts_at, session_type, patients(full_name)')
+      .lte('starts_at', new Date().toISOString())
+      .neq('status', 'cancelled')
+      .order('starts_at', { ascending: false })
       .limit(5);
     if (lnError) throw lnError;
 
@@ -248,7 +250,7 @@ export const clinicalApi = {
       totalPatients: totalPatients || 0,
       recentSessions: recentSessions || 0,
       upcomingAppointments: upcomingAppointments || 0,
-      latestActivity: (latestNotes || []) as ClinicStats['latestActivity']
+      latestActivity: (latestAppts || []) as ClinicStats['latestActivity']
     };
   },
 

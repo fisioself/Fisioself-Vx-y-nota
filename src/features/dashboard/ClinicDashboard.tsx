@@ -14,6 +14,21 @@ const getActivityPatientName = (patients: ClinicStatsActivityItem['patients']): 
   return ref?.full_name || 'Paciente desconocido';
 };
 
+const cdmxDateLabel = (iso: string | null): string => {
+  if (!iso) return '';
+  try {
+    return new Intl.DateTimeFormat('es-MX', {
+      timeZone: 'America/Mexico_City',
+      day: '2-digit',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(new Date(iso));
+  } catch {
+    return '';
+  }
+};
+
 export function ClinicDashboard({ onPatientSelect }: ClinicDashboardProps) {
   const [calStatus, setCalStatus] = useState({ loading: true, connected: false });
 
@@ -112,14 +127,14 @@ export function ClinicDashboard({ onPatientSelect }: ClinicDashboardProps) {
                   {getActivityPatientName(item.patients)}
                 </strong>
                 <span className="muted" style={{ fontSize: '0.85rem' }}>
-                  Sesion #{item.session_number} · {item.session_date}
+                  {item.session_type || item.title} · {cdmxDateLabel(item.starts_at)}
                 </span>
               </div>
               <span
                 className="pill"
                 style={{ background: 'var(--secondary)', color: 'var(--primary)' }}
               >
-                Guardada
+                Atendida
               </span>
             </li>
           ))}
