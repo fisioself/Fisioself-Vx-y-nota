@@ -347,4 +347,22 @@ describe('financeApi listers y borradores', () => {
     const pay = await financeApi.addPayment({ patientId: 'patient-1', amount: 500 });
     expect(pay).toMatchObject({ id: 'p9' });
   });
+
+  it('deletePatientPackageFully borra los pagos del paquete y el paquete', async () => {
+    const db = makeDb({});
+    const { financeApi } = await loadFinanceApi(db);
+    await financeApi.deletePatientPackageFully('pk1');
+    expect(db.from).toHaveBeenCalledWith('payments');
+    expect(db.from).toHaveBeenCalledWith('patient_packages');
+  });
+
+  it('listRecentPayments trae pagos con monto > 0', async () => {
+    const db = makeDb({
+      payments: { rows: [{ id: 'p1', amount: 350, patients: { full_name: 'Ana' } }] }
+    });
+    const { financeApi } = await loadFinanceApi(db);
+    const rows = await financeApi.listRecentPayments();
+    expect(rows).toHaveLength(1);
+    expect(db.from).toHaveBeenCalledWith('payments');
+  });
 });
