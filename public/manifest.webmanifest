@@ -4,15 +4,15 @@
   "description": "App clinica privada para notas, valoraciones y expediente del paciente.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f7f3ea",
-  "theme_color": "#12372a",
+  "background_color": "#000000",
+  "theme_color": "#000000",
   "lang": "es-MX",
   "icons": [
     {
-      "src": "/icons/icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "src": "/logo.jpg",
+      "sizes": "853x1280",
+      "type": "image/jpeg",
+      "purpose": "any"
     }
   ]
 }
