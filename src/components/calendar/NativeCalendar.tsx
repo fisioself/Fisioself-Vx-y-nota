@@ -30,23 +30,27 @@ interface CalendarEventChangeArg {
   revert: () => void;
 }
 
+// Paleta sencilla y legible: tonos sólidos y oscuros que contrastan bien con
+// texto blanco. Sin verdes (chocan con el tema) ni amarillos (ilegibles).
 const colorMap: Record<string, string> = {
-  '1': '#7986cb', // Lavender (Azul claro)
-  '2': '#33b679', // Sage (Verde)
-  '3': '#8e24aa', // Grape (Morado - Valoración)
-  '4': '#e67c73', // Flamingo (Naranja/Salmón - Domicilio)
-  '5': '#f6c026', // Banana (Amarillo - Descarga)
-  '6': '#f4511e', // Tangerine (Naranja fuerte)
-  '7': '#039be5', // Peacock (Azul claro)
-  '8': '#616161', // Graphite (Gris)
-  '9': '#3f51b5', // Blueberry (Azul oscuro - Clínica)
-  '10': '#0b8043', // Basil (Verde oscuro)
-  '11': '#d50000' // Tomato (Rojo)
+  '1': '#3b6fb0', // Azul
+  '2': '#566573', // Gris azulado
+  '3': '#7d4ba0', // Morado (Valoración)
+  '4': '#b9542e', // Naranja quemado (Domicilio)
+  '5': '#a06a1b', // Ámbar oscuro (Descarga)
+  '6': '#b9542e', // Naranja quemado
+  '7': '#3b6fb0', // Azul
+  '8': '#5f6368', // Gris
+  '9': '#34507f', // Azul oscuro (Clínica)
+  '10': '#566573', // Gris azulado
+  '11': '#a83232' // Rojo
 };
 
+const DEFAULT_COLOR = '#34507f';
+
 const resolveColor = (colorId?: string | null) => {
-  if (!colorId) return '#3788d8'; // Default FullCalendar blue
-  return colorMap[colorId] || '#3788d8';
+  if (!colorId) return DEFAULT_COLOR;
+  return colorMap[colorId] || DEFAULT_COLOR;
 };
 
 interface NativeCalendarProps {
@@ -217,9 +221,10 @@ export function NativeCalendar({ onEventClick }: NativeCalendarProps) {
             eventClick={handleEventClick}
             eventDrop={handleEventDrop}
             eventResize={handleEventDrop} // Same logic for resize
+            eventTextColor="#ffffff"
             height="auto"
-            slotMinTime="06:00:00"
-            slotMaxTime="22:00:00"
+            slotMinTime="08:00:00"
+            slotMaxTime="20:00:00"
             allDaySlot={false}
             locales={[esLocale]}
             locale="es"
