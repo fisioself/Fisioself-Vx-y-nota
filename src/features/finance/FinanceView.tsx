@@ -18,7 +18,14 @@ const monthLabel = (ym: string) => {
   return MONTH_ABBR[Number(m) - 1] ?? ym;
 };
 
-const today = () => new Date().toISOString().slice(0, 10);
+// Fecha de hoy en CDMX (no UTC): de noche en CDMX, toISOString() daría el día siguiente.
+const today = () =>
+  new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Mexico_City',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).format(new Date());
 
 // ------------------------------------------------------------------
 // Gráfica de barras ligera (sin dependencias). Una serie por mes.

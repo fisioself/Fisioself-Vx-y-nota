@@ -79,7 +79,18 @@ const unwrap = <T>({ data, error }: { data: unknown; error: unknown }): T => {
 const sum = (rows: Array<{ amount?: number | null }>, key: 'amount' = 'amount'): number =>
   rows.reduce((acc, r) => acc + Number(r[key] ?? 0), 0);
 
-const monthKey = (isoDate: string): string => isoDate.slice(0, 7); // 'YYYY-MM'
+// Toda fecha se interpreta en horario de CDMX (la base corre en UTC). Sin esto,
+// los cortes mensuales se desfasan hasta 6 h respecto a la función SQL.
+const CDMX_TZ = 'America/Mexico_City';
+const cdmxDay = (d: Date | string): string =>
+  new Intl.DateTimeFormat('en-CA', {
+    timeZone: CDMX_TZ,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).format(typeof d === 'string' ? new Date(d) : d); // 'YYYY-MM-DD'
+
+const monthKey = (isoDate: string): string => cdmxDay(isoDate).slice(0, 7); // 'YYYY-MM' en CDMX
 
 export const financeApi = {
   // ---------- Catálogo de precios ----------
@@ -248,14 +259,13 @@ export const financeApi = {
     const patients = unwrap<Array<{ id: string; full_name: string }>>(patRes);
     const nameById = new Map(patients.map((p) => [p.id, p.full_name]));
 
-    // Claves de fecha (calculadas en horario local)
+    // Claves de fecha (calculadas en horario de CDMX, igual que la función SQL)
     const now = new Date();
-    const curMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-    const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const prevMonthKey = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
-    const since30 = new Date(now);
-    since30.setDate(since30.getDate() - 30);
-    const since30Str = since30.toISOString().slice(0, 10);
+    const curMonthKey = cdmxDay(now).slice(0, 7); // 'YYYY-MM' en CDMX
+    const [cy, cm] = curMonthKey.split('-').map(Number);
+    const prevMonthKey = `${cm === 1 ? cy - 1 : cy}-${String(cm === 1 ? 12 : cm - 1).padStart(2, '0')}`;
+    // Últimos 30 días: comparación por instante (independiente de zona horaria).
+    const since30 = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
     // Ingresos / gastos por mes
     const incomeByMonth = new Map<string, number>();
@@ -312,10 +322,10 @@ export const financeApi = {
 
     // Periodo: últimos 30 días
     const d30Income = payments
-      .filter((p) => p.paid_at >= since30Str)
+      .filter((p) => new Date(p.paid_at) >= since30)
       .reduce((a, p) => a + Number(p.amount ?? 0), 0);
     const d30Expense = expenses
-      .filter((e) => e.spent_at >= since30Str)
+      .filter((e) => new Date(e.spent_at) >= since30)
       .reduce((a, e) => a + Number(e.amount ?? 0), 0);
     const last30d: PeriodSummary = {
       income: d30Income,
