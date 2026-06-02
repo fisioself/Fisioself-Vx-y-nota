@@ -595,18 +595,20 @@ export const financeApi = {
 
     // Caja (todo el tiempo) por método = cobros a pacientes + ajustes manuales.
     // Los movimientos manuales pueden ser negativos (salidas de caja).
+    // Transferencia se suma al bucket de Tarjeta (ambos son pagos electrónicos;
+    // la clínica solo necesita ver Efectivo vs. Tarjeta/Transferencia).
     const cajaByMethod: Record<string, number> = {};
     let cajaTotal = 0;
     for (const p of payments) {
       const amt = Number(p.amount ?? 0);
       cajaTotal += amt;
-      const m = p.method ?? 'otro';
+      const m = p.method === 'transferencia' ? 'tarjeta' : (p.method ?? 'otro');
       cajaByMethod[m] = (cajaByMethod[m] ?? 0) + amt;
     }
     for (const mv of cajaMovements) {
       const amt = Number(mv.amount ?? 0);
       cajaTotal += amt;
-      const m = mv.method ?? 'efectivo';
+      const m = mv.method === 'transferencia' ? 'tarjeta' : (mv.method ?? 'efectivo');
       cajaByMethod[m] = (cajaByMethod[m] ?? 0) + amt;
     }
 

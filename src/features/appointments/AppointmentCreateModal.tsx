@@ -41,7 +41,6 @@ export function AppointmentCreateModal({ slot, onClose }: AppointmentCreateModal
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [patient, setPatient] = useState<Patient | null>(null);
-  const [title, setTitle] = useState('');
   const [sessionTypeIdx, setSessionTypeIdx] = useState(0);
   const [startLocal, setStartLocal] = useState('');
   const [endLocal, setEndLocal] = useState('');
@@ -54,7 +53,6 @@ export function AppointmentCreateModal({ slot, onClose }: AppointmentCreateModal
     setQuery('');
     setDebouncedQuery('');
     setPatient(null);
-    setTitle('');
     setSessionTypeIdx(0);
     setStartLocal(toLocalInput(slot.start));
     setEndLocal(toLocalInput(slot.end));
@@ -92,9 +90,7 @@ export function AppointmentCreateModal({ slot, onClose }: AppointmentCreateModal
     }
 
     const sessionType = SESSION_TYPES[sessionTypeIdx];
-    // El título es exactamente lo que el usuario escribió (lo que verá en
-    // Google); si lo deja vacío, usamos el nombre del paciente como respaldo.
-    const finalTitle = title.trim() || patient.full_name;
+    const finalTitle = patient.full_name;
     setSaving(true);
     try {
       const appt = await clinicalApi.addAppointment({
@@ -177,7 +173,6 @@ export function AppointmentCreateModal({ slot, onClose }: AppointmentCreateModal
                       className="secondary"
                       onClick={() => {
                         setPatient(p);
-                        setTitle((t) => t || p.full_name || '');
                         setQuery('');
                       }}
                     >
@@ -191,16 +186,6 @@ export function AppointmentCreateModal({ slot, onClose }: AppointmentCreateModal
             )}
           </label>
         )}
-
-        <label>
-          Título (lo que verás en Google Calendar)
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Ej. Juan Pérez #3"
-          />
-        </label>
 
         <label>
           Tipo de sesión

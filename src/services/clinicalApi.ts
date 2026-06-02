@@ -62,14 +62,16 @@ export const clinicalApi = {
     const db = assertSupabase();
     const q = query.trim();
     if (!q) return [];
-    return unwrap(
-      await db
-        .from('patients')
-        .select('*')
-        .or(`full_name.ilike.%${q}%,phone.ilike.%${q}%,email.ilike.%${q}%`)
-        .order('full_name', { ascending: true })
-        .limit(50)
-    );
+    // search_patients_unaccent usa unaccent() para encontrar pacientes aunque
+    // el usuario escriba sin acentos (ej. "antonio perez" → "Antonio Pérez").
+    const { data, error } = await (
+      db.rpc as unknown as (
+        name: string,
+        args: Record<string, unknown>
+      ) => Promise<{ data: unknown; error: unknown }>
+    )('search_patients_unaccent', { p_query: q });
+    if (error) throw error;
+    return (data ?? []) as Patient[];
   },
 
   async createPatient(payload: Partial<Patient>): Promise<Patient> {
