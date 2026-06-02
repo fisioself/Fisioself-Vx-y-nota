@@ -52,17 +52,22 @@ interface TurnstileProps {
   siteKey: string;
   onVerify: (token: string) => void;
   onExpire?: () => void;
+  // Se llama si el widget no pudo cargar/dibujarse (script bloqueado, red, etc.)
+  // para que el login avise en vez de dejar el botón deshabilitado en silencio.
+  onError?: (message: string) => void;
   // Cambiar este valor fuerza a re-montar el widget (token nuevo tras un fallo).
   resetKey?: number;
 }
 
-export function Turnstile({ siteKey, onVerify, onExpire, resetKey }: TurnstileProps) {
+export function Turnstile({ siteKey, onVerify, onExpire, onError, resetKey }: TurnstileProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   // Guardamos los callbacks en refs para no re-montar el widget cuando cambian.
   const onVerifyRef = useRef(onVerify);
   const onExpireRef = useRef(onExpire);
+  const onErrorRef = useRef(onError);
   onVerifyRef.current = onVerify;
   onExpireRef.current = onExpire;
+  onErrorRef.current = onError;
 
   useEffect(() => {
     let cancelled = false;
@@ -75,13 +80,14 @@ export function Turnstile({ siteKey, onVerify, onExpire, resetKey }: TurnstilePr
           sitekey: siteKey,
           callback: (token) => onVerifyRef.current(token),
           'expired-callback': () => onExpireRef.current?.(),
-          'error-callback': () => onExpireRef.current?.(),
+          'error-callback': () => onErrorRef.current?.('La verificación de seguridad falló. Reintenta.'),
           theme: 'auto'
         });
       })
       .catch(() => {
-        // Si el script no carga, el campo queda vacío y el login mostrará el
-        // error de captcha de Supabase; no hay forma segura de continuar sin él.
+        if (!cancelled) {
+          onErrorRef.current?.('No se pudo cargar la verificación de seguridad. Revisa tu conexión.');
+        }
       });
 
     return () => {

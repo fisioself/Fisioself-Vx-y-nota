@@ -105,8 +105,12 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
         {captchaEnabled && TURNSTILE_SITE_KEY && (
           <Turnstile
             siteKey={TURNSTILE_SITE_KEY}
-            onVerify={setCaptchaToken}
+            onVerify={(t) => {
+              setCaptchaToken(t);
+              setError('');
+            }}
             onExpire={() => setCaptchaToken('')}
+            onError={(msg) => setError(msg)}
             resetKey={captchaResetKey}
           />
         )}
