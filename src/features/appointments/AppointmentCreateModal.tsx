@@ -140,7 +140,9 @@ export function AppointmentCreateModal({ slot, onClose }: AppointmentCreateModal
     }
 
     const sessionType = SESSION_TYPES[sessionTypeIdx];
-    const finalTitle = patient.full_name;
+    // full_name es NOT NULL en la práctica, pero el tipo lo marca como string|null.
+    // El fallback evita rechazar el INSERT si algún registro antiguo tiene nombre vacío.
+    const finalTitle = patient.full_name ?? patient.id;
     setSaving(true);
     try {
       await clinicalApi.addAppointment({

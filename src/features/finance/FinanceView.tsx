@@ -690,6 +690,33 @@ function PatientFinancePanel({ patient }: { patient: Patient }) {
   );
 }
 
+// Formatea una fecha ISO o "YYYY-MM-DD" como "2 jun · 14:30" en CDMX.
+// Si el valor es solo fecha sin hora, omite la hora.
+const fmtDate = (iso: string): string => {
+  if (!iso) return '';
+  const d = new Date(iso.includes('T') ? iso : iso + 'T12:00:00');
+  const date = new Intl.DateTimeFormat('es-MX', {
+    day: 'numeric',
+    month: 'short',
+    timeZone: 'America/Mexico_City'
+  }).format(d);
+  if (!iso.includes('T')) return date;
+  const time = new Intl.DateTimeFormat('es-MX', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: 'America/Mexico_City'
+  }).format(d);
+  return `${date} · ${time}`;
+};
+
+// Etiqueta legible para el método de pago en el historial de caja.
+const methodLabel = (m: string) => {
+  if (m === 'tarjeta' || m === 'transferencia') return 'Tarjeta / Trans.';
+  if (m === 'efectivo') return 'Efectivo';
+  return m;
+};
+
 // ------------------------------------------------------------------
 // Caja: total acumulado + ajustes manuales (entradas/salidas) con borrado
 // ------------------------------------------------------------------
@@ -726,12 +753,18 @@ function CajaPanel({ caja }: { caja?: { total: number; byMethod: Record<string, 
     const obj = Array.isArray(rel) ? rel[0] : rel;
     return obj?.full_name || 'Paciente';
   };
+  const sessionTypeOf = (p: (typeof payments)[number]): string | null => {
+    const appt = p.appointments;
+    if (!appt || Array.isArray(appt)) return null;
+    return appt.session_type ?? null;
+  };
   type CajaEntry = {
     id: string;
     kind: 'payment' | 'movement';
     label: string;
+    sublabel: string; // tipo sesión o concepto del movimiento
     method: string;
-    date: string;
+    date: string; // ISO — usado para ordenar y mostrar
     amount: number; // firmado: + entrada, − salida
     raw: (typeof payments)[number] | (typeof movements)[number];
   };
@@ -740,6 +773,7 @@ function CajaPanel({ caja }: { caja?: { total: number; byMethod: Record<string, 
       id: p.id,
       kind: 'payment' as const,
       label: patientName(p),
+      sublabel: sessionTypeOf(p) ?? 'Cobro',
       method: p.method,
       date: p.paid_at,
       amount: Number(p.amount),
@@ -748,7 +782,8 @@ function CajaPanel({ caja }: { caja?: { total: number; byMethod: Record<string, 
     ...movements.map((m) => ({
       id: m.id,
       kind: 'movement' as const,
-      label: m.description || (Number(m.amount) >= 0 ? 'Entrada' : 'Salida'),
+      label: m.description || (Number(m.amount) >= 0 ? 'Entrada manual' : 'Salida manual'),
+      sublabel: '',
       method: m.method,
       date: m.occurred_at,
       amount: Number(m.amount),
@@ -867,7 +902,13 @@ function CajaPanel({ caja }: { caja?: { total: number; byMethod: Record<string, 
       </div>
 
       {/* Historial: cobros de pacientes + ajustes manuales */}
-      <ul className="list-stack" style={{ marginTop: 16, listStyle: 'none', padding: 0 }}>
+      <div style={{ marginTop: 12, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+        <p className="eyebrow" style={{ margin: 0 }}>Historial</p>
+        <span className="muted" style={{ fontSize: '0.8rem' }}>
+          ({entries.length} movimientos)
+        </span>
+      </div>
+      <ul className="list-stack" style={{ marginTop: 8, listStyle: 'none', padding: 0 }}>
         {entries.map((e) => {
           const positive = e.amount >= 0;
           return (
@@ -881,24 +922,27 @@ function CajaPanel({ caja }: { caja?: { total: number; byMethod: Record<string, 
                 gap: 10
               }}
             >
-              <div>
-                <strong style={{ display: 'block' }}>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <strong style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {e.label}
-                  {e.kind === 'payment' && (
-                    <span className="pill" style={{ marginLeft: 8, fontSize: '0.7rem' }}>
-                      Cobro
-                    </span>
-                  )}
                 </strong>
                 <span
                   className="muted"
-                  style={{ fontSize: '0.85rem', textTransform: 'capitalize' }}
+                  style={{ fontSize: '0.8rem' }}
                 >
-                  {e.method} · {e.date}
+                  {e.sublabel && (
+                    <span
+                      className="pill"
+                      style={{ marginRight: 6, fontSize: '0.7rem', textTransform: 'none' }}
+                    >
+                      {e.sublabel}
+                    </span>
+                  )}
+                  {methodLabel(e.method)} · {fmtDate(e.date)}
                 </span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <strong style={{ color: positive ? '#1f9d57' : '#c0392b' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+                <strong style={{ color: positive ? '#1f9d57' : '#c0392b', whiteSpace: 'nowrap' }}>
                   {positive ? '+' : '−'}
                   {money(Math.abs(e.amount))}
                 </strong>
