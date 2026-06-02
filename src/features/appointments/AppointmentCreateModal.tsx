@@ -274,8 +274,8 @@ export function AppointmentCreateModal({ slot, onClose }: AppointmentCreateModal
           </select>
         </label>
 
-        <div style={{ display: 'flex', gap: 12 }}>
-          <label style={{ flex: 1 }}>
+        <div className="appt-create-times">
+          <label>
             Inicio
             <input
               type="datetime-local"
@@ -283,7 +283,7 @@ export function AppointmentCreateModal({ slot, onClose }: AppointmentCreateModal
               onChange={(e) => setStartLocal(e.target.value)}
             />
           </label>
-          <label style={{ flex: 1 }}>
+          <label>
             Fin
             <input
               type="datetime-local"

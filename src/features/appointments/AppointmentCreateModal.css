@@ -21,7 +21,10 @@
   color: var(--text-main);
   width: min(440px, 100%);
   max-height: min(820px, calc(100vh - 40px));
-  overflow: auto;
+  /* Solo scroll vertical; nunca horizontal (antes los inputs de fecha/hora se
+     desbordaban y aparecía una barra para mover el contenido de lado). */
+  overflow-y: auto;
+  overflow-x: hidden;
   display: grid;
   gap: 14px;
   padding: 22px;
@@ -29,6 +32,31 @@
   background: #fffaf0;
   border: 1px solid rgba(18, 55, 42, 0.18);
   box-shadow: 0 24px 80px rgba(18, 55, 42, 0.3);
+}
+
+/* Los <input>, sobre todo datetime-local, traen un ancho mínimo intrínseco
+   grande que no se encoge dentro de un contenedor flex/grid y desbordaba la
+   tarjeta. min-width:0 + max-width:100% los obliga a caber. */
+.appt-create-card input,
+.appt-create-card select,
+.appt-create-card textarea {
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* Inicio / Fin: lado a lado en pantallas con espacio, apilados en móvil. */
+.appt-create-times {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.appt-create-times label {
+  min-width: 0;
+}
+@media (max-width: 460px) {
+  .appt-create-times {
+    grid-template-columns: 1fr;
+  }
 }
 
 .appt-create-patient {
