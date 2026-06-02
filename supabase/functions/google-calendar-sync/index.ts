@@ -58,14 +58,7 @@ Deno.serve(async (req) => {
     const serviceRoleKey = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
     const googleClientId = requireEnv('GOOGLE_CLIENT_ID');
     const googleClientSecret = requireEnv('GOOGLE_CLIENT_SECRET');
-    const token = getBearerToken(req);
-
-    if (!token) return json(req, 401, { error: 'Falta autorizacion' });
-
     const supabase = createClient(supabaseUrl, serviceRoleKey);
-
-    const { data: userData, error: userError } = await supabase.auth.getUser(token);
-    if (userError || !userData.user) return json(req, 401, { error: 'Sesion invalida' });
 
     const body = await req.json().catch(() => ({}));
     const appointmentId = typeof body.appointment_id === 'string' ? body.appointment_id : null;
@@ -81,33 +74,89 @@ Deno.serve(async (req) => {
     if (appointment.sync_status === 'disabled')
       return json(req, 400, { error: 'La cita no esta habilitada para Google Calendar' });
 
-    const clinicId = appointment.patients?.clinic_id;
-    if (!clinicId) return json(req, 403, { error: 'Cita sin clinica autorizada' });
+    const CONNECTION_COLUMNS = 'id, calendar_id, token_expires_at, access_token, refresh_token';
+    const calendarKey = appointment.google_calendar_id || 'primary';
 
-    const { data: membership, error: membershipError } = await supabase
-      .from('clinic_memberships')
-      .select('role, active')
-      .eq('user_id', userData.user.id)
-      .eq('clinic_id', clinicId)
-      .single();
-    if (
-      membershipError ||
-      !membership?.active ||
-      !['admin', 'therapist'].includes(membership.role)
-    ) {
-      return json(req, 403, { error: 'No tienes permiso para sincronizar esta cita' });
+    interface ConnRow {
+      id: string;
+      calendar_id: string | null;
+      token_expires_at: string | null;
+      access_token: string | null;
+      refresh_token: string | null;
     }
 
-    // Read connection + tokens directly (access_token/refresh_token are plain columns)
-    const { data: connection, error: connectionError } = await supabase
-      .from('calendar_connections')
-      .select('id, calendar_id, token_expires_at, access_token, refresh_token')
-      .eq('user_id', userData.user.id)
-      .eq('provider', 'google')
-      .eq('calendar_id', appointment.google_calendar_id || 'primary')
-      .single();
+    // --- Autenticación: secret del trigger DB (server-side) o JWT del usuario (app) ---
+    // Modo secret: el trigger appointments_autosync envía x-sync-secret para que
+    // CADA cita creada/movida en la app se empuje a Google de forma confiable,
+    // sin depender de que el token del móvil esté vigente en ese instante.
+    const syncSecret = req.headers.get('x-sync-secret');
+    let actorId: string | null = null;
+    let connection: ConnRow | null = null;
 
-    if (connectionError || !connection) {
+    if (syncSecret) {
+      const { data: cfg } = await supabase
+        .from('integration_config')
+        .select('value')
+        .eq('key', 'gcal_autosync_secret')
+        .single();
+      if (!cfg || cfg.value !== syncSecret) return json(req, 401, { error: 'Secret invalido' });
+
+      actorId = appointment.created_by ?? null;
+      // Conexión del dueño de la cita; si no, cualquier conexión Google de ese
+      // calendario (clínica de un solo terapeuta = una sola conexión).
+      let q = supabase
+        .from('calendar_connections')
+        .select(CONNECTION_COLUMNS)
+        .eq('provider', 'google')
+        .eq('calendar_id', calendarKey);
+      if (appointment.created_by) q = q.eq('user_id', appointment.created_by);
+      const owner = await q.maybeSingle();
+      connection = (owner.data as ConnRow | null) ?? null;
+      if (!connection) {
+        const anyConn = await supabase
+          .from('calendar_connections')
+          .select(CONNECTION_COLUMNS)
+          .eq('provider', 'google')
+          .eq('calendar_id', calendarKey)
+          .limit(1)
+          .maybeSingle();
+        connection = (anyConn.data as ConnRow | null) ?? null;
+      }
+    } else {
+      const token = getBearerToken(req);
+      if (!token) return json(req, 401, { error: 'Falta autorizacion' });
+      const { data: userData, error: userError } = await supabase.auth.getUser(token);
+      if (userError || !userData.user) return json(req, 401, { error: 'Sesion invalida' });
+      actorId = userData.user.id;
+
+      const clinicId = appointment.patients?.clinic_id;
+      if (!clinicId) return json(req, 403, { error: 'Cita sin clinica autorizada' });
+
+      const { data: membership, error: membershipError } = await supabase
+        .from('clinic_memberships')
+        .select('role, active')
+        .eq('user_id', userData.user.id)
+        .eq('clinic_id', clinicId)
+        .single();
+      if (
+        membershipError ||
+        !membership?.active ||
+        !['admin', 'therapist'].includes(membership.role)
+      ) {
+        return json(req, 403, { error: 'No tienes permiso para sincronizar esta cita' });
+      }
+
+      const { data: conn } = await supabase
+        .from('calendar_connections')
+        .select(CONNECTION_COLUMNS)
+        .eq('user_id', userData.user.id)
+        .eq('provider', 'google')
+        .eq('calendar_id', calendarKey)
+        .single();
+      connection = (conn as ConnRow | null) ?? null;
+    }
+
+    if (!connection) {
       await supabase
         .from('appointments')
         .update({ sync_status: 'failed', sync_error: 'Google Calendar no conectado' })
@@ -219,7 +268,7 @@ Deno.serve(async (req) => {
     if (updateError) throw updateError;
 
     await supabase.from('audit_log').insert({
-      actor_id: userData.user.id,
+      actor_id: actorId,
       action: 'appointment.google_synced',
       entity_type: 'appointments',
       entity_id: appointmentId,

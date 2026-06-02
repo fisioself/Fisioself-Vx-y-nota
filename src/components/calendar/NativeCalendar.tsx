@@ -6,7 +6,6 @@ import interactionPlugin from '@fullcalendar/interaction';
 import esLocale from '@fullcalendar/core/locales/es';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { assertSupabase } from '../../lib/supabaseClient';
-import { calendarService } from '../../services/calendarService';
 import { useToast } from '../../app/ToastProvider';
 import {
   AppointmentChargeModal,
@@ -201,10 +200,9 @@ export function NativeCalendar({ onEventClick }: NativeCalendarProps) {
 
       if (error) throw error;
 
-      // Sincronizacion bidireccional: empujar el cambio de vuelta a Google Calendar
-      await calendarService.syncAppointment(apptId);
-
-      notify({ tone: 'success', message: 'Cita movida y sincronizada con Google.' });
+      // El cambio se empuja a Google con el trigger server-side
+      // (appointments_autosync), sin depender del token del móvil.
+      notify({ tone: 'success', message: 'Cita movida. Se actualiza en Google automáticamente.' });
     } catch {
       dropInfo.revert();
       notify({ tone: 'error', message: 'No se pudo mover la cita.' });
