@@ -85,6 +85,22 @@ interface NativeCalendarProps {
   onEventClick?: (patientId: string) => void;
 }
 
+// Genera un slot de 1 hora desde la próxima marca de 30 minutos, en hora local,
+// para pre-rellenar el modal al tocar "Nueva cita" sin arrastrar en el calendario.
+function makeDefaultSlot(): NewAppointmentSlot {
+  const now = new Date();
+  const mins = now.getMinutes();
+  const roundedMins = Math.ceil((mins + 1) / 30) * 30;
+  const start = new Date(now);
+  start.setMinutes(roundedMins, 0, 0);
+  const end = new Date(start.getTime() + 60 * 60 * 1000);
+  const fmt = (d: Date) => {
+    const p = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:00`;
+  };
+  return { start: fmt(start), end: fmt(end) };
+}
+
 export function NativeCalendar({ onEventClick }: NativeCalendarProps) {
   const [syncing, setSyncing] = useState(false);
   const [chargeTarget, setChargeTarget] = useState<ChargeAppointmentTarget | null>(null);
@@ -223,6 +239,9 @@ export function NativeCalendar({ onEventClick }: NativeCalendarProps) {
         )}
         <button onClick={syncWithGoogle} disabled={syncing} className="secondary">
           {syncing ? 'Sincronizando...' : 'Sincronizar Calendar'}
+        </button>
+        <button onClick={() => setNewSlot(makeDefaultSlot())}>
+          + Nueva cita
         </button>
       </div>
 

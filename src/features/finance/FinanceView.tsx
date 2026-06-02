@@ -768,6 +768,11 @@ function CajaPanel({ caja }: { caja?: { total: number; byMethod: Record<string, 
     amount: number; // firmado: + entrada, − salida
     raw: (typeof payments)[number] | (typeof movements)[number];
   };
+  // Normaliza a ISO datetime para ordenar: los movimientos usan sólo fecha
+  // ("YYYY-MM-DD") y al comparar contra timestamps de pagos quedan por debajo
+  // del mismo día. Al hacer flotar la fecha al final del día quedan primero.
+  const sortKey = (date: string) => (date.includes('T') ? date : date + 'T23:59:59');
+
   const entries: CajaEntry[] = [
     ...payments.map((p) => ({
       id: p.id,
@@ -789,7 +794,11 @@ function CajaPanel({ caja }: { caja?: { total: number; byMethod: Record<string, 
       amount: Number(m.amount),
       raw: m
     }))
-  ].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+  ].sort((a, b) => {
+    const ka = sortKey(a.date);
+    const kb = sortKey(b.date);
+    return ka < kb ? 1 : ka > kb ? -1 : 0;
+  });
 
   const submit = async () => {
     const value = Number(amount);
