@@ -116,7 +116,7 @@ export function AppointmentCreateModal({ slot, onClose }: AppointmentCreateModal
     const finalTitle = patient.full_name;
     setSaving(true);
     try {
-      const appt = await clinicalApi.addAppointment({
+      await clinicalApi.addAppointment({
         patient_id: patient.id,
         title: finalTitle,
         starts_at: startsAt.toISOString(),
