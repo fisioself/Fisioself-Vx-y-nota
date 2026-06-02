@@ -62,14 +62,16 @@ export const clinicalApi = {
     const db = assertSupabase();
     const q = query.trim();
     if (!q) return [];
-    return unwrap(
-      await db
-        .from('patients')
-        .select('*')
-        .or(`full_name.ilike.%${q}%,phone.ilike.%${q}%,email.ilike.%${q}%`)
-        .order('full_name', { ascending: true })
-        .limit(50)
-    );
+    // search_patients_unaccent usa unaccent() para encontrar pacientes aunque
+    // el usuario escriba sin acentos (ej. "antonio perez" → "Antonio Pérez").
+    const { data, error } = await (
+      db.rpc as unknown as (
+        name: string,
+        args: Record<string, unknown>
+      ) => Promise<{ data: unknown; error: unknown }>
+    )('search_patients_unaccent', { p_query: q });
+    if (error) throw error;
+    return (data ?? []) as Patient[];
   },
 
   async createPatient(payload: Partial<Patient>): Promise<Patient> {
@@ -209,6 +211,18 @@ export const clinicalApi = {
         .select('*')
         .single()
     );
+  },
+
+  // Elimina una cita de la app Y de Google Calendar a la vez. Lo hace vía edge
+  // function porque borrar el evento en Google requiere el token del servidor;
+  // si solo se borrara localmente, el cron de importación la recrearía.
+  async deleteAppointmentFully(appointmentId: string): Promise<void> {
+    const db = assertSupabase();
+    const { data, error } = await db.functions.invoke('google-calendar-delete', {
+      body: { appointment_id: appointmentId }
+    });
+    if (error) throw error;
+    if (data?.error) throw new Error(data.error);
   },
 
   async updateAppointment(id: string, payload: Partial<Appointment>): Promise<Appointment> {

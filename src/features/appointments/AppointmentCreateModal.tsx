@@ -41,11 +41,11 @@ export function AppointmentCreateModal({ slot, onClose }: AppointmentCreateModal
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [patient, setPatient] = useState<Patient | null>(null);
-  const [title, setTitle] = useState('');
   const [sessionTypeIdx, setSessionTypeIdx] = useState(0);
   const [startLocal, setStartLocal] = useState('');
   const [endLocal, setEndLocal] = useState('');
   const [saving, setSaving] = useState(false);
+  const [creatingPatient, setCreatingPatient] = useState(false);
   const [error, setError] = useState('');
 
   // Reinicia el formulario cada vez que se abre con un slot nuevo.
@@ -54,7 +54,6 @@ export function AppointmentCreateModal({ slot, onClose }: AppointmentCreateModal
     setQuery('');
     setDebouncedQuery('');
     setPatient(null);
-    setTitle('');
     setSessionTypeIdx(0);
     setStartLocal(toLocalInput(slot.start));
     setEndLocal(toLocalInput(slot.end));
@@ -74,6 +73,28 @@ export function AppointmentCreateModal({ slot, onClose }: AppointmentCreateModal
 
   if (!slot) return null;
 
+  // Crea un paciente nuevo con el nombre escrito y lo selecciona para la cita.
+  // Sirve para agendar a alguien que aún no existe en el sistema (primera vez),
+  // sin tener que salir a la pantalla de pacientes.
+  const createNewPatient = async () => {
+    const name = query.trim();
+    if (name.length < 2) {
+      setError('Escribe el nombre del paciente nuevo.');
+      return;
+    }
+    setCreatingPatient(true);
+    setError('');
+    try {
+      const nuevo = await clinicalApi.createPatient({ full_name: name });
+      setPatient(nuevo);
+      setQuery('');
+    } catch (err) {
+      setError(getErrorMessage(err, 'No se pudo crear el paciente.'));
+    } finally {
+      setCreatingPatient(false);
+    }
+  };
+
   const create = async () => {
     setError('');
     if (!patient?.id) {
@@ -92,9 +113,7 @@ export function AppointmentCreateModal({ slot, onClose }: AppointmentCreateModal
     }
 
     const sessionType = SESSION_TYPES[sessionTypeIdx];
-    // El título es exactamente lo que el usuario escribió (lo que verá en
-    // Google); si lo deja vacío, usamos el nombre del paciente como respaldo.
-    const finalTitle = title.trim() || patient.full_name;
+    const finalTitle = patient.full_name;
     setSaving(true);
     try {
       const appt = await clinicalApi.addAppointment({
@@ -164,11 +183,11 @@ export function AppointmentCreateModal({ slot, onClose }: AppointmentCreateModal
             Paciente
             <input
               type="search"
-              placeholder="Buscar por nombre o teléfono…"
+              placeholder="Buscar paciente existente o escribir uno nuevo…"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
-            {debouncedQuery.trim().length >= 2 && (
+            {query.trim().length >= 2 && (
               <ul className="appt-create-results">
                 {results.map((p) => (
                   <li key={p.id}>
@@ -177,7 +196,6 @@ export function AppointmentCreateModal({ slot, onClose }: AppointmentCreateModal
                       className="secondary"
                       onClick={() => {
                         setPatient(p);
-                        setTitle((t) => t || p.full_name || '');
                         setQuery('');
                       }}
                     >
@@ -186,21 +204,24 @@ export function AppointmentCreateModal({ slot, onClose }: AppointmentCreateModal
                     </button>
                   </li>
                 ))}
-                {results.length === 0 && <li className="muted">Sin resultados.</li>}
+                {/* Siempre se puede agendar como paciente NUEVO con el nombre
+                    escrito, exista o no en la búsqueda. */}
+                <li>
+                  <button
+                    type="button"
+                    onClick={createNewPatient}
+                    disabled={creatingPatient}
+                    style={{ width: '100%', textAlign: 'left' }}
+                  >
+                    {creatingPatient
+                      ? 'Creando…'
+                      : `+ Paciente nuevo: «${query.trim()}»`}
+                  </button>
+                </li>
               </ul>
             )}
           </label>
         )}
-
-        <label>
-          Título (lo que verás en Google Calendar)
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Ej. Juan Pérez #3"
-          />
-        </label>
 
         <label>
           Tipo de sesión

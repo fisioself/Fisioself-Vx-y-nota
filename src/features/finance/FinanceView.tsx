@@ -813,12 +813,8 @@ function CajaPanel({ caja }: { caja?: { total: number; byMethod: Record<string, 
           <strong>{money(caja?.byMethod?.efectivo ?? 0)}</strong>
         </div>
         <div className="card" style={{ background: 'var(--bg-sunken)' }}>
-          <span>Tarjeta</span>
+          <span>Tarjeta / Transferencia</span>
           <strong>{money(caja?.byMethod?.tarjeta ?? 0)}</strong>
-        </div>
-        <div className="card" style={{ background: 'var(--bg-sunken)' }}>
-          <span>Transferencia</span>
-          <strong>{money(caja?.byMethod?.transferencia ?? 0)}</strong>
         </div>
         <div className="card">
           <span>Total en caja</span>

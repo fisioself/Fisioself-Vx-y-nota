@@ -272,6 +272,10 @@ export function NativeCalendar({ onEventClick }: NativeCalendarProps) {
         appointment={chargeTarget}
         onClose={() => setChargeTarget(null)}
         onViewPatient={onEventClick}
+        onDeleted={() => {
+          setChargeTarget(null);
+          queryClient.invalidateQueries({ queryKey: ['appointments'] });
+        }}
       />
 
       <AppointmentCreateModal slot={newSlot} onClose={() => setNewSlot(null)} />
