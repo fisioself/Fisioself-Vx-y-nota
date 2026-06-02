@@ -1,5 +1,5 @@
 // Classic Service Worker — no ES module imports, no CDN dependencies
-const CACHE_NAME = 'fisioself-notas-vx-v6';
+const CACHE_NAME = 'fisioself-notas-vx-v7';
 const APP_SHELL = ['/', '/index.html', '/manifest.webmanifest'];
 const DB_NAME = 'fisioself-sync-db';
 const STORE_NAME = 'sync-queue';
@@ -66,38 +66,49 @@ self.addEventListener('fetch', (event) => {
 
   if (request.method === 'POST' || request.method === 'PUT' || request.method === 'DELETE') {
     if (request.url.includes('/rest/v1/')) {
-      event.respondWith(
-        fetch(request.clone()).catch(async (_err) => {
-          const db = await idbOpen();
-          const clonedReq = request.clone();
-          const headers = {};
-          clonedReq.headers.forEach((value, key) => (headers[key] = value));
+      // IMPORTANTE: solo encolamos escrituras cuando el dispositivo está
+      // REALMENTE sin conexión. Antes interceptábamos toda escritura y, si el
+      // `fetch` fallaba por un microcorte de red (mucho más común en celular),
+      // devolvíamos un 202 falso "queued_offline". El cliente de Supabase espera
+      // la fila insertada (.select().single()) y, al recibir ese 202, fallaba con
+      // "No se pudo agendar la cita" — por eso en celular no se podía agendar y en
+      // laptop (wifi estable) sí. Estando en línea dejamos pasar la petición tal
+      // cual para que la app vea la respuesta/el error real y pueda reintentar.
+      if (self.navigator && self.navigator.onLine === false) {
+        event.respondWith(
+          (async () => {
+            const db = await idbOpen();
+            const clonedReq = request.clone();
+            const headers = {};
+            clonedReq.headers.forEach((value, key) => (headers[key] = value));
 
-          let body;
-          try {
-            body = await clonedReq.text();
-          } catch (_e) {
-            body = null;
-          }
+            let body;
+            try {
+              body = await clonedReq.text();
+            } catch (_e) {
+              body = null;
+            }
 
-          await idbPut(db, {
-            url: clonedReq.url,
-            method: clonedReq.method,
-            headers,
-            body,
-            timestamp: Date.now()
-          });
+            await idbPut(db, {
+              url: clonedReq.url,
+              method: clonedReq.method,
+              headers,
+              body,
+              timestamp: Date.now()
+            });
 
-          if ('sync' in self.registration) {
-            await self.registration.sync.register('clinical-sync');
-          }
+            if ('sync' in self.registration) {
+              await self.registration.sync.register('clinical-sync');
+            }
 
-          return new Response(JSON.stringify({ status: 'queued_offline' }), {
-            status: 202,
-            headers: { 'Content-Type': 'application/json' }
-          });
-        })
-      );
+            return new Response(JSON.stringify({ status: 'queued_offline' }), {
+              status: 202,
+              headers: { 'Content-Type': 'application/json' }
+            });
+          })()
+        );
+      }
+      // En línea: no interceptamos — el navegador hace el fetch normal.
       return;
     }
   }
