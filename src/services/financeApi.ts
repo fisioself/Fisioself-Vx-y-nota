@@ -13,8 +13,9 @@ export type PaymentWithPatient = Payment & {
   patients?: { full_name: string | null } | { full_name: string | null }[] | null;
 };
 
-// Métodos de pago/caja soportados (transferencia retirada).
-export const PAYMENT_METHODS = ['efectivo', 'tarjeta'] as const;
+// Métodos de pago/caja soportados. La transferencia entra ÍNTEGRA a la caja
+// (no se le descuenta comisión; solo la tarjeta tiene comisión de terminal).
+export const PAYMENT_METHODS = ['efectivo', 'tarjeta', 'transferencia'] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
 export interface PatientFinanceSummary {
@@ -44,7 +45,8 @@ export interface PeriodSummary {
   expenses: number;
   net: number;
   patients: number;
-  sessions: number;
+  sessions: number; // sesiones cobradas (azul/naranja/amarillo/rosa), sin valoraciones
+  valoraciones: number; // valoraciones (morado) — métrica aparte
 }
 
 export interface TopPatientRow {
@@ -76,8 +78,8 @@ interface ApptStats {
     newPatients: number;
     valoraciones: number;
   }>;
-  currentMonth: { patients: number; sessions: number };
-  last30d: { patients: number; sessions: number };
+  currentMonth: { patients: number; sessions: number; valoraciones: number };
+  last30d: { patients: number; sessions: number; valoraciones: number };
   totalSessions: number;
 }
 
@@ -492,8 +494,8 @@ export const financeApi = {
     if (apptRes.error) throw apptRes.error;
     const appt = (apptRes.data as ApptStats | null) ?? {
       monthly: [],
-      currentMonth: { patients: 0, sessions: 0 },
-      last30d: { patients: 0, sessions: 0 },
+      currentMonth: { patients: 0, sessions: 0, valoraciones: 0 },
+      last30d: { patients: 0, sessions: 0, valoraciones: 0 },
       totalSessions: 0
     };
 
@@ -571,7 +573,8 @@ export const financeApi = {
       expenses: curExpense,
       net: curIncome - curExpense,
       patients: appt.currentMonth?.patients ?? 0,
-      sessions: appt.currentMonth?.sessions ?? 0
+      sessions: appt.currentMonth?.sessions ?? 0,
+      valoraciones: appt.currentMonth?.valoraciones ?? 0
     };
 
     // Periodo: últimos 30 días
@@ -586,7 +589,8 @@ export const financeApi = {
       expenses: d30Expense,
       net: d30Income - d30Expense,
       patients: appt.last30d?.patients ?? 0,
-      sessions: appt.last30d?.sessions ?? 0
+      sessions: appt.last30d?.sessions ?? 0,
+      valoraciones: appt.last30d?.valoraciones ?? 0
     };
 
     // Caja (todo el tiempo) por método = cobros a pacientes + ajustes manuales.

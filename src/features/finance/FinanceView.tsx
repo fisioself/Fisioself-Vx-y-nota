@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { financeApi, type Payment } from '../../services/financeApi';
+import { financeApi, type Payment, type PaymentMethod } from '../../services/financeApi';
 import { clinicalApi } from '../../services/clinicalApi';
 import { useToast } from '../../app/ToastProvider';
 import type { Patient } from '../../types/clinical';
@@ -587,6 +587,7 @@ function PatientFinancePanel({ patient }: { patient: Patient }) {
           >
             <option value="efectivo">Efectivo</option>
             <option value="tarjeta">Tarjeta</option>
+            <option value="transferencia">Transferencia</option>
           </select>
           <button type="button" onClick={addPackage} disabled={busy}>
             Agregar
@@ -674,6 +675,7 @@ function PatientFinancePanel({ patient }: { patient: Patient }) {
         >
           <option value="efectivo">Efectivo</option>
           <option value="tarjeta">Tarjeta</option>
+          <option value="transferencia">Transferencia</option>
         </select>
         <button type="button" className="secondary" onClick={registerPayment} disabled={busy}>
           Registrar abono
@@ -764,7 +766,7 @@ function CajaPanel({ caja }: { caja?: { total: number; byMethod: Record<string, 
     try {
       await financeApi.addCajaMovement({
         amount: direction === 'out' ? -Math.abs(value) : Math.abs(value),
-        method: method as 'efectivo' | 'tarjeta',
+        method: method as PaymentMethod,
         description,
         occurredAt
       });
@@ -804,12 +806,8 @@ function CajaPanel({ caja }: { caja?: { total: number; byMethod: Record<string, 
       </div>
       <div
         className="summary-grid"
-        style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', marginTop: 12 }}
+        style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', marginTop: 12 }}
       >
-        <div className="card">
-          <span>Total en caja</span>
-          <strong style={{ color: '#1f9d57' }}>{money(caja?.total ?? 0)}</strong>
-        </div>
         <div className="card" style={{ background: 'var(--bg-sunken)' }}>
           <span>Efectivo</span>
           <strong>{money(caja?.byMethod?.efectivo ?? 0)}</strong>
@@ -817,6 +815,14 @@ function CajaPanel({ caja }: { caja?: { total: number; byMethod: Record<string, 
         <div className="card" style={{ background: 'var(--bg-sunken)' }}>
           <span>Tarjeta</span>
           <strong>{money(caja?.byMethod?.tarjeta ?? 0)}</strong>
+        </div>
+        <div className="card" style={{ background: 'var(--bg-sunken)' }}>
+          <span>Transferencia</span>
+          <strong>{money(caja?.byMethod?.transferencia ?? 0)}</strong>
+        </div>
+        <div className="card">
+          <span>Total en caja</span>
+          <strong style={{ color: '#1f9d57' }}>{money(caja?.total ?? 0)}</strong>
         </div>
       </div>
 
@@ -849,6 +855,7 @@ function CajaPanel({ caja }: { caja?: { total: number; byMethod: Record<string, 
           <select value={method} onChange={(e) => setMethod(e.target.value)} aria-label="Método">
             <option value="efectivo">Efectivo</option>
             <option value="tarjeta">Tarjeta</option>
+            <option value="transferencia">Transferencia</option>
           </select>
           <input
             type="text"
@@ -1011,6 +1018,9 @@ export function FinanceView(_props: FinanceViewProps) {
 
           {selectedPatient && <PatientFinancePanel patient={selectedPatient} />}
 
+          {/* === Caja (todo el tiempo): cuánto hay AHORA, hasta arriba === */}
+          <CajaPanel caja={caja} />
+
           {/* === Mes en curso === */}
           <section className="card">
             <div className="form-header">
@@ -1044,8 +1054,12 @@ export function FinanceView(_props: FinanceViewProps) {
                 <GrowthBadge value={summary?.growth.patients ?? null} />
               </div>
               <div className="card" style={{ background: 'var(--bg-sunken)' }}>
-                <span>Sesiones</span>
+                <span>Sesiones cobradas</span>
                 <strong>{cm?.sessions ?? 0}</strong>
+              </div>
+              <div className="card" style={{ background: 'var(--bg-sunken)' }}>
+                <span>Valoraciones</span>
+                <strong style={{ color: '#8e44ad' }}>{cm?.valoraciones ?? 0}</strong>
               </div>
             </div>
           </section>
@@ -1081,8 +1095,12 @@ export function FinanceView(_props: FinanceViewProps) {
                 <strong>{d30?.patients ?? 0}</strong>
               </div>
               <div className="card" style={{ background: 'var(--bg-sunken)' }}>
-                <span>Sesiones</span>
+                <span>Sesiones cobradas</span>
                 <strong>{d30?.sessions ?? 0}</strong>
+              </div>
+              <div className="card" style={{ background: 'var(--bg-sunken)' }}>
+                <span>Valoraciones</span>
+                <strong style={{ color: '#8e44ad' }}>{d30?.valoraciones ?? 0}</strong>
               </div>
             </div>
           </section>
@@ -1119,9 +1137,6 @@ export function FinanceView(_props: FinanceViewProps) {
               />
             </div>
           </section>
-
-          {/* === Caja (todo el tiempo) + ajustes manuales === */}
-          <CajaPanel caja={caja} />
 
           {/* === Top pacientes por ingreso === */}
           <section className="card">

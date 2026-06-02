@@ -251,6 +251,7 @@ export function NativeCalendar({ onEventClick }: NativeCalendarProps) {
           select={(arg: CalendarSelectArg) => setNewSlot({ start: arg.startStr, end: arg.endStr })}
           dayMaxEvents={true}
           weekends={true}
+          hiddenDays={[0]} // Oculta el domingo: la clínica no trabaja ese día
           eventClick={handleEventClick}
           eventDrop={handleEventDrop}
           eventResize={handleEventDrop} // Same logic for resize

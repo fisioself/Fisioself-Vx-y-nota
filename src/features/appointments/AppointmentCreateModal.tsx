@@ -109,19 +109,21 @@ export function AppointmentCreateModal({ slot, onClose }: AppointmentCreateModal
 
       // Empuja la cita a Google Calendar con la sesión del usuario. Si falla
       // (p. ej. Google no conectado) la cita queda guardada igual en la app.
-      let googleOk = true;
+      // Mostramos el motivo REAL del fallo para poder diagnosticar (antes se
+      // ocultaba con un mensaje genérico y no se sabía qué pasaba).
+      let googleErr: string | null = null;
       try {
         await calendarService.syncAppointment(appt.id);
-      } catch {
-        googleOk = false;
+      } catch (e) {
+        googleErr = getErrorMessage(e, 'Error desconocido al enviar a Google.');
       }
 
       await queryClient.invalidateQueries({ queryKey: ['appointments'] });
       notify({
-        tone: googleOk ? 'success' : 'info',
-        message: googleOk
-          ? 'Cita agendada y enviada a Google Calendar.'
-          : 'Cita agendada. No se pudo enviar a Google (revisa la conexión).'
+        tone: googleErr ? 'info' : 'success',
+        message: googleErr
+          ? `Cita agendada en la app, pero Google falló: ${googleErr}`
+          : 'Cita agendada y enviada a Google Calendar.'
       });
       onClose();
     } catch (err) {
