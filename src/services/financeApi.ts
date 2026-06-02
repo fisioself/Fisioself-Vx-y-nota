@@ -370,15 +370,19 @@ export const financeApi = {
     );
   },
 
-  // Número de sesión del paciente — cuántas citas (no canceladas) tiene hasta
+  // Número de sesión del paciente — cuántas SESIONES (no canceladas) tiene hasta
   // la fecha de la cita actual, inclusive. Útil para mostrar "Sesión #N".
+  // Las VALORACIONES (morado: color 9 o 1) NO cuentan como sesión: son aparte,
+  // igual que en finance_appt_stats. Así "Sesión #N" no se infla por la VX.
   async getPatientSessionCount(patientId: string, upToDate?: string | null): Promise<number> {
     const db = assertSupabase();
     let q = db
       .from('appointments')
       .select('id', { count: 'exact', head: true })
       .eq('patient_id', patientId)
-      .neq('status', 'cancelled');
+      .neq('status', 'cancelled')
+      // color_id NULL (sesión clínica sin color) o cualquiera que no sea valoración.
+      .or('color_id.is.null,color_id.not.in.(9,1)');
     if (upToDate) q = q.lte('starts_at', upToDate);
     const { count, error } = await q;
     if (error) throw error;

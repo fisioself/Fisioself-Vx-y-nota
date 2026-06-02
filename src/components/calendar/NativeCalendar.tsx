@@ -24,7 +24,7 @@ interface CalendarEventClickArg {
     id: string;
     title: string;
     startStr: string;
-    extendedProps: { patientId?: string; sessionType?: string | null };
+    extendedProps: { patientId?: string; sessionType?: string | null; colorId?: string | null };
   };
 }
 
@@ -196,7 +196,8 @@ export function NativeCalendar({ onEventClick }: NativeCalendarProps) {
         textColor: textColorFor(bg),
         extendedProps: {
           patientId: appt.patient_id,
-          sessionType: appt.session_type
+          sessionType: appt.session_type,
+          colorId: appt.color_id
         }
       };
     });
@@ -219,7 +220,8 @@ export function NativeCalendar({ onEventClick }: NativeCalendarProps) {
       patientId,
       patientName: clickInfo.event.title,
       sessionType: clickInfo.event.extendedProps.sessionType ?? null,
-      startsAt: clickInfo.event.startStr
+      startsAt: clickInfo.event.startStr,
+      colorId: clickInfo.event.extendedProps.colorId ?? null
     });
   };
 

@@ -16,7 +16,12 @@ export interface ChargeAppointmentTarget {
   patientName: string;
   sessionType: string | null;
   startsAt: string | null;
+  colorId?: string | null;
 }
+
+// Las valoraciones (morado: color 9 o 1) son aparte y NO son una "sesión".
+const isValoracion = (t: ChargeAppointmentTarget): boolean =>
+  t.colorId === '9' || t.colorId === '1' || t.sessionType === 'Valoración';
 
 interface AppointmentChargeModalProps {
   appointment: ChargeAppointmentTarget | null;
@@ -102,10 +107,12 @@ export function AppointmentChargeModal({
     enabled: !!appointment
   });
 
+  // Para valoraciones no pedimos número de sesión: se muestran como "VX".
+  const showSessionNum = !!appointment && !isValoracion(appointment);
   const { data: sessionNum = 0 } = useQuery({
     queryKey: ['patient-session-count', patientId, appointment?.startsAt],
     queryFn: () => financeApi.getPatientSessionCount(patientId, appointment?.startsAt),
-    enabled: !!patientId && !!appointment
+    enabled: !!patientId && showSessionNum
   });
 
   const { data: catalog = [] } = useQuery({
@@ -420,7 +427,9 @@ export function AppointmentChargeModal({
             </h2>
             <span className="muted" style={{ fontSize: '0.85rem' }}>
               {appointment.sessionType || 'Sesión'}
-              {sessionNum > 0 && ` · Sesión #${sessionNum}`}
+              {isValoracion(appointment)
+                ? ' · VX (no cuenta como sesión)'
+                : sessionNum > 0 && ` · Sesión #${sessionNum}`}
               {' · '}
               {cdmxLabel(appointment.startsAt)}
             </span>
