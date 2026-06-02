@@ -389,6 +389,27 @@ export const financeApi = {
     return count ?? 0;
   },
 
+  // Posición de esta cita dentro de un paquete: cuántas sesiones NO-valoración
+  // y no canceladas tiene el paciente desde purchased_at hasta upToDate (inclusive).
+  // Permite mostrar "Sesión 4 de 10 en paquete X" al abrir una cita.
+  async getPackageSessionPosition(
+    patientId: string,
+    packagePurchasedAt: string,
+    upToDate: string
+  ): Promise<number> {
+    const db = assertSupabase();
+    const { count, error } = await db
+      .from('appointments')
+      .select('id', { count: 'exact', head: true })
+      .eq('patient_id', patientId)
+      .neq('status', 'cancelled')
+      .or('color_id.is.null,color_id.not.in.(9,1)')
+      .gte('starts_at', packagePurchasedAt)
+      .lte('starts_at', upToDate);
+    if (error) throw error;
+    return count ?? 0;
+  },
+
   // Precio sugerido del catálogo según el tipo de sesión de la cita.
   async suggestPriceForSessionType(sessionType: string | null): Promise<number | null> {
     if (!sessionType) return null;

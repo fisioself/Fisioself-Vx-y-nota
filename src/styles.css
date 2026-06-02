@@ -550,11 +550,10 @@ pre {
   }
 }
 
-/* Ningún elemento debe provocar scroll horizontal de toda la página. */
-html,
+/* Evita que el body sea más ancho que la ventana; pero NO se oculta overflow-x
+   a nivel html/body porque eso clipa secciones internas (p.ej. finanzas). */
 body {
   max-width: 100%;
-  overflow-x: hidden;
 }
 
 /* --- Print Styles for Clinical Reports (Point 2) --- */

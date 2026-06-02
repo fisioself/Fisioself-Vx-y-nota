@@ -135,6 +135,25 @@ export function AppointmentChargeModal({
     enabled: !!patientId
   });
 
+  // Paquete más reciente cuya fecha de inicio sea ≤ starts_at de esta cita.
+  // Permite mostrar "Sesión N de X en paquete [nombre]" para contextualizar.
+  const relevantPkg = (patientFinance?.packages ?? []).find(
+    (p) =>
+      p.purchased_at != null &&
+      appointment?.startsAt != null &&
+      p.purchased_at <= appointment.startsAt
+  );
+  const { data: pkgSessionPos = 0 } = useQuery({
+    queryKey: ['pkg-session-pos', patientId, relevantPkg?.purchased_at, appointment?.startsAt],
+    queryFn: () =>
+      financeApi.getPackageSessionPosition(
+        patientId,
+        relevantPkg!.purchased_at!,
+        appointment!.startsAt!
+      ),
+    enabled: showSessionNum && !!relevantPkg?.purchased_at && !!appointment?.startsAt
+  });
+
   // Al cambiar de cita, limpia el formulario para no arrastrar datos previos.
   useEffect(() => {
     setMode('suelta');
@@ -433,6 +452,11 @@ export function AppointmentChargeModal({
               {' · '}
               {cdmxLabel(appointment.startsAt)}
             </span>
+            {relevantPkg && pkgSessionPos > 0 && !isValoracion(appointment) && (
+              <p className="muted" style={{ fontSize: '0.82rem', margin: '3px 0 0' }}>
+                Sesión {pkgSessionPos} de {relevantPkg.sessions_total} en paquete «{relevantPkg.name}»
+              </p>
+            )}
           </div>
           <button type="button" className="secondary" onClick={onClose}>
             Cerrar
