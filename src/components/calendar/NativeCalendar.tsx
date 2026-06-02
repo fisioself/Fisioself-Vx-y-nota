@@ -40,11 +40,18 @@ interface CalendarDatesSetArg {
   endStr: string;
 }
 
-// `select` se dispara al hacer click/arrastrar sobre un hueco libre del
-// calendario; lo usamos para agendar una cita nueva en ese horario.
+// `select` se dispara al ARRASTRAR sobre un rango libre (elige duración).
 interface CalendarSelectArg {
   startStr: string;
   endStr: string;
+}
+
+// `dateClick` se dispara con un toque/click simple sobre un hueco. A diferencia
+// de `select` (que exige arrastrar y no funciona bien en táctil), este sí
+// responde igual en celular y laptop: por eso lo usamos para agendar al picar.
+interface CalendarDateClickArg {
+  date: Date;
+  allDay: boolean;
 }
 
 // Colores oficiales de Google Calendar (mismos hex que usa Google), para que
@@ -85,20 +92,27 @@ interface NativeCalendarProps {
   onEventClick?: (patientId: string) => void;
 }
 
+// Formatea una fecha como "YYYY-MM-DDTHH:mm:00" en hora local (hora de pared,
+// sin zona) — el mismo formato que da FullCalendar y que espera el modal.
+const fmtLocal = (d: Date) => {
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:00`;
+};
+
+// Crea un slot de 1 hora a partir de una fecha de inicio.
+const slotFrom = (start: Date): NewAppointmentSlot => ({
+  start: fmtLocal(start),
+  end: fmtLocal(new Date(start.getTime() + 60 * 60 * 1000))
+});
+
 // Genera un slot de 1 hora desde la próxima marca de 30 minutos, en hora local,
 // para pre-rellenar el modal al tocar "Nueva cita" sin arrastrar en el calendario.
 function makeDefaultSlot(): NewAppointmentSlot {
   const now = new Date();
-  const mins = now.getMinutes();
-  const roundedMins = Math.ceil((mins + 1) / 30) * 30;
+  const roundedMins = Math.ceil((now.getMinutes() + 1) / 30) * 30;
   const start = new Date(now);
   start.setMinutes(roundedMins, 0, 0);
-  const end = new Date(start.getTime() + 60 * 60 * 1000);
-  const fmt = (d: Date) => {
-    const p = (n: number) => String(n).padStart(2, '0');
-    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:00`;
-  };
-  return { start: fmt(start), end: fmt(end) };
+  return slotFrom(start);
 }
 
 export function NativeCalendar({ onEventClick }: NativeCalendarProps) {
@@ -188,6 +202,14 @@ export function NativeCalendar({ onEventClick }: NativeCalendarProps) {
     });
   }, [appointments]);
 
+  // Toque/click simple sobre un hueco → agendar en ese horario. En la vista de
+  // mes (allDay) el click no trae hora, así que arrancamos a las 9:00.
+  const handleDateClick = (arg: CalendarDateClickArg) => {
+    const start = new Date(arg.date);
+    if (arg.allDay) start.setHours(9, 0, 0, 0);
+    setNewSlot(slotFrom(start));
+  };
+
   const handleEventClick = (clickInfo: CalendarEventClickArg) => {
     const patientId = clickInfo.event.extendedProps.patientId;
     if (!patientId) return;
@@ -266,6 +288,7 @@ export function NativeCalendar({ onEventClick }: NativeCalendarProps) {
           selectable={true}
           selectMirror={true}
           select={(arg: CalendarSelectArg) => setNewSlot({ start: arg.startStr, end: arg.endStr })}
+          dateClick={handleDateClick}
           dayMaxEvents={true}
           weekends={true}
           hiddenDays={[0]} // Oculta el domingo: la clínica no trabaja ese día
