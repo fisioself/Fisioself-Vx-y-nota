@@ -2,26 +2,50 @@ import { useState, type FormEvent } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { authService } from '../../services/authService';
 import { getErrorMessage } from '../../shared/errors';
+import { Turnstile } from './Turnstile';
 
 interface LoginScreenProps {
   onLogin?: (session: Session | null) => void;
 }
+
+// Site key pública de Cloudflare Turnstile. Si está definida, mostramos el
+// CAPTCHA y exigimos su token (debe coincidir con el secret puesto en Supabase).
+const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined;
 
 export function LoginScreen({ onLogin }: LoginScreenProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [captchaToken, setCaptchaToken] = useState('');
+  // Al cambiar este número se re-monta el widget para pedir un token nuevo
+  // (los tokens de Turnstile son de un solo uso: hay que renovarlos tras fallar).
+  const [captchaResetKey, setCaptchaResetKey] = useState(0);
+
+  const captchaEnabled = Boolean(TURNSTILE_SITE_KEY);
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (captchaEnabled && !captchaToken) {
+      setError('Completa la verificación de seguridad.');
+      return;
+    }
     setBusy(true);
     setError('');
     try {
-      const session = await authService.signInWithPassword({ email: email.trim(), password });
+      const session = await authService.signInWithPassword({
+        email: email.trim(),
+        password,
+        captchaToken: captchaEnabled ? captchaToken : undefined
+      });
       onLogin?.(session);
     } catch (err) {
       setError(getErrorMessage(err, 'No se pudo iniciar sesion.'));
+      // El token ya se consumió en el intento: pedimos uno nuevo.
+      if (captchaEnabled) {
+        setCaptchaToken('');
+        setCaptchaResetKey((k) => k + 1);
+      }
     } finally {
       setBusy(false);
     }
@@ -78,12 +102,21 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
           />
         </label>
 
+        {captchaEnabled && TURNSTILE_SITE_KEY && (
+          <Turnstile
+            siteKey={TURNSTILE_SITE_KEY}
+            onVerify={setCaptchaToken}
+            onExpire={() => setCaptchaToken('')}
+            resetKey={captchaResetKey}
+          />
+        )}
+
         {error && (
           <p className="error" role="alert">
             {error}
           </p>
         )}
-        <button type="submit" disabled={busy}>
+        <button type="submit" disabled={busy || (captchaEnabled && !captchaToken)}>
           {busy ? 'Entrando...' : 'Entrar'}
         </button>
 
