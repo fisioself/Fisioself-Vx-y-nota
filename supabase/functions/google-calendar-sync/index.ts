@@ -209,8 +209,14 @@ Deno.serve(async (req) => {
     const isCreate = !appointment.google_event_id;
     const userTitle = typeof appointment.title === 'string' ? appointment.title.trim() : '';
 
+    // id determinístico (UUID sin guiones = base32hex válido para Google). Hace
+    // que dos sincronizaciones concurrentes de la MISMA cita (trigger DB + app)
+    // no creen eventos duplicados: la segunda recibe 409 y se trata como éxito.
+    const detEventId = String(appointment.id).replace(/-/g, '');
+
     const eventPayload = isCreate
       ? {
+          id: detEventId,
           summary: userTitle || SAFE_EVENT_SUMMARY,
           location: safeLocation,
           description: SAFE_EVENT_DESCRIPTION,
@@ -238,8 +244,12 @@ Deno.serve(async (req) => {
       body: JSON.stringify(eventPayload)
     });
 
-    const googleData = await googleResponse.json().catch(() => ({}));
-    if (!googleResponse.ok) {
+    let googleData = await googleResponse.json().catch(() => ({}));
+    // 409 al crear = el evento ya existe con ese id determinístico (lo creó otra
+    // sincronización concurrente de esta misma cita). No es error: ya está en Google.
+    if (!googleResponse.ok && isCreate && googleResponse.status === 409) {
+      googleData = { id: detEventId, htmlLink: appointment.google_html_link ?? null };
+    } else if (!googleResponse.ok) {
       console.error('google_calendar_sync_rejected', {
         status: googleResponse.status,
         code: googleData.error?.code || googleData.error?.status || 'unknown'
