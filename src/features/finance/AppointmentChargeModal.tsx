@@ -64,6 +64,7 @@ export function AppointmentChargeModal({
   const [showAssign, setShowAssign] = useState(false);
   const [assignPkgId, setAssignPkgId] = useState('');
   const [assignAmount, setAssignAmount] = useState('');
+  const [assignStartDate, setAssignStartDate] = useState('');
   const [assignInitPay, setAssignInitPay] = useState('');
   const [assignInitMethod, setAssignInitMethod] = useState<PaymentMethod>('efectivo');
   const [assigning, setAssigning] = useState(false);
@@ -133,12 +134,27 @@ export function AppointmentChargeModal({
     setShowAssign(false);
     setAssignPkgId('');
     setAssignAmount('');
+    setAssignStartDate('');
     setAssignInitPay('');
     setShowNote(false);
     setNoteText('');
     setNoteEva('');
     setNoteSaved(false);
   }, [apptId]);
+
+  // Al abrir el modal, sincronizar sessions_used de cada paquete del paciente
+  // con el conteo real de citas no canceladas desde purchased_at, para que el
+  // número refleje la realidad sin requerir cobrar "con paquete" manualmente.
+  useEffect(() => {
+    if (!patientId) return;
+    financeApi
+      .syncPackageSessionsUsed(patientId)
+      .then(() => {
+        queryClient.invalidateQueries({ queryKey: ['patient-finance', patientId] });
+        queryClient.invalidateQueries({ queryKey: ['active-packages', patientId] });
+      })
+      .catch(() => {});
+  }, [patientId, queryClient]);
 
   // Prefill del monto sugerido y selección del primer paquete disponible.
   useEffect(() => {
@@ -294,7 +310,8 @@ export function AppointmentChargeModal({
         packageId: chosenCatalog.id,
         name: chosenCatalog.name,
         totalAmount,
-        sessionsTotal: chosenCatalog.sessions_included
+        sessionsTotal: chosenCatalog.sessions_included,
+        purchasedAt: assignStartDate || undefined
       });
       if (initAmt > 0) {
         const initNet = assignInitMethod === 'tarjeta' ? netAfterCommission(initAmt) : initAmt;
@@ -305,6 +322,8 @@ export function AppointmentChargeModal({
           method: assignInitMethod
         });
       }
+      // Sincronizar sesiones usadas según citas reales desde la fecha de inicio.
+      await financeApi.syncPackageSessionsUsed(patientId);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['active-packages', patientId] }),
         queryClient.invalidateQueries({ queryKey: ['patient-finance', patientId] }),
@@ -313,6 +332,7 @@ export function AppointmentChargeModal({
       ]);
       setAssignPkgId('');
       setAssignAmount('');
+      setAssignStartDate('');
       setAssignInitPay('');
       setShowAssign(false);
       setMode('paquete');
@@ -496,6 +516,14 @@ export function AppointmentChargeModal({
                     value={assignAmount}
                     onChange={(e) => setAssignAmount(e.target.value)}
                     placeholder={chosenCatalog ? String(chosenCatalog.price) : 'Precio'}
+                  />
+                </label>
+                <label>
+                  Fecha de inicio (si ya tomó sesiones antes)
+                  <input
+                    type="date"
+                    value={assignStartDate}
+                    onChange={(e) => setAssignStartDate(e.target.value)}
                   />
                 </label>
                 <label>

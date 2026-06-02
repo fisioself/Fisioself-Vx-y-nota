@@ -338,6 +338,35 @@ export const financeApi = {
     if (error) throw error;
   },
 
+  // Sincroniza sessions_used de cada paquete del paciente con el número real de
+  // citas no canceladas desde purchased_at. Se llama al abrir el modal para que
+  // el contador refleje la realidad sin requerir cobro manual por sesión.
+  async syncPackageSessionsUsed(patientId: string): Promise<void> {
+    const db = assertSupabase();
+    const pkgs = unwrap<PatientPackage[]>(
+      await db.from('patient_packages').select('*').eq('patient_id', patientId)
+    );
+    await Promise.all(
+      pkgs
+        .filter((pkg) => pkg.purchased_at)
+        .map(async (pkg) => {
+          const { count, error } = await db
+            .from('appointments')
+            .select('id', { count: 'exact', head: true })
+            .eq('patient_id', patientId)
+            .neq('status', 'cancelled')
+            .gte('starts_at', pkg.purchased_at!);
+          if (error) return;
+          const realUsed = Math.min(count ?? 0, Number(pkg.sessions_total ?? 0));
+          if (realUsed === Number(pkg.sessions_used ?? 0)) return;
+          await db
+            .from('patient_packages')
+            .update({ sessions_used: realUsed, updated_at: new Date().toISOString() })
+            .eq('id', pkg.id);
+        })
+    );
+  },
+
   // Número de sesión del paciente — cuántas citas (no canceladas) tiene hasta
   // la fecha de la cita actual, inclusive. Útil para mostrar "Sesión #N".
   async getPatientSessionCount(patientId: string, upToDate?: string | null): Promise<number> {
