@@ -50,6 +50,25 @@ describe('authService.signInWithPassword', () => {
     expect(auth.signInWithPassword).toHaveBeenCalledWith({ email: 'a@b.com', password: 'x' });
   });
 
+  it('reenvía el captchaToken a Supabase cuando se proporciona', async () => {
+    const auth = {
+      signInWithPassword: vi
+        .fn()
+        .mockResolvedValue({ data: { session: { access_token: 'tok' } }, error: null })
+    };
+    const { authService } = await loadAuth({ auth });
+    await authService.signInWithPassword({
+      email: 'a@b.com',
+      password: 'x',
+      captchaToken: 'cf-token'
+    });
+    expect(auth.signInWithPassword).toHaveBeenCalledWith({
+      email: 'a@b.com',
+      password: 'x',
+      options: { captchaToken: 'cf-token' }
+    });
+  });
+
   it('lanza error con credenciales inválidas', async () => {
     const auth = {
       signInWithPassword: vi

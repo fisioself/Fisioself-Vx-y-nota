@@ -23,13 +23,21 @@ export const authService = {
 
   async signInWithPassword({
     email,
-    password
+    password,
+    captchaToken
   }: {
     email: string;
     password: string;
+    // Token de Cloudflare Turnstile. Obligatorio cuando la protección CAPTCHA
+    // está activada en Supabase Auth; si no se envía, el login es rechazado.
+    captchaToken?: string;
   }): Promise<Session | null> {
     const db = assertSupabase();
-    const { data, error } = await db.auth.signInWithPassword({ email, password });
+    const { data, error } = await db.auth.signInWithPassword({
+      email,
+      password,
+      options: captchaToken ? { captchaToken } : undefined
+    });
     if (error) throw error;
     return data.session;
   },
