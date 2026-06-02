@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { clinicalApi } from '../../services/clinicalApi';
-import { calendarService } from '../../services/calendarService';
 import { useToast } from '../../app/ToastProvider';
 import { getErrorMessage } from '../../shared/errors';
 import type { Patient } from '../../types/clinical';
@@ -107,21 +106,14 @@ export function AppointmentCreateModal({ slot, onClose }: AppointmentCreateModal
         color_id: sessionType.colorId
       });
 
-      // Empuja la cita a Google Calendar con la sesión del usuario. Si falla
-      // (p. ej. Google no conectado) la cita queda guardada igual en la app.
-      let googleOk = true;
-      try {
-        await calendarService.syncAppointment(appt.id);
-      } catch {
-        googleOk = false;
-      }
-
+      // La sincronización a Google Calendar la hace el trigger server-side
+      // (appointments_autosync), de forma confiable y SIN depender de que el
+      // token del móvil esté vigente. Ya no la disparamos desde aquí para
+      // evitar una carrera que podía duplicar el evento en Google.
       await queryClient.invalidateQueries({ queryKey: ['appointments'] });
       notify({
-        tone: googleOk ? 'success' : 'info',
-        message: googleOk
-          ? 'Cita agendada y enviada a Google Calendar.'
-          : 'Cita agendada. No se pudo enviar a Google (revisa la conexión).'
+        tone: 'success',
+        message: 'Cita agendada. Se sincroniza con Google Calendar automáticamente.'
       });
       onClose();
     } catch (err) {

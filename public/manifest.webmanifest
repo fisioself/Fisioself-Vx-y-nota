@@ -3,11 +3,25 @@
   "short_name": "Notas VX",
   "description": "App clinica privada para notas, valoraciones y expediente del paciente.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#000000",
-  "theme_color": "#000000",
+  "orientation": "portrait",
+  "background_color": "#12372a",
+  "theme_color": "#12372a",
   "lang": "es-MX",
   "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
     {
       "src": "/logo.jpg",
       "sizes": "853x1280",
