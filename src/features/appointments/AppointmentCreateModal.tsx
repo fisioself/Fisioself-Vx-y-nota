@@ -34,6 +34,15 @@ const SESSION_TYPES: SessionTypeOption[] = [
 // FullCalendar (hora de pared local, sin zona).
 const toLocalInput = (s: string) => s.slice(0, 16);
 
+// Normaliza un nombre (sin acentos ni mayúsculas) para detectar si el paciente
+// que se va a crear ya existe y evitar fichas duplicadas por error.
+const normName = (s: string) =>
+  s
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .trim();
+
 export function AppointmentCreateModal({ slot, onClose }: AppointmentCreateModalProps) {
   const { notify } = useToast();
   const queryClient = useQueryClient();
@@ -46,6 +55,9 @@ export function AppointmentCreateModal({ slot, onClose }: AppointmentCreateModal
   const [endLocal, setEndLocal] = useState('');
   const [saving, setSaving] = useState(false);
   const [creatingPatient, setCreatingPatient] = useState(false);
+  // Cuando el nombre escrito coincide con un paciente que ya existe, pedimos
+  // una confirmación extra antes de crear una ficha nueva (evita duplicados).
+  const [confirmDuplicate, setConfirmDuplicate] = useState(false);
   const [error, setError] = useState('');
 
   // Reinicia el formulario cada vez que se abre con un slot nuevo.
@@ -57,8 +69,14 @@ export function AppointmentCreateModal({ slot, onClose }: AppointmentCreateModal
     setSessionTypeIdx(0);
     setStartLocal(toLocalInput(slot.start));
     setEndLocal(toLocalInput(slot.end));
+    setConfirmDuplicate(false);
     setError('');
   }, [slot]);
+
+  // Si cambia lo que se escribe, se reinicia la confirmación de duplicado.
+  useEffect(() => {
+    setConfirmDuplicate(false);
+  }, [query]);
 
   useEffect(() => {
     const handler = setTimeout(() => setDebouncedQuery(query), 300);
@@ -73,6 +91,10 @@ export function AppointmentCreateModal({ slot, onClose }: AppointmentCreateModal
 
   if (!slot) return null;
 
+  // ¿El nombre escrito ya corresponde a un paciente existente en los resultados?
+  // Si es así, avisamos antes de crear otra ficha para no duplicar pacientes.
+  const duplicate = results.find((p) => normName(p.full_name ?? '') === normName(query));
+
   // Crea un paciente nuevo con el nombre escrito y lo selecciona para la cita.
   // Sirve para agendar a alguien que aún no existe en el sistema (primera vez),
   // sin tener que salir a la pantalla de pacientes.
@@ -80,6 +102,11 @@ export function AppointmentCreateModal({ slot, onClose }: AppointmentCreateModal
     const name = query.trim();
     if (name.length < 2) {
       setError('Escribe el nombre del paciente nuevo.');
+      return;
+    }
+    // Si ya existe alguien con ese nombre, primero pedimos confirmación.
+    if (duplicate && !confirmDuplicate) {
+      setConfirmDuplicate(true);
       return;
     }
     setCreatingPatient(true);
@@ -205,7 +232,8 @@ export function AppointmentCreateModal({ slot, onClose }: AppointmentCreateModal
                   </li>
                 ))}
                 {/* Siempre se puede agendar como paciente NUEVO con el nombre
-                    escrito, exista o no en la búsqueda. */}
+                    escrito, exista o no en la búsqueda. Si ya existe alguien con
+                    ese nombre, se pide confirmar para no duplicar la ficha. */}
                 <li>
                   <button
                     type="button"
@@ -215,8 +243,15 @@ export function AppointmentCreateModal({ slot, onClose }: AppointmentCreateModal
                   >
                     {creatingPatient
                       ? 'Creando…'
-                      : `+ Paciente nuevo: «${query.trim()}»`}
+                      : confirmDuplicate
+                        ? `⚠️ Ya existe «${query.trim()}». Toca otra vez para crear uno aparte`
+                        : `+ Paciente nuevo: «${query.trim()}»`}
                   </button>
+                  {confirmDuplicate && (
+                    <p className="muted" style={{ fontSize: '0.8rem', margin: '4px 2px 0' }}>
+                      Si es la misma persona, mejor selecciónala de la lista de arriba.
+                    </p>
+                  )}
                 </li>
               </ul>
             )}

@@ -54,6 +54,8 @@ export function AppointmentChargeModal({
   const queryClient = useQueryClient();
 
   const [deleting, setDeleting] = useState(false);
+  // Confirmación de dos pasos para borrar la cita (en vez del confirm() nativo).
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [mode, setMode] = useState<'suelta' | 'paquete'>('suelta');
   const [amount, setAmount] = useState('');
   const [method, setMethod] = useState<PaymentMethod>('efectivo');
@@ -133,6 +135,7 @@ export function AppointmentChargeModal({
     setMethod('efectivo');
     setPackageId('');
     setAbonoAmount('');
+    setConfirmDelete(false);
     setError('');
     setShowAssign(false);
     setAssignPkgId('');
@@ -300,13 +303,6 @@ export function AppointmentChargeModal({
   // agendó por error. Los pagos ligados NO se pierden: el vínculo se pone en
   // null pero el dinero permanece en la caja.
   const deleteAppointment = async () => {
-    if (
-      !window.confirm(
-        '¿Eliminar esta cita? Se quitará de la app y de Google Calendar. Esta acción no se puede deshacer.'
-      )
-    ) {
-      return;
-    }
     setDeleting(true);
     setError('');
     try {
@@ -785,16 +781,43 @@ export function AppointmentChargeModal({
           </button>
         )}
 
-        {/* Eliminar la cita (agendada por error) de la app y de Google. */}
-        <button
-          type="button"
-          className="secondary"
-          onClick={deleteAppointment}
-          disabled={deleting || saving}
-          style={{ color: '#c0392b', borderColor: '#c0392b' }}
-        >
-          {deleting ? 'Eliminando…' : 'Eliminar cita'}
-        </button>
+        {/* Eliminar la cita (agendada por error) de la app y de Google, con
+            confirmación de dos pasos en vez del confirm() nativo del navegador. */}
+        {confirmDelete ? (
+          <div className="charge-subform" style={{ borderColor: '#c0392b' }}>
+            <p style={{ margin: 0 }}>
+              ¿Eliminar esta cita? Se quitará de la app y de Google Calendar. No se puede deshacer.
+            </p>
+            <div className="actions" style={{ gap: 8 }}>
+              <button
+                type="button"
+                onClick={deleteAppointment}
+                disabled={deleting}
+                style={{ background: '#c0392b', borderColor: '#c0392b' }}
+              >
+                {deleting ? 'Eliminando…' : 'Sí, eliminar'}
+              </button>
+              <button
+                type="button"
+                className="secondary"
+                onClick={() => setConfirmDelete(false)}
+                disabled={deleting}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => setConfirmDelete(true)}
+            disabled={deleting || saving}
+            style={{ color: '#c0392b', borderColor: '#c0392b' }}
+          >
+            Eliminar cita
+          </button>
+        )}
       </section>
     </div>
   );
