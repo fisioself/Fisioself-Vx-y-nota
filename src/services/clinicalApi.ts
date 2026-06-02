@@ -213,6 +213,18 @@ export const clinicalApi = {
     );
   },
 
+  // Elimina una cita de la app Y de Google Calendar a la vez. Lo hace vía edge
+  // function porque borrar el evento en Google requiere el token del servidor;
+  // si solo se borrara localmente, el cron de importación la recrearía.
+  async deleteAppointmentFully(appointmentId: string): Promise<void> {
+    const db = assertSupabase();
+    const { data, error } = await db.functions.invoke('google-calendar-delete', {
+      body: { appointment_id: appointmentId }
+    });
+    if (error) throw error;
+    if (data?.error) throw new Error(data.error);
+  },
+
   async updateAppointment(id: string, payload: Partial<Appointment>): Promise<Appointment> {
     const db = assertSupabase();
     return unwrap(

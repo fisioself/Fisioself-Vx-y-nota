@@ -45,6 +45,7 @@ export function AppointmentCreateModal({ slot, onClose }: AppointmentCreateModal
   const [startLocal, setStartLocal] = useState('');
   const [endLocal, setEndLocal] = useState('');
   const [saving, setSaving] = useState(false);
+  const [creatingPatient, setCreatingPatient] = useState(false);
   const [error, setError] = useState('');
 
   // Reinicia el formulario cada vez que se abre con un slot nuevo.
@@ -71,6 +72,28 @@ export function AppointmentCreateModal({ slot, onClose }: AppointmentCreateModal
   });
 
   if (!slot) return null;
+
+  // Crea un paciente nuevo con el nombre escrito y lo selecciona para la cita.
+  // Sirve para agendar a alguien que aún no existe en el sistema (primera vez),
+  // sin tener que salir a la pantalla de pacientes.
+  const createNewPatient = async () => {
+    const name = query.trim();
+    if (name.length < 2) {
+      setError('Escribe el nombre del paciente nuevo.');
+      return;
+    }
+    setCreatingPatient(true);
+    setError('');
+    try {
+      const nuevo = await clinicalApi.createPatient({ full_name: name });
+      setPatient(nuevo);
+      setQuery('');
+    } catch (err) {
+      setError(getErrorMessage(err, 'No se pudo crear el paciente.'));
+    } finally {
+      setCreatingPatient(false);
+    }
+  };
 
   const create = async () => {
     setError('');
@@ -160,11 +183,11 @@ export function AppointmentCreateModal({ slot, onClose }: AppointmentCreateModal
             Paciente
             <input
               type="search"
-              placeholder="Buscar por nombre o teléfono…"
+              placeholder="Buscar paciente existente o escribir uno nuevo…"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
-            {debouncedQuery.trim().length >= 2 && (
+            {query.trim().length >= 2 && (
               <ul className="appt-create-results">
                 {results.map((p) => (
                   <li key={p.id}>
@@ -181,7 +204,20 @@ export function AppointmentCreateModal({ slot, onClose }: AppointmentCreateModal
                     </button>
                   </li>
                 ))}
-                {results.length === 0 && <li className="muted">Sin resultados.</li>}
+                {/* Siempre se puede agendar como paciente NUEVO con el nombre
+                    escrito, exista o no en la búsqueda. */}
+                <li>
+                  <button
+                    type="button"
+                    onClick={createNewPatient}
+                    disabled={creatingPatient}
+                    style={{ width: '100%', textAlign: 'left' }}
+                  >
+                    {creatingPatient
+                      ? 'Creando…'
+                      : `+ Paciente nuevo: «${query.trim()}»`}
+                  </button>
+                </li>
               </ul>
             )}
           </label>

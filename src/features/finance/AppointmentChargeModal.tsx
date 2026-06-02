@@ -22,6 +22,7 @@ interface AppointmentChargeModalProps {
   appointment: ChargeAppointmentTarget | null;
   onClose: () => void;
   onViewPatient?: (patientId: string) => void;
+  onDeleted?: () => void;
 }
 
 const money = (n: number) =>
@@ -46,11 +47,13 @@ const cdmxLabel = (iso: string | null) => {
 export function AppointmentChargeModal({
   appointment,
   onClose,
-  onViewPatient
+  onViewPatient,
+  onDeleted
 }: AppointmentChargeModalProps) {
   const { notify } = useToast();
   const queryClient = useQueryClient();
 
+  const [deleting, setDeleting] = useState(false);
   const [mode, setMode] = useState<'suelta' | 'paquete'>('suelta');
   const [amount, setAmount] = useState('');
   const [method, setMethod] = useState<PaymentMethod>('efectivo');
@@ -290,6 +293,32 @@ export function AppointmentChargeModal({
       setError(getErrorMessage(err, 'No se pudo eliminar el paquete.'));
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Borra la cita por completo (en la app y en Google Calendar). Útil cuando se
+  // agendó por error. Los pagos ligados NO se pierden: el vínculo se pone en
+  // null pero el dinero permanece en la caja.
+  const deleteAppointment = async () => {
+    if (
+      !window.confirm(
+        '¿Eliminar esta cita? Se quitará de la app y de Google Calendar. Esta acción no se puede deshacer.'
+      )
+    ) {
+      return;
+    }
+    setDeleting(true);
+    setError('');
+    try {
+      await clinicalApi.deleteAppointmentFully(appointment.id);
+      await queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      notify({ tone: 'success', message: 'Cita eliminada.' });
+      onDeleted?.();
+      onClose();
+    } catch (err) {
+      setError(getErrorMessage(err, 'No se pudo eliminar la cita.'));
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -755,6 +784,17 @@ export function AppointmentChargeModal({
             Ver expediente del paciente
           </button>
         )}
+
+        {/* Eliminar la cita (agendada por error) de la app y de Google. */}
+        <button
+          type="button"
+          className="secondary"
+          onClick={deleteAppointment}
+          disabled={deleting || saving}
+          style={{ color: '#c0392b', borderColor: '#c0392b' }}
+        >
+          {deleting ? 'Eliminando…' : 'Eliminar cita'}
+        </button>
       </section>
     </div>
   );
