@@ -525,6 +525,36 @@ pre {
   .row > button {
     width: 100%;
   }
+
+  /* iOS hace zoom al enfocar inputs con letra < 16px; lo evitamos para que la
+     pantalla no "salte" al escribir en celular. */
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+
+  /* El hero ocupaba demasiado alto en celular; lo compactamos. */
+  .hero {
+    padding: 20px;
+    border-radius: 20px;
+    margin-bottom: 14px;
+  }
+  .hero h1 {
+    font-size: clamp(26px, 7vw, 34px);
+  }
+
+  /* La navegación principal (Resumen / Finanzas / Pacientes) en una fila táctil. */
+  .split-actions button {
+    min-height: 44px;
+  }
+}
+
+/* Ningún elemento debe provocar scroll horizontal de toda la página. */
+html,
+body {
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 /* --- Print Styles for Clinical Reports (Point 2) --- */

@@ -21,7 +21,8 @@
   color: var(--text-main);
   width: min(440px, 100%);
   max-height: min(820px, calc(100vh - 40px));
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
   display: grid;
   gap: 14px;
   padding: 22px;
@@ -29,6 +30,13 @@
   background: #fffaf0;
   border: 1px solid rgba(18, 55, 42, 0.18);
   box-shadow: 0 24px 80px rgba(18, 55, 42, 0.3);
+}
+
+.charge-card input,
+.charge-card select,
+.charge-card textarea {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .charge-segmented {
