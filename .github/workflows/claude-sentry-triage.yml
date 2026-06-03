@@ -1,0 +1,72 @@
+name: Claude · Triaje de errores Sentry
+
+# Se dispara cuando llega un issue nuevo. Sentry (vía su integración con GitHub)
+# crea un issue automáticamente al detectar un error nuevo en producción; este
+# workflow hace que Claude lo investigue y proponga una corrección en un PR
+# *en borrador* para que tú la revises antes de mezclarla. NUNCA mezcla solo.
+on:
+  issues:
+    types: [opened]
+
+# Sin permisos de escritura sobre el repo más allá de lo necesario para que
+# Claude pueda comentar el issue y abrir un PR en una rama nueva.
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  triage:
+    # Solo corre si el issue parece venir de Sentry: o lo abrió la integración
+    # de Sentry, o el cuerpo enlaza a sentry.io. Así no se dispara con issues
+    # normales escritos a mano.
+    if: >-
+      contains(github.event.issue.body, 'sentry.io') ||
+      contains(github.event.issue.user.login, 'sentry')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Claude investiga el error
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Contexto y reglas de seguridad para una app clínica con datos reales.
+          prompt: |
+            Eres un asistente que triajea un error reportado por Sentry en una
+            aplicación clínica de fisioterapia (React + Vite + TypeScript +
+            Supabase) con datos REALES de pacientes en producción.
+
+            El issue de GitHub #${{ github.event.issue.number }} fue creado
+            automáticamente por Sentry. Su título y cuerpo describen el error
+            (mensaje, stack trace, archivo y línea minificada, URL, tags).
+
+            Tu tarea:
+            1. Lee el issue y extrae el mensaje de error, el stack trace y
+               cualquier ruta de archivo o pista de los tags.
+            2. Localiza la causa raíz en el código fuente del repo. Recuerda que
+               los stack traces de producción están minificados (p.ej.
+               /assets/esm-XXXX.js): mapea hacia el código fuente real en src/.
+            3. Si el error es claramente una PRUEBA (mensajes como
+               VerificationTest, PRUEBA_, test, etc.), NO abras PR: comenta en el
+               issue que es ruido de prueba y ciérralo.
+            4. Si encuentras un fix claro y de bajo riesgo, créalo en una rama
+               nueva y abre un PULL REQUEST EN BORRADOR (draft) que cierre el
+               issue. Explica en el PR qué causaba el error y cómo lo arreglas.
+            5. Si el fix es ambiguo, grande, o toca algo sensible, NO toques el
+               código: comenta en el issue tu diagnóstico y qué haría falta.
+
+            REGLAS DE SEGURIDAD INNEGOCIABLES (esta es una app clínica):
+            - NUNCA modifiques políticas RLS, migraciones de base de datos, ni
+              nada bajo supabase/ sin marcarlo muy claramente y dejarlo solo como
+              propuesta para revisión humana.
+            - NUNCA expongas ni cometas secretos (.env, claves anon, VAPID, etc.).
+            - NUNCA borres ni reescribas datos de pacientes.
+            - Antes de abrir el PR, asegúrate de que el proyecto compila:
+              ejecuta `npm ci`, `npm run lint`, `npm run test` y `npm run build`.
+            - El PR SIEMPRE debe ser draft. Nunca lo mezcles tú.
+          claude_args: |
+            --allowed-tools "Bash(npm ci),Bash(npm run lint),Bash(npm run test),Bash(npm run build),Bash(git*),Read,Grep,Glob,Edit,Write"
