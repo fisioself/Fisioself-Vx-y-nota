@@ -12,8 +12,7 @@ import { PatientEditForm } from './PatientEditForm';
 import { ClinicalSummary } from './ClinicalSummary';
 import { useRole } from '../../shared/useRole';
 import { EvaluationSummary } from '../evaluations/EvaluationSummary';
-import { ImageUploader } from '../../components/ImageUploader';
-import { ClinicalFilesList } from '../../components/ClinicalFilesList';
+import { PatientDocuments } from './PatientDocuments';
 
 export const getNextSessionNumber = (notes: Pick<SessionNote, 'session_number'>[] = []) => {
   const maxSession = notes.reduce((max, note) => {
@@ -338,11 +337,10 @@ export const PatientRecord = memo(function PatientRecord({
             <div className="form-header">
               <div>
                 <p className="eyebrow">Documentos</p>
-                <h2>Archivos clinicos</h2>
+                <h2>Archivos clínicos y estudios</h2>
               </div>
-              <ImageUploader patientId={current.id} onUploadComplete={refreshRecord} />
             </div>
-            <ClinicalFilesList patientId={current.id} refreshTrigger={record?.id ? 1 : 0} />
+            <PatientDocuments patientId={current.id} />
           </section>
 
           <section className="card">
