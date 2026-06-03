@@ -9,6 +9,7 @@ import { SessionNotesList } from '../session-notes/SessionNotesList';
 import { AppointmentList } from '../appointments/AppointmentList';
 import { ClinicalTimeline } from './ClinicalTimeline';
 import { PatientEditForm } from './PatientEditForm';
+import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 import { ClinicalSummary } from './ClinicalSummary';
 import { useRole } from '../../shared/useRole';
 import { EvaluationSummary } from '../evaluations/EvaluationSummary';
@@ -80,6 +81,7 @@ export const PatientRecord = memo(function PatientRecord({
   const queryClient = useQueryClient();
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [showEvaluation, setShowEvaluation] = useState(false);
   const [showSessionNote, setShowSessionNote] = useState(false);
@@ -146,21 +148,11 @@ export const PatientRecord = memo(function PatientRecord({
   const refreshRecord = () => queryClient.invalidateQueries({ queryKey: ['patient', patient.id] });
 
   const deletePatient = async () => {
-    const name = current.full_name || 'este paciente';
-    const confirmed = window.confirm(
-      `ELIMINACION DEFINITIVA: ¿Seguro que quieres borrar el expediente de ${name}? \n\nEsta accion es irreversible y eliminara todas sus notas, valoraciones e IA.`
-    );
-    if (!confirmed) return;
-
-    const secondConfirm = window.confirm(
-      `¿Confirmas que quieres borrar permanentemente todos los datos de ${name}?`
-    );
-    if (!secondConfirm) return;
-
     setDeleting(true);
     setDeleteError('');
     try {
       await clinicalApi.deletePatient(current.id);
+      setShowDeleteConfirm(false);
       onPatientDeleted?.(current);
     } catch (err) {
       setDeleteError(err instanceof Error ? err.message : 'No se pudo eliminar el paciente.');
@@ -203,12 +195,30 @@ export const PatientRecord = memo(function PatientRecord({
             {showEdit ? 'Cerrar edicion' : 'Editar'}
           </button>
           {isAdmin && (
-            <button type="button" className="danger" disabled={deleting} onClick={deletePatient}>
+            <button
+              type="button"
+              className="danger"
+              disabled={deleting}
+              onClick={() => {
+                setDeleteError('');
+                setShowDeleteConfirm(true);
+              }}
+            >
               {deleting ? 'Eliminando...' : 'Eliminar paciente'}
             </button>
           )}
         </div>
       </article>
+
+      {showDeleteConfirm && (
+        <ConfirmDeleteModal
+          patientName={current.full_name || 'este paciente'}
+          busy={deleting}
+          error={deleteError}
+          onConfirm={deletePatient}
+          onCancel={() => setShowDeleteConfirm(false)}
+        />
+      )}
 
       {showEdit && (
         <PatientEditForm
@@ -243,12 +253,6 @@ export const PatientRecord = memo(function PatientRecord({
           <p>{summary.diagnosis || 'Sin diagnostico fisioterapeutico'}</p>
         </section>
       </div>
-
-      {deleteError && (
-        <p className="error" role="alert">
-          {deleteError}
-        </p>
-      )}
 
       {(loading || isRefetching) && !record && <p className="muted">Cargando expediente...</p>}
 
