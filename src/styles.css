@@ -550,10 +550,12 @@ pre {
   }
 }
 
-/* Evita que el body sea más ancho que la ventana; pero NO se oculta overflow-x
-   a nivel html/body porque eso clipa secciones internas (p.ej. finanzas). */
+/* Evita scroll horizontal de toda la página SIN convertir el body en contenedor
+   de scroll. `clip` (a diferencia de `hidden`) no fuerza overflow-y:auto, así
+   que no recorta secciones internas como Finanzas (ese era el bug anterior). */
 body {
   max-width: 100%;
+  overflow-x: clip;
 }
 
 /* --- Print Styles for Clinical Reports (Point 2) --- */
