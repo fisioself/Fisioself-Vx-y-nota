@@ -14,6 +14,8 @@ export interface Patient {
   functional_diagnosis?: string | null;
   created_at?: string;
   updated_at?: string;
+  // Borrado lógico: si tiene valor, el paciente está en la papelera.
+  deleted_at?: string | null;
 }
 
 export interface SessionNote {

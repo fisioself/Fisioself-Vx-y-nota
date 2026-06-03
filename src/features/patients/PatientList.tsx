@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { clinicalApi } from '../../services/clinicalApi';
 import { useToast } from '../../app/ToastProvider';
+import { PatientTrash } from './PatientTrash';
 import type { Patient } from '../../types/clinical';
 
 interface PatientListProps {
@@ -54,7 +55,8 @@ export function PatientList({ selectedId, onSelect }: PatientListProps) {
   };
 
   return (
-    <section className="card patient-list">
+    <>
+      <section className="card patient-list">
       <div className="form-header">
         <div>
           <p className="eyebrow">Expedientes</p>
@@ -120,6 +122,8 @@ export function PatientList({ selectedId, onSelect }: PatientListProps) {
           )}
         </div>
       )}
-    </section>
+      </section>
+      <PatientTrash />
+    </>
   );
 }
