@@ -33,7 +33,9 @@ jobs:
       - name: Claude investiga el error
         uses: anthropics/claude-code-action@v1
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Usa el token de la suscripción Claude (Pro/Max), no una API key.
+          # Se genera con `claude setup-token` y se guarda como secret del repo.
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # Contexto y reglas de seguridad para una app clínica con datos reales.
           prompt: |
             Eres un asistente que triajea un error reportado por Sentry en una
