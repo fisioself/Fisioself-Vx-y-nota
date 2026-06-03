@@ -49,6 +49,7 @@ function buildSentryConfig(Sentry) {
         if (event.request.data) event.request.data = scrubObject(event.request.data);
         if (event.request.query_string) event.request.query_string = '[redacted]';
       }
+      // Keep only the opaque user ID — never email, name, IP, or any PII.
       if (event.user) {
         event.user = { id: event.user.id };
       }
@@ -57,6 +58,7 @@ function buildSentryConfig(Sentry) {
       return event;
     },
     beforeBreadcrumb(breadcrumb) {
+      // Never record what the user typed (passwords, patient names, clinical notes…).
       if (breadcrumb.category === 'ui.input') return null;
       if (breadcrumb.data) breadcrumb.data = scrubObject(breadcrumb.data);
       return breadcrumb;
@@ -83,12 +85,34 @@ export function initSentry() {
 }
 
 export function reportError(error, context) {
-  if (!isSentryConfigured) return;
+  if (!isSentryConfigured) {
+    // En desarrollo, muestra los errores que llegarían a Sentry para que sean
+    // visibles aunque no haya DSN configurado.
+    if (import.meta.env.DEV) console.error('[Sentry (no DSN)] reportError:', error, context);
+    return;
+  }
   // initSentry() was either already called or will be soon. Either way, queue
   // the report on the loader promise so we never miss an error that fires
   // during boot.
   (sentryReady || loadSentry()).then((Sentry) => {
     Sentry.captureException(error, context ? { extra: scrubObject(context) } : undefined);
+  });
+}
+
+// Etiqueta los errores con el ID opaco del usuario de Supabase. Se llama al
+// confirmar la sesión. Solo se manda el ID — nunca email, nombre ni IP.
+export function setUser(userId) {
+  if (!isSentryConfigured) return;
+  (sentryReady || loadSentry()).then((Sentry) => {
+    Sentry.setUser({ id: userId });
+  });
+}
+
+// Limpia el contexto de usuario al cerrar sesión.
+export function clearUser() {
+  if (!isSentryConfigured) return;
+  (sentryReady || loadSentry()).then((Sentry) => {
+    Sentry.setUser(null);
   });
 }
 

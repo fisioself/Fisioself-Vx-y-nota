@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 vi.mock('@sentry/react', () => ({
   init: vi.fn(),
   captureException: vi.fn(),
+  setUser: vi.fn(),
   browserTracingIntegration: vi.fn(() => ({ name: 'BrowserTracing' })),
   breadcrumbsIntegration: vi.fn(() => ({ name: 'Breadcrumbs' }))
 }));
@@ -98,5 +99,29 @@ describe('sentry', () => {
     const [, options] = sentry.captureException.mock.calls[0];
     expect(options.extra.email).toBe('[redacted:phi]');
     expect(options.extra.step).toBe('save');
+  });
+
+  it('setUser tags only the opaque user ID', async () => {
+    const { module, sentry } = await loadSentryModule('https://key@example.ingest.sentry.io/1');
+    module.initSentry();
+    module.setUser('user-uuid-123');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(sentry.setUser).toHaveBeenCalledWith({ id: 'user-uuid-123' });
+  });
+
+  it('clearUser calls setUser(null) to remove user context', async () => {
+    const { module, sentry } = await loadSentryModule('https://key@example.ingest.sentry.io/1');
+    module.initSentry();
+    module.clearUser();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(sentry.setUser).toHaveBeenCalledWith(null);
+  });
+
+  it('setUser and clearUser are no-ops without a DSN', async () => {
+    const { module, sentry } = await loadSentryModule('');
+    module.setUser('any-id');
+    module.clearUser();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(sentry.setUser).not.toHaveBeenCalled();
   });
 });

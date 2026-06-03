@@ -47,7 +47,8 @@ async function verifySignature(rawBody: string, signature: string): Promise<bool
   // Comparación de tiempo constante para no filtrar la firma por timing.
   if (expected.length !== signature.length) return false;
   let diff = 0;
-  for (let i = 0; i < expected.length; i++) diff |= expected.charCodeAt(i) ^ signature.charCodeAt(i);
+  for (let i = 0; i < expected.length; i++)
+    diff |= expected.charCodeAt(i) ^ signature.charCodeAt(i);
   return diff === 0;
 }
 
@@ -74,7 +75,10 @@ function extractEvent(payload: Record<string, unknown>): SentryEvent {
     culprit: ev.culprit ? String(ev.culprit) : undefined,
     level: ev.level ? String(ev.level) : undefined,
     environment: ev.environment ? String(ev.environment) : undefined,
-    metadata: { type: meta.type ? String(meta.type) : undefined, value: meta.value ? String(meta.value) : undefined }
+    metadata: {
+      type: meta.type ? String(meta.type) : undefined,
+      value: meta.value ? String(meta.value) : undefined
+    }
   };
 }
 
@@ -82,7 +86,9 @@ function extractEvent(payload: Record<string, unknown>): SentryEvent {
 // Sentry reintenta o manda el webhook varias veces.
 async function alreadyOpen(issueId: string): Promise<boolean> {
   if (!issueId) return false;
-  const q = encodeURIComponent(`repo:${GITHUB_REPO} is:issue is:open in:body "sentry-issue-id: ${issueId}"`);
+  const q = encodeURIComponent(
+    `repo:${GITHUB_REPO} is:issue is:open in:body "sentry-issue-id: ${issueId}"`
+  );
   const res = await fetch(`${GH_API}/search/issues?q=${q}`, { headers: GH_HEADERS });
   if (!res.ok) return false; // si la búsqueda falla, mejor crear que perder el aviso
   const json = (await res.json()) as { total_count?: number };

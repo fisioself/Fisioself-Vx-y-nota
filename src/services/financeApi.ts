@@ -342,10 +342,13 @@ export const financeApi = {
   },
 
   // Sincroniza sessions_used de cada paquete del paciente con el número real de
-  // citas no canceladas desde purchased_at. Se llama al abrir el modal para que
-  // el contador refleje la realidad sin requerir cobro manual por sesión.
+  // SESIONES YA TOMADAS (citas no canceladas, no valoraciones) desde purchased_at
+  // hasta HOY. Las citas futuras todavía NO consumen sesión (si no, un paquete con
+  // todas las citas agendadas aparecería 6/6 aunque falten por tomarse). Se llama
+  // al abrir el modal para que el contador refleje la realidad.
   async syncPackageSessionsUsed(patientId: string): Promise<void> {
     const db = assertSupabase();
+    const now = new Date().toISOString();
     const pkgs = unwrap<PatientPackage[]>(
       await db.from('patient_packages').select('*').eq('patient_id', patientId)
     );
@@ -358,7 +361,11 @@ export const financeApi = {
             .select('id', { count: 'exact', head: true })
             .eq('patient_id', patientId)
             .neq('status', 'cancelled')
-            .gte('starts_at', pkg.purchased_at!);
+            // Las valoraciones (morado: 9 o 1) no consumen sesión del paquete.
+            .or('color_id.is.null,color_id.not.in.(9,1)')
+            .gte('starts_at', pkg.purchased_at!)
+            // Solo sesiones ya tomadas (hasta ahora); las futuras no cuentan aún.
+            .lte('starts_at', now);
           if (error) return;
           const realUsed = Math.min(count ?? 0, Number(pkg.sessions_total ?? 0));
           if (realUsed === Number(pkg.sessions_used ?? 0)) return;

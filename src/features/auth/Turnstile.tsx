@@ -80,13 +80,16 @@ export function Turnstile({ siteKey, onVerify, onExpire, onError, resetKey }: Tu
           sitekey: siteKey,
           callback: (token) => onVerifyRef.current(token),
           'expired-callback': () => onExpireRef.current?.(),
-          'error-callback': () => onErrorRef.current?.('La verificación de seguridad falló. Reintenta.'),
+          'error-callback': () =>
+            onErrorRef.current?.('La verificación de seguridad falló. Reintenta.'),
           theme: 'auto'
         });
       })
       .catch(() => {
         if (!cancelled) {
-          onErrorRef.current?.('No se pudo cargar la verificación de seguridad. Revisa tu conexión.');
+          onErrorRef.current?.(
+            'No se pudo cargar la verificación de seguridad. Revisa tu conexión.'
+          );
         }
       });
 

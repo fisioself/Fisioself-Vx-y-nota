@@ -104,10 +104,7 @@ Deno.serve(async (req) => {
 
       if (conn) {
         let accessToken: string | null = conn.access_token ?? null;
-        if (
-          !accessToken ||
-          new Date(conn.token_expires_at || 0) <= new Date(Date.now() + 60_000)
-        ) {
+        if (!accessToken || new Date(conn.token_expires_at || 0) <= new Date(Date.now() + 60_000)) {
           if (conn.refresh_token) {
             const refreshed = await refreshGoogleToken({
               refreshToken: conn.refresh_token,

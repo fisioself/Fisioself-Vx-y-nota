@@ -264,9 +264,7 @@ export function NativeCalendar({ onEventClick }: NativeCalendarProps) {
         <button onClick={syncWithGoogle} disabled={syncing} className="secondary">
           {syncing ? 'Sincronizando...' : 'Sincronizar Calendar'}
         </button>
-        <button onClick={() => setNewSlot(makeDefaultSlot())}>
-          + Nueva cita
-        </button>
+        <button onClick={() => setNewSlot(makeDefaultSlot())}>+ Nueva cita</button>
       </div>
 
       <div className="fc-container">
