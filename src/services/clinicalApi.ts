@@ -97,9 +97,37 @@ export const clinicalApi = {
     );
   },
 
+  // Borrado lógico: marca deleted_at en vez de eliminar la fila. El paciente
+  // desaparece de toda lectura (la política RLS oculta deleted_at IS NOT NULL)
+  // pero su expediente se conserva y puede recuperarse desde la papelera.
   async deletePatient(id: string): Promise<void> {
     const db = assertSupabase();
-    return unwrap(await db.from('patients').delete().eq('id', id));
+    return unwrap(
+      await db.from('patients').update({ deleted_at: new Date().toISOString() }).eq('id', id)
+    );
+  },
+
+  // Papelera: pacientes borrados de la clínica (solo admin, vía RPC con
+  // SECURITY DEFINER que verifica is_admin() internamente).
+  async listDeletedPatients(): Promise<Patient[]> {
+    const db = assertSupabase();
+    const { data, error } = await (
+      db.rpc as unknown as (name: string) => Promise<{ data: unknown; error: unknown }>
+    )('list_deleted_patients');
+    if (error) throw error;
+    return (data ?? []) as Patient[];
+  },
+
+  // Restaura un paciente borrado (solo admin).
+  async restorePatient(id: string): Promise<void> {
+    const db = assertSupabase();
+    const { error } = await (
+      db.rpc as unknown as (
+        name: string,
+        args: Record<string, unknown>
+      ) => Promise<{ data: unknown; error: unknown }>
+    )('restore_patient', { p_id: id });
+    if (error) throw error;
   },
 
   async getPatient(id: string): Promise<ClinicalRecord> {

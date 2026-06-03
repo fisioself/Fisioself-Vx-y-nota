@@ -56,18 +56,59 @@ describe('clinicalApi writes', () => {
     expect(from).not.toHaveBeenCalledWith('audit_log');
   });
 
-  it('deletes patients through the patients table and leaves auditing to database triggers', async () => {
+  it('soft-deletes patients by stamping deleted_at instead of removing the row', async () => {
     const eq = vi.fn().mockResolvedValue({ data: null, error: null });
-    const deleteFn = vi.fn(() => ({ eq }));
-    const from = vi.fn(() => ({ delete: deleteFn }));
+    const update = vi.fn(() => ({ eq }));
+    const deleteFn = vi.fn();
+    const from = vi.fn(() => ({ update, delete: deleteFn }));
     const { clinicalApi } = await loadClinicalApi(from);
 
     await expect(clinicalApi.deletePatient('patient-1')).resolves.toBeNull();
 
     expect(from).toHaveBeenCalledWith('patients');
-    expect(deleteFn).toHaveBeenCalled();
+    // No es un borrado físico: usa update con deleted_at, no delete().
+    expect(deleteFn).not.toHaveBeenCalled();
+    expect(update).toHaveBeenCalledWith(
+      expect.objectContaining({ deleted_at: expect.any(String) })
+    );
     expect(eq).toHaveBeenCalledWith('id', 'patient-1');
     expect(from).not.toHaveBeenCalledWith('audit_log');
+  });
+
+  it('lists deleted patients through the list_deleted_patients RPC', async () => {
+    const rpc = vi.fn().mockResolvedValue({
+      data: [{ id: 'patient-9', full_name: 'Borrado Demo', deleted_at: '2026-06-01T00:00:00Z' }],
+      error: null
+    });
+    vi.resetModules();
+    vi.doMock('../lib/supabaseClient.js', () => ({
+      isSupabaseConfigured: true,
+      supabase: { rpc },
+      assertSupabase: () => ({ rpc })
+    }));
+    const { clinicalApi } = await import('./clinicalApi');
+
+    const deleted = await clinicalApi.listDeletedPatients();
+
+    expect(rpc).toHaveBeenCalledWith('list_deleted_patients');
+    expect(deleted).toEqual([
+      expect.objectContaining({ id: 'patient-9', full_name: 'Borrado Demo' })
+    ]);
+  });
+
+  it('restores a patient through the restore_patient RPC', async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: null, error: null });
+    vi.resetModules();
+    vi.doMock('../lib/supabaseClient.js', () => ({
+      isSupabaseConfigured: true,
+      supabase: { rpc },
+      assertSupabase: () => ({ rpc })
+    }));
+    const { clinicalApi } = await import('./clinicalApi');
+
+    await expect(clinicalApi.restorePatient('patient-9')).resolves.toBeUndefined();
+
+    expect(rpc).toHaveBeenCalledWith('restore_patient', { p_id: 'patient-9' });
   });
 
   it('updates session notes and leaves auditing to database triggers', async () => {

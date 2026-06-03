@@ -657,6 +657,7 @@ export type Database = {
           clinic_id: string;
           created_at: string;
           created_by: string | null;
+          deleted_at: string | null;
           email: string | null;
           full_name: string;
           functional_diagnosis: string | null;
@@ -674,6 +675,7 @@ export type Database = {
           clinic_id?: string;
           created_at?: string;
           created_by?: string | null;
+          deleted_at?: string | null;
           email?: string | null;
           full_name: string;
           functional_diagnosis?: string | null;
@@ -691,6 +693,7 @@ export type Database = {
           clinic_id?: string;
           created_at?: string;
           created_by?: string | null;
+          deleted_at?: string | null;
           email?: string | null;
           full_name?: string;
           functional_diagnosis?: string | null;

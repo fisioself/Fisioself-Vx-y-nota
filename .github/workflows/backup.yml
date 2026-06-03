@@ -1,0 +1,65 @@
+name: Backup base de datos
+
+# Respaldo diario, cifrado y restaurable de la base de datos clínica.
+# El dump se cifra con AES-256 ANTES de subirse, así el artifact nunca
+# contiene datos de pacientes en claro. Solo quien tenga la passphrase
+# (secret BACKUP_GPG_PASSPHRASE) puede descifrarlo.
+#
+# Secrets necesarios (Settings → Secrets and variables → Actions):
+#   - SUPABASE_DB_URL: cadena de conexión "Session pooler" o directa
+#       (Supabase → Project Settings → Database → Connection string,
+#        puerto 5432, incluye la contraseña de la base).
+#   - BACKUP_GPG_PASSPHRASE: passphrase larga y secreta para cifrar el dump.
+#
+# Restaurar un respaldo (en local):
+#   gpg --batch --passphrase 'TU_PASSPHRASE' -o db.dump -d fisioself-XXXX.dump.gpg
+#   pg_restore --no-owner --no-privileges -d "postgresql://..." db.dump
+
+on:
+  schedule:
+    - cron: '0 8 * * *' # 08:00 UTC = 02:00 CDMX, todos los días
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    name: Dump cifrado diario
+    runs-on: ubuntu-latest
+    steps:
+      - name: Instalar pg_dump 17 (igual que Supabase)
+        run: |
+          sudo sh -c 'echo "deb https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/pgdg.gpg
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-17
+
+      - name: Generar dump y cifrarlo (AES-256)
+        env:
+          PGCONN: ${{ secrets.SUPABASE_DB_URL }}
+          PASSPHRASE: ${{ secrets.BACKUP_GPG_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          if [ -z "${PGCONN:-}" ] || [ -z "${PASSPHRASE:-}" ]; then
+            echo "::error::Faltan los secrets SUPABASE_DB_URL y/o BACKUP_GPG_PASSPHRASE"
+            exit 1
+          fi
+          TS=$(date -u +%Y%m%d-%H%M%S)
+          echo "TS=$TS" >> "$GITHUB_ENV"
+          # -Fc = formato custom, comprimido y restaurable con pg_restore.
+          /usr/lib/postgresql/17/bin/pg_dump "$PGCONN" \
+            --no-owner --no-privileges -Fc -f db.dump
+          gpg --batch --yes --passphrase "$PASSPHRASE" \
+            --symmetric --cipher-algo AES256 \
+            -o "fisioself-${TS}.dump.gpg" db.dump
+          rm -f db.dump
+          ls -lh "fisioself-${TS}.dump.gpg"
+
+      - name: Subir respaldo cifrado
+        uses: actions/upload-artifact@v4
+        with:
+          name: db-backup-${{ env.TS }}
+          path: fisioself-*.dump.gpg
+          retention-days: 30
+          if-no-files-found: error

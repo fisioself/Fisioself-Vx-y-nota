@@ -101,3 +101,150 @@ describe('clinicalApi wrappers simples', () => {
     expect(from).toHaveBeenCalledWith('patients');
   });
 });
+
+// Cadena encadenable y "thenable": cada método del query builder devuelve la
+// misma cadena, y al hacer await se resuelve con `result`. Útil para los
+// métodos que terminan en .order()/.select() en vez de .single().
+const makeChain = (result) => {
+  const chain = {};
+  for (const m of [
+    'select',
+    'order',
+    'gte',
+    'lt',
+    'lte',
+    'neq',
+    'eq',
+    'limit',
+    'insert',
+    'update'
+  ]) {
+    chain[m] = vi.fn(() => chain);
+  }
+  chain.then = (resolve) => resolve(result);
+  return chain;
+};
+
+describe('clinicalApi lecturas de lista', () => {
+  it('listPatients ordena por updated_at descendente', async () => {
+    const from = vi.fn(() => makeChain({ data: [{ id: 'p1' }, { id: 'p2' }], error: null }));
+    const { clinicalApi } = await loadApi(from);
+    await expect(clinicalApi.listPatients()).resolves.toHaveLength(2);
+    expect(from).toHaveBeenCalledWith('patients');
+  });
+
+  it('listPatientsToday deduplica pacientes y aplana la relación', async () => {
+    const rows = [
+      { patient_id: 'p1', patients: { id: 'p1', full_name: 'Ana' } },
+      { patient_id: 'p1', patients: { id: 'p1', full_name: 'Ana' } }, // duplicado
+      { patient_id: 'p2', patients: [{ id: 'p2', full_name: 'Beto' }] } // array
+    ];
+    const from = vi.fn(() => makeChain({ data: rows, error: null }));
+    const { clinicalApi } = await loadApi(from);
+    const result = await clinicalApi.listPatientsToday();
+    expect(result.map((p) => p.id)).toEqual(['p1', 'p2']);
+    expect(from).toHaveBeenCalledWith('appointments');
+  });
+
+  it('listPatientsToday propaga errores de Supabase', async () => {
+    const from = vi.fn(() => makeChain({ data: null, error: new Error('db down') }));
+    const { clinicalApi } = await loadApi(from);
+    await expect(clinicalApi.listPatientsToday()).rejects.toThrow('db down');
+  });
+});
+
+describe('clinicalApi.searchPatients', () => {
+  it('devuelve [] sin consultar cuando la búsqueda está vacía', async () => {
+    const rpc = vi.fn();
+    vi.resetModules();
+    vi.doMock('../lib/supabaseClient.js', () => ({
+      isSupabaseConfigured: true,
+      supabase: { rpc },
+      assertSupabase: () => ({ rpc })
+    }));
+    const { clinicalApi } = await import('./clinicalApi');
+    await expect(clinicalApi.searchPatients('   ')).resolves.toEqual([]);
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it('llama al RPC search_patients_unaccent con el texto recortado', async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: [{ id: 'p9' }], error: null });
+    vi.resetModules();
+    vi.doMock('../lib/supabaseClient.js', () => ({
+      isSupabaseConfigured: true,
+      supabase: { rpc },
+      assertSupabase: () => ({ rpc })
+    }));
+    const { clinicalApi } = await import('./clinicalApi');
+    await expect(clinicalApi.searchPatients('  ana  ')).resolves.toEqual([{ id: 'p9' }]);
+    expect(rpc).toHaveBeenCalledWith('search_patients_unaccent', { p_query: 'ana' });
+  });
+});
+
+describe('clinicalApi.deleteAppointmentFully', () => {
+  it('invoca la edge function google-calendar-delete', async () => {
+    const invoke = vi.fn().mockResolvedValue({ data: { ok: true }, error: null });
+    vi.resetModules();
+    vi.doMock('../lib/supabaseClient.js', () => ({
+      isSupabaseConfigured: true,
+      supabase: { functions: { invoke } },
+      assertSupabase: () => ({ functions: { invoke } })
+    }));
+    const { clinicalApi } = await import('./clinicalApi');
+    await expect(clinicalApi.deleteAppointmentFully('appt-1')).resolves.toBeUndefined();
+    expect(invoke).toHaveBeenCalledWith('google-calendar-delete', {
+      body: { appointment_id: 'appt-1' }
+    });
+  });
+
+  it('lanza error si la edge function devuelve error en el cuerpo', async () => {
+    const invoke = vi.fn().mockResolvedValue({ data: { error: 'no token' }, error: null });
+    vi.resetModules();
+    vi.doMock('../lib/supabaseClient.js', () => ({
+      isSupabaseConfigured: true,
+      supabase: { functions: { invoke } },
+      assertSupabase: () => ({ functions: { invoke } })
+    }));
+    const { clinicalApi } = await import('./clinicalApi');
+    await expect(clinicalApi.deleteAppointmentFully('appt-1')).rejects.toThrow('no token');
+  });
+});
+
+describe('clinicalApi.addSessionNote', () => {
+  it('traduce el error 23505 (sesión duplicada) a un mensaje claro', async () => {
+    const single = vi.fn().mockResolvedValue({ data: null, error: { code: '23505' } });
+    const select = vi.fn(() => ({ single }));
+    const insert = vi.fn(() => ({ select }));
+    const from = vi.fn(() => ({ insert }));
+    const { clinicalApi } = await loadApi(from);
+    await expect(
+      clinicalApi.addSessionNote({ patient_id: 'p1', session_number: 1 })
+    ).rejects.toThrow(/numero de sesion/i);
+  });
+});
+
+describe('clinicalApi.getClinicStats', () => {
+  it('agrega conteos y actividad reciente', async () => {
+    // 4 llamadas a from(): 3 conteos + 1 lista de actividad.
+    const from = vi
+      .fn()
+      .mockReturnValueOnce(makeChain({ count: 10, error: null })) // totalPatients
+      .mockReturnValueOnce(makeChain({ count: 5, error: null })) // recentSessions
+      .mockReturnValueOnce(makeChain({ count: 3, error: null })) // upcoming
+      .mockReturnValueOnce(makeChain({ data: [{ id: 'a1', title: 'Cita' }], error: null }));
+    const { clinicalApi } = await loadApi(from);
+    const stats = await clinicalApi.getClinicStats();
+    expect(stats).toMatchObject({
+      totalPatients: 10,
+      recentSessions: 5,
+      upcomingAppointments: 3
+    });
+    expect(stats.latestActivity).toHaveLength(1);
+  });
+
+  it('propaga el error del primer conteo', async () => {
+    const from = vi.fn(() => makeChain({ count: null, error: new Error('count fail') }));
+    const { clinicalApi } = await loadApi(from);
+    await expect(clinicalApi.getClinicStats()).rejects.toThrow('count fail');
+  });
+});
