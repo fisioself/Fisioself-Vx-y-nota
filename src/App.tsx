@@ -4,6 +4,7 @@ import type { Session } from '@supabase/supabase-js';
 import { authService } from './services/authService';
 import { isSupabaseConfigured } from './lib/supabaseClient';
 import { draftStorage } from './shared/draftStorage';
+import { setUser as sentrySetUser, clearUser as sentryClearUser } from './lib/sentry';
 import { AppLogo } from './components/AppLogo';
 import type { Patient } from './types/clinical';
 
@@ -95,7 +96,12 @@ export function App() {
     }
 
     loadSession();
-    const subscription = authService.onAuthStateChange(setSession);
+    const subscription = authService.onAuthStateChange((s) => {
+      setSession(s);
+      // Etiqueta los errores de Sentry con el ID opaco del usuario (sin PII).
+      if (s?.user?.id) sentrySetUser(s.user.id);
+      else sentryClearUser();
+    });
     return () => {
       cancelled = true;
       subscription?.unsubscribe?.();
@@ -105,6 +111,7 @@ export function App() {
   const logout = async () => {
     await authService.signOut();
     draftStorage.clearAll();
+    sentryClearUser();
     setSelectedPatient(null);
     setShowFinance(false);
     setSession(null);
