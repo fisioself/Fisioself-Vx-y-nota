@@ -11,6 +11,14 @@ import type { Patient } from './types/clinical';
 interface LoginScreenProps {
   onLogin: (session: Session | null) => void;
 }
+interface MfaChallengeProps {
+  factorId: string;
+  onVerified: () => void;
+  onCancel: () => void;
+}
+interface MfaSettingsProps {
+  onClose: () => void;
+}
 interface PatientFormProps {
   onCreated: (patient: Patient) => void;
   onCancel: () => void;
@@ -34,6 +42,12 @@ interface FinanceProps {
 const LoginScreen = lazy(() =>
   import('./features/auth/LoginScreen').then((module) => ({ default: module.LoginScreen }))
 ) as ComponentType<LoginScreenProps>;
+const MfaChallenge = lazy(() =>
+  import('./features/auth/MfaChallenge').then((module) => ({ default: module.MfaChallenge }))
+) as ComponentType<MfaChallengeProps>;
+const MfaSettings = lazy(() =>
+  import('./features/auth/MfaSettings').then((module) => ({ default: module.MfaSettings }))
+) as ComponentType<MfaSettingsProps>;
 const PatientForm = lazy(() =>
   import('./features/patients/PatientForm').then((module) => ({ default: module.PatientForm }))
 ) as ComponentType<PatientFormProps>;
@@ -70,6 +84,12 @@ export function App() {
   const [showNewPatient, setShowNewPatient] = useState(false);
   const [showFinance, setShowFinance] = useState(false);
   const [showDashboard, setShowDashboard] = useState(true);
+  const [showMfaSettings, setShowMfaSettings] = useState(false);
+  // Si el usuario tiene 2FA activo, aquí guardamos el id del factor que debe
+  // resolver el reto tras iniciar sesión. mfaChecking evita mostrar la app
+  // mientras averiguamos si hace falta el segundo factor.
+  const [mfaFactorId, setMfaFactorId] = useState<string | null>(null);
+  const [mfaChecking, setMfaChecking] = useState(false);
 
   // Siempre tema claro.
   useEffect(() => {
@@ -108,12 +128,48 @@ export function App() {
     };
   }, []);
 
+  // Cada vez que cambia la sesión, comprobamos si el usuario debe resolver el
+  // reto 2FA (tiene un factor verificado pero la sesión es solo de contraseña).
+  useEffect(() => {
+    let cancelled = false;
+
+    async function checkMfa() {
+      if (!isSupabaseConfigured || !session) {
+        setMfaFactorId(null);
+        return;
+      }
+      setMfaChecking(true);
+      try {
+        const needs = await authService.needsMfaChallenge();
+        if (!needs) {
+          if (!cancelled) setMfaFactorId(null);
+          return;
+        }
+        const factors = await authService.listMfaFactors();
+        const verified = factors.find((f) => f.status === 'verified');
+        if (!cancelled) setMfaFactorId(verified ? verified.id : null);
+      } catch {
+        // Ante un fallo de red no bloqueamos: RLS sigue protegiendo los datos.
+        if (!cancelled) setMfaFactorId(null);
+      } finally {
+        if (!cancelled) setMfaChecking(false);
+      }
+    }
+
+    checkMfa();
+    return () => {
+      cancelled = true;
+    };
+  }, [session]);
+
   const logout = async () => {
     await authService.signOut();
     draftStorage.clearAll();
     sentryClearUser();
     setSelectedPatient(null);
     setShowFinance(false);
+    setShowMfaSettings(false);
+    setMfaFactorId(null);
     setSession(null);
   };
 
@@ -148,6 +204,32 @@ export function App() {
     );
   }
 
+  // El usuario inició sesión pero tiene 2FA activo: bloqueamos la app hasta
+  // resolver el reto del segundo factor.
+  if (mfaFactorId) {
+    return (
+      <Suspense fallback={<LoadingCard>Cargando verificación...</LoadingCard>}>
+        <MfaChallenge
+          factorId={mfaFactorId}
+          onVerified={() => setMfaFactorId(null)}
+          onCancel={logout}
+        />
+      </Suspense>
+    );
+  }
+
+  // Mientras comprobamos si hace falta el segundo factor, no mostramos datos.
+  if (mfaChecking) {
+    return (
+      <div className="app-loading">
+        <div className="app-loading-inner">
+          <AppLogo size={110} pulse />
+          <p>FISIOSELF VX</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <main className="shell app-grid">
       <header className="hero app-hero">
@@ -161,11 +243,52 @@ export function App() {
         </div>
         <div className="hero-actions">
           <span className="pill">{session.user?.email}</span>
+          <button type="button" className="secondary" onClick={() => setShowMfaSettings(true)}>
+            Seguridad
+          </button>
           <button type="button" className="secondary" onClick={logout}>
             Salir
           </button>
         </div>
       </header>
+
+      {showMfaSettings && (
+        <div
+          className="modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Configuración de seguridad"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 16,
+            zIndex: 1000
+          }}
+        >
+          {/* Fondo clicable (y accesible por teclado) para cerrar el diálogo. */}
+          <button
+            type="button"
+            aria-label="Cerrar"
+            onClick={() => setShowMfaSettings(false)}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              border: 'none',
+              padding: 0,
+              background: 'rgba(0,0,0,0.45)',
+              cursor: 'pointer'
+            }}
+          />
+          <div style={{ position: 'relative', zIndex: 1 }}>
+            <Suspense fallback={<LoadingCard>Cargando...</LoadingCard>}>
+              <MfaSettings onClose={() => setShowMfaSettings(false)} />
+            </Suspense>
+          </div>
+        </div>
+      )}
 
       <nav className="main-tabs">
         <button
