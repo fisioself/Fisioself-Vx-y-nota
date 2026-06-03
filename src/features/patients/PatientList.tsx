@@ -57,71 +57,71 @@ export function PatientList({ selectedId, onSelect }: PatientListProps) {
   return (
     <>
       <section className="card patient-list">
-      <div className="form-header">
-        <div>
-          <p className="eyebrow">Expedientes</p>
-          <h2>Pacientes</h2>
+        <div className="form-header">
+          <div>
+            <p className="eyebrow">Expedientes</p>
+            <h2>Pacientes</h2>
+          </div>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <button type="button" className="secondary" onClick={handleImport} disabled={importing}>
+              {importing ? 'Sincronizando...' : 'Importar de Calendar'}
+            </button>
+            <span className="pill">{patients.length}</span>
+          </div>
         </div>
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <button type="button" className="secondary" onClick={handleImport} disabled={importing}>
-            {importing ? 'Sincronizando...' : 'Importar de Calendar'}
-          </button>
-          <span className="pill">{patients.length}</span>
+
+        <div className="filter-group">
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Buscar por nombre o telefono..."
+            aria-label="Buscar pacientes"
+            className="search-input"
+          />
         </div>
-      </div>
 
-      <div className="filter-group">
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Buscar por nombre o telefono..."
-          aria-label="Buscar pacientes"
-          className="search-input"
-        />
-      </div>
-
-      {/* Botón para mostrar/ocultar la lista de hoy (colapsada por defecto para
+        {/* Botón para mostrar/ocultar la lista de hoy (colapsada por defecto para
           que los nombres no aparezcan en la pantalla principal). Al buscar, la
           lista se muestra sola y este botón se oculta. */}
-      {!isSearching && (
-        <button
-          type="button"
-          className="secondary"
-          onClick={() => setExpanded((v) => !v)}
-          style={{ marginBottom: showList ? 12 : 0 }}
-        >
-          {expanded
-            ? 'Ocultar lista'
-            : `Mostrar pacientes de hoy${todayPatients.length ? ` (${todayPatients.length})` : ''}`}
-        </button>
-      )}
+        {!isSearching && (
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => setExpanded((v) => !v)}
+            style={{ marginBottom: showList ? 12 : 0 }}
+          >
+            {expanded
+              ? 'Ocultar lista'
+              : `Mostrar pacientes de hoy${todayPatients.length ? ` (${todayPatients.length})` : ''}`}
+          </button>
+        )}
 
-      {isLoading && showList && <p className="muted">Cargando...</p>}
+        {isLoading && showList && <p className="muted">Cargando...</p>}
 
-      {showList && (
-        <div className="list-stack">
-          {patients.map((patient) => (
-            <button
-              key={patient.id}
-              type="button"
-              className={patient.id === selectedId ? 'patient-row active' : 'patient-row'}
-              onClick={() => onSelect?.(patient)}
-            >
-              <strong>{patient.full_name}</strong>
-              <span>{patient.status || 'Sin estado'}</span>
-              <small>{patient.phone || 'Sin telefono'}</small>
-            </button>
-          ))}
+        {showList && (
+          <div className="list-stack">
+            {patients.map((patient) => (
+              <button
+                key={patient.id}
+                type="button"
+                className={patient.id === selectedId ? 'patient-row active' : 'patient-row'}
+                onClick={() => onSelect?.(patient)}
+              >
+                <strong>{patient.full_name}</strong>
+                <span>{patient.status || 'Sin estado'}</span>
+                <small>{patient.phone || 'Sin telefono'}</small>
+              </button>
+            ))}
 
-          {!isLoading && !patients.length && (
-            <p className="muted">
-              {isSearching
-                ? 'No se encontraron pacientes.'
-                : 'Sin pacientes agendados hoy — usa el buscador'}
-            </p>
-          )}
-        </div>
-      )}
+            {!isLoading && !patients.length && (
+              <p className="muted">
+                {isSearching
+                  ? 'No se encontraron pacientes.'
+                  : 'Sin pacientes agendados hoy — usa el buscador'}
+              </p>
+            )}
+          </div>
+        )}
       </section>
       <PatientTrash />
     </>

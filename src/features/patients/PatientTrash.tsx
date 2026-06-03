@@ -64,9 +64,7 @@ export function PatientTrash() {
               }}
             >
               <div style={{ minWidth: 0 }}>
-                <strong style={{ display: 'block' }}>
-                  {patient.full_name ?? 'Sin nombre'}
-                </strong>
+                <strong style={{ display: 'block' }}>{patient.full_name ?? 'Sin nombre'}</strong>
                 <span className="muted" style={{ fontSize: '0.8rem' }}>
                   Borrado: {patient.deleted_at ? patient.deleted_at.slice(0, 10) : '—'}
                 </span>

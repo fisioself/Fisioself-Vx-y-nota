@@ -103,10 +103,7 @@ export const clinicalApi = {
   async deletePatient(id: string): Promise<void> {
     const db = assertSupabase();
     return unwrap(
-      await db
-        .from('patients')
-        .update({ deleted_at: new Date().toISOString() })
-        .eq('id', id)
+      await db.from('patients').update({ deleted_at: new Date().toISOString() }).eq('id', id)
     );
   },
 

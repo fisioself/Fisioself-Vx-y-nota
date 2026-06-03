@@ -6,11 +6,7 @@ describe('ConfirmDeleteModal', () => {
   it('mantiene deshabilitado el botón hasta escribir el nombre exacto', () => {
     const onConfirm = vi.fn();
     render(
-      <ConfirmDeleteModal
-        patientName="Antonio Pérez"
-        onConfirm={onConfirm}
-        onCancel={() => {}}
-      />
+      <ConfirmDeleteModal patientName="Antonio Pérez" onConfirm={onConfirm} onCancel={() => {}} />
     );
 
     const confirmBtn = screen.getByRole('button', { name: /mover a la papelera/i });
@@ -42,9 +38,7 @@ describe('ConfirmDeleteModal', () => {
   it('cancela sin confirmar', () => {
     const onConfirm = vi.fn();
     const onCancel = vi.fn();
-    render(
-      <ConfirmDeleteModal patientName="Test" onConfirm={onConfirm} onCancel={onCancel} />
-    );
+    render(<ConfirmDeleteModal patientName="Test" onConfirm={onConfirm} onCancel={onCancel} />);
 
     fireEvent.click(screen.getByRole('button', { name: /^cancelar$/i }));
     expect(onCancel).toHaveBeenCalledTimes(1);
