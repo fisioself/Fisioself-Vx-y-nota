@@ -8,12 +8,13 @@ on:
   issues:
     types: [opened]
 
-# Sin permisos de escritura sobre el repo más allá de lo necesario para que
-# Claude pueda comentar el issue y abrir un PR en una rama nueva.
+# Permisos mínimos: comentar el issue, abrir un PR en una rama nueva, y obtener
+# un OIDC token (id-token) que claude-code-action usa para autenticarse.
 permissions:
   contents: write
   issues: write
   pull-requests: write
+  id-token: write
 
 jobs:
   triage:
