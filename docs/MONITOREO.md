@@ -24,7 +24,7 @@ cada 5 minutos. No requiere tarjeta.
 ### Qué vigilar
 
 - **App principal** (URL de Vercel): que cargue la página.
-- *(Opcional)* Un **endpoint de salud** de Supabase o de una Edge Function, si
+- _(Opcional)_ Un **endpoint de salud** de Supabase o de una Edge Function, si
   más adelante se expone uno.
 
 ### Cuando llega una alerta

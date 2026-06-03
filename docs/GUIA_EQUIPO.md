@@ -60,6 +60,7 @@ Añade una capa extra de seguridad: además de tu contraseña, se pide un códig
 de tu teléfono al entrar.
 
 **Activarla:**
+
 1. Toca **"Seguridad"** (arriba a la derecha).
 2. Toca **"Activar 2FA"**.
 3. Escanea el **código QR** con una app de autenticación
