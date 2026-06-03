@@ -7,8 +7,7 @@ const BUCKET = 'patient-files';
 // types/supabase.ts, así que el cliente tipado no la conoce todavía. Igual que
 // se hace con db.rpc en clinicalApi, usamos un cliente sin tipar SOLO para esta
 // tabla; los resultados se castean a PatientDocument vía unwrap<T>.
-const docsTable = () =>
-  (assertSupabase() as unknown as SupabaseClient).from('patient_documents');
+const docsTable = () => (assertSupabase() as unknown as SupabaseClient).from('patient_documents');
 
 // Fila de metadatos de un documento clínico (la tabla patient_documents).
 // Se define aquí (y no en types/supabase.ts) para no depender de regenerar los

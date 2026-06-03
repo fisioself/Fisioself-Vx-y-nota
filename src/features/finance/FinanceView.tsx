@@ -911,8 +911,12 @@ function CajaPanel({ caja }: { caja?: { total: number; byMethod: Record<string, 
       </div>
 
       {/* Historial: cobros de pacientes + ajustes manuales */}
-      <div style={{ marginTop: 12, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
-        <p className="eyebrow" style={{ margin: 0 }}>Historial</p>
+      <div
+        style={{ marginTop: 12, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}
+      >
+        <p className="eyebrow" style={{ margin: 0 }}>
+          Historial
+        </p>
         <span className="muted" style={{ fontSize: '0.8rem' }}>
           ({entries.length} movimientos)
         </span>
@@ -932,13 +936,17 @@ function CajaPanel({ caja }: { caja?: { total: number; byMethod: Record<string, 
               }}
             >
               <div style={{ minWidth: 0, flex: 1 }}>
-                <strong style={{ display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <strong
+                  style={{
+                    display: 'block',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
                   {e.label}
                 </strong>
-                <span
-                  className="muted"
-                  style={{ fontSize: '0.8rem' }}
-                >
+                <span className="muted" style={{ fontSize: '0.8rem' }}>
                   {e.sublabel && (
                     <span
                       className="pill"

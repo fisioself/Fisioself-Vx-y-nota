@@ -36,12 +36,7 @@ const toLocalInput = (s: string) => s.slice(0, 16);
 
 // Normaliza un nombre (sin acentos ni mayúsculas) para detectar si el paciente
 // que se va a crear ya existe y evitar fichas duplicadas por error.
-const normName = (s: string) =>
-  s
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
-    .trim();
+const normName = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 
 export function AppointmentCreateModal({ slot, onClose }: AppointmentCreateModalProps) {
   const { notify } = useToast();

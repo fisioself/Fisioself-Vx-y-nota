@@ -454,7 +454,8 @@ export function AppointmentChargeModal({
             </span>
             {relevantPkg && pkgSessionPos > 0 && !isValoracion(appointment) && (
               <p className="muted" style={{ fontSize: '0.82rem', margin: '3px 0 0' }}>
-                Sesión {pkgSessionPos} de {relevantPkg.sessions_total} en paquete «{relevantPkg.name}»
+                Sesión {pkgSessionPos} de {relevantPkg.sessions_total} en paquete «
+                {relevantPkg.name}»
               </p>
             )}
           </div>

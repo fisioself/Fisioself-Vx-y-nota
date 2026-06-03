@@ -127,7 +127,12 @@ export function PatientDocuments({ patientId }: PatientDocumentsProps) {
             <li
               key={doc.id}
               className="note-row"
-              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: 10
+              }}
             >
               <div style={{ minWidth: 0 }}>
                 <strong
