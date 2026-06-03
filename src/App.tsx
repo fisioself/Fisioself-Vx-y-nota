@@ -160,57 +160,50 @@ export function App() {
         </div>
       </header>
 
-      <aside className="left-pane">
-        <div className="actions split-actions" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
-          <button
-            type="button"
-            className={showDashboard ? '' : 'secondary'}
-            onClick={() => {
+      <nav className="main-tabs">
+        <button
+          type="button"
+          className={showDashboard ? '' : 'secondary'}
+          onClick={() => {
+            setShowDashboard(true);
+            setShowFinance(false);
+            setSelectedPatient(null);
+          }}
+        >
+          Panel
+        </button>
+        <button
+          type="button"
+          className={showFinance ? '' : 'secondary'}
+          onClick={() => {
+            setShowFinance(true);
+            setShowDashboard(false);
+            setSelectedPatient(null);
+          }}
+        >
+          Finanzas
+        </button>
+        <button
+          type="button"
+          className="secondary"
+          onClick={() => {
+            setShowFinance(false);
+            if (showNewPatient) {
+              // Cerrar el alta y volver al Panel (en vez de dejar un expediente vacío).
+              setShowNewPatient(false);
               setShowDashboard(true);
-              setShowFinance(false);
-              setSelectedPatient(null);
-            }}
-          >
-            Panel
-          </button>
-          <button
-            type="button"
-            className={showFinance ? '' : 'secondary'}
-            onClick={() => {
-              setShowFinance(true);
+            } else {
+              setShowNewPatient(true);
               setShowDashboard(false);
-              setSelectedPatient(null);
-            }}
-          >
-            Finanzas
-          </button>
-          <button
-            type="button"
-            className="secondary"
-            onClick={() => {
-              setShowFinance(false);
-              setShowDashboard(false);
-              setShowNewPatient((value) => !value);
-            }}
-          >
-            {showNewPatient ? 'Cerrar' : '+ Paciente'}
-          </button>
-        </div>
+            }
+          }}
+        >
+          {showNewPatient ? 'Cerrar' : '+ Paciente'}
+        </button>
+      </nav>
 
+      <aside className="left-pane">
         <Suspense fallback={<LoadingCard>Cargando pacientes...</LoadingCard>}>
-          {showNewPatient && (
-            <PatientForm
-              onCancel={() => setShowNewPatient(false)}
-              onCreated={(patient) => {
-                setSelectedPatient(patient);
-                setShowFinance(false);
-                setShowDashboard(false);
-                setShowNewPatient(false);
-                queryClient.invalidateQueries({ queryKey: ['patients'] });
-              }}
-            />
-          )}
-
           <PatientList
             selectedId={selectedPatient?.id}
             onSelect={(patient) => {
@@ -224,7 +217,21 @@ export function App() {
 
       <section className="right-pane">
         <Suspense fallback={<LoadingCard>Cargando datos...</LoadingCard>}>
-          {showDashboard ? (
+          {showNewPatient ? (
+            <PatientForm
+              onCancel={() => {
+                setShowNewPatient(false);
+                setShowDashboard(true);
+              }}
+              onCreated={(patient) => {
+                setSelectedPatient(patient);
+                setShowFinance(false);
+                setShowDashboard(false);
+                setShowNewPatient(false);
+                queryClient.invalidateQueries({ queryKey: ['patients'] });
+              }}
+            />
+          ) : showDashboard ? (
             <ClinicDashboard
               onPatientSelect={(patientId) => {
                 setSelectedPatient({ id: patientId });

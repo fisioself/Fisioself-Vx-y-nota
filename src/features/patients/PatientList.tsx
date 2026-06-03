@@ -13,6 +13,9 @@ export function PatientList({ selectedId, onSelect }: PatientListProps) {
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [importing, setImporting] = useState(false);
+  // La lista de nombres arranca colapsada para no llenar la pantalla principal;
+  // se despliega al tocar "Mostrar" o automáticamente al buscar.
+  const [expanded, setExpanded] = useState(false);
   const { notify } = useToast();
   const queryClient = useQueryClient();
 
@@ -37,6 +40,8 @@ export function PatientList({ selectedId, onSelect }: PatientListProps) {
 
   const patients = isSearching ? searchResults : todayPatients;
   const isLoading = isSearching ? loadingSearch : loadingToday;
+  // Mostramos los nombres solo al buscar o cuando el usuario despliega la lista.
+  const showList = isSearching || expanded;
 
   const handleImport = async () => {
     setImporting(true);
@@ -73,30 +78,48 @@ export function PatientList({ selectedId, onSelect }: PatientListProps) {
         />
       </div>
 
-      {isLoading && <p className="muted">Cargando...</p>}
+      {/* Botón para mostrar/ocultar la lista de hoy (colapsada por defecto para
+          que los nombres no aparezcan en la pantalla principal). Al buscar, la
+          lista se muestra sola y este botón se oculta. */}
+      {!isSearching && (
+        <button
+          type="button"
+          className="secondary"
+          onClick={() => setExpanded((v) => !v)}
+          style={{ marginBottom: showList ? 12 : 0 }}
+        >
+          {expanded
+            ? 'Ocultar lista'
+            : `Mostrar pacientes de hoy${todayPatients.length ? ` (${todayPatients.length})` : ''}`}
+        </button>
+      )}
 
-      <div className="list-stack">
-        {patients.map((patient) => (
-          <button
-            key={patient.id}
-            type="button"
-            className={patient.id === selectedId ? 'patient-row active' : 'patient-row'}
-            onClick={() => onSelect?.(patient)}
-          >
-            <strong>{patient.full_name}</strong>
-            <span>{patient.status || 'Sin estado'}</span>
-            <small>{patient.phone || 'Sin telefono'}</small>
-          </button>
-        ))}
+      {isLoading && showList && <p className="muted">Cargando...</p>}
 
-        {!isLoading && !patients.length && (
-          <p className="muted">
-            {isSearching
-              ? 'No se encontraron pacientes.'
-              : 'Sin pacientes agendados hoy — usa el buscador'}
-          </p>
-        )}
-      </div>
+      {showList && (
+        <div className="list-stack">
+          {patients.map((patient) => (
+            <button
+              key={patient.id}
+              type="button"
+              className={patient.id === selectedId ? 'patient-row active' : 'patient-row'}
+              onClick={() => onSelect?.(patient)}
+            >
+              <strong>{patient.full_name}</strong>
+              <span>{patient.status || 'Sin estado'}</span>
+              <small>{patient.phone || 'Sin telefono'}</small>
+            </button>
+          ))}
+
+          {!isLoading && !patients.length && (
+            <p className="muted">
+              {isSearching
+                ? 'No se encontraron pacientes.'
+                : 'Sin pacientes agendados hoy — usa el buscador'}
+            </p>
+          )}
+        </div>
+      )}
     </section>
   );
 }

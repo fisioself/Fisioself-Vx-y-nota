@@ -209,6 +209,18 @@ details:focus-visible summary {
   gap: 18px;
   align-items: start;
 }
+/* Barra de pestañas principal (Panel / Finanzas / + Paciente) a todo lo ancho,
+   en una cuadrícula de 3 columnas iguales que nunca se desborda. */
+.main-tabs {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.main-tabs button {
+  width: 100%;
+  min-height: 46px;
+}
 .left-pane,
 .right-pane,
 .record-stack {
@@ -473,6 +485,15 @@ pre {
 @media (max-width: 900px) {
   .app-grid {
     grid-template-columns: 1fr;
+  }
+  /* En móvil el contenido principal (Panel/Finanzas/expediente) va primero y la
+     lista de pacientes se manda al final, para no tener que pasar por toda la
+     lista al entrar a Finanzas. */
+  .right-pane {
+    order: 1;
+  }
+  .left-pane {
+    order: 2;
   }
   .app-hero,
   .record-header {
