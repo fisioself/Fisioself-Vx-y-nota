@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { clinicalApi } from '../../services/clinicalApi';
 import { useToast } from '../../app/ToastProvider';
 import { useRole } from '../../shared/useRole';
+import { SkeletonList } from '../../components/Skeleton';
 
 // Papelera de pacientes borrados. Solo visible para administradores.
 // Permite recuperar un paciente eliminado por error (el borrado es lógico:
@@ -46,7 +47,7 @@ export function PatientTrash() {
 
       {open && (
         <div className="list-stack" style={{ marginTop: 12 }}>
-          {isLoading && <p className="muted">Cargando…</p>}
+          {isLoading && <SkeletonList rows={2} label="Cargando papelera…" />}
 
           {!isLoading && deleted.length === 0 && (
             <p className="muted">No hay pacientes borrados.</p>

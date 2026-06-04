@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { getErrorMessage } from '../../shared/errors';
 import type { AiConsultSavePayload, PendingConsult } from './types';
 import './AiConsultModal.css';
@@ -15,6 +15,18 @@ export function AiConsultModal({ consult, onClose, onSave }: AiConsultModalProps
   const [validationNotes, setValidationNotes] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+
+  // El modal permanece montado en el editor (solo cambia `consult`). Sin esto,
+  // la marca "revisé clínicamente" de una consulta previa persistiría en la
+  // siguiente, permitiendo guardar IA sin re-revisarla. Reinicia en cada consulta.
+  useEffect(() => {
+    if (consult) {
+      setValidated(false);
+      setAlsoInsert(true);
+      setValidationNotes('');
+      setError('');
+    }
+  }, [consult]);
 
   if (!consult) return null;
 

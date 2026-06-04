@@ -95,13 +95,18 @@ const sum = (rows: Array<{ amount?: number | null }>, key: 'amount' = 'amount'):
 // Toda fecha se interpreta en horario de CDMX (la base corre en UTC). Sin esto,
 // los cortes mensuales se desfasan hasta 6 h respecto a la función SQL.
 const CDMX_TZ = 'America/Mexico_City';
-const cdmxDay = (d: Date | string): string =>
-  new Intl.DateTimeFormat('en-CA', {
+const cdmxDay = (d: Date | string): string => {
+  const date = typeof d === 'string' ? new Date(d) : d;
+  // Defensa: una fecha inválida haría que Intl.format lance RangeError y tumbe
+  // todo el cálculo del dashboard. Devolver '' la deja fuera de los buckets.
+  if (Number.isNaN(date.getTime())) return '';
+  return new Intl.DateTimeFormat('en-CA', {
     timeZone: CDMX_TZ,
     year: 'numeric',
     month: '2-digit',
     day: '2-digit'
-  }).format(typeof d === 'string' ? new Date(d) : d); // 'YYYY-MM-DD'
+  }).format(date); // 'YYYY-MM-DD'
+};
 
 const monthKey = (isoDate: string): string => cdmxDay(isoDate).slice(0, 7); // 'YYYY-MM' en CDMX
 

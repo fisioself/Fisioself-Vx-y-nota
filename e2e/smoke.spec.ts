@@ -1,33 +1,28 @@
 import { test, expect } from '@playwright/test';
 
-// Smoke test: the production preview boots and either prompts for Supabase
-// config (when env vars are missing) or shows the login screen. Both states
-// confirm the bundle loaded, the service worker did not break the shell,
-// and the React tree mounted without runtime errors.
-test('app boots and renders the auth or config shell', async ({ page }) => {
+// Smoke E2E: con credenciales (dummy) de build, la app arranca y muestra el
+// LoginScreen. Confirma de punta a punta que el bundle carga, los chunks lazy
+// resuelven, el árbol React monta y no hay errores de runtime en el navegador
+// real — cosas que los tests unitarios (jsdom) no pueden garantizar.
+test('la app arranca y muestra la pantalla de acceso sin errores de runtime', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (err) => errors.push(err.message));
 
   await page.goto('/');
 
-  await expect(page.locator('main.shell')).toBeVisible();
+  // Marca de FISIOSELF y encabezado de acceso privado.
+  await expect(page.getByText('FISIOSELF', { exact: true }).first()).toBeVisible();
+  await expect(page.getByRole('heading', { name: /acceso privado/i })).toBeVisible();
 
-  const heading = page.getByRole('heading', { level: 1 });
-  await expect(heading).toBeVisible();
-  await expect(heading).toHaveText(/Falta conectar Supabase|FISIOSELF|Acceso/i);
+  // Campos de credenciales y botón de entrar presentes.
+  await expect(page.getByLabel(/correo/i)).toBeVisible();
+  await expect(page.getByLabel(/contrasena|contraseña/i)).toBeVisible();
+  await expect(page.getByRole('button', { name: /entrar/i })).toBeVisible();
 
-  expect(errors, `Unexpected page errors: ${errors.join('\n')}`).toEqual([]);
+  expect(errors, `Errores inesperados en la página: ${errors.join('\n')}`).toEqual([]);
 });
 
-test('login form is reachable when Supabase is configured', async ({ page }) => {
-  test.skip(
-    !process.env.VITE_SUPABASE_URL,
-    'Skipping: requires VITE_SUPABASE_URL in the build env'
-  );
-
+test('el documento expone el título de FISIOSELF', async ({ page }) => {
   await page.goto('/');
-
-  const emailField = page.getByLabel(/correo|email/i);
-  await expect(emailField).toBeVisible();
-  await expect(page.getByRole('button', { name: /entrar|iniciar|acceder/i })).toBeVisible();
+  await expect(page).toHaveTitle(/fisioself/i);
 });

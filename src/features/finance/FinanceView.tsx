@@ -8,6 +8,7 @@ import { BarChart, GroupedBarChart, GrowthBadge } from './FinanceCharts';
 import { ExpensesPanel } from './ExpensesPanel';
 import { PatientFinancePanel } from './PatientFinancePanel';
 import { CajaPanel } from './CajaPanel';
+import { Skeleton } from '../../components/Skeleton';
 
 interface FinanceViewProps {
   onPatientSelect?: (patientId: string) => void;
@@ -56,7 +57,14 @@ export function FinanceView(_props: FinanceViewProps) {
 
       {isLoading ? (
         <section className="card" aria-busy="true">
-          Cargando finanzas…
+          <Skeleton width="40%" height={20} />
+          <div style={{ display: 'flex', gap: 12, marginTop: 16, flexWrap: 'wrap' }}>
+            <Skeleton width={120} height={70} radius={14} />
+            <Skeleton width={120} height={70} radius={14} />
+            <Skeleton width={120} height={70} radius={14} />
+          </div>
+          <Skeleton width="100%" height={180} radius={14} style={{ marginTop: 16 }} />
+          <span className="sr-only">Cargando finanzas…</span>
         </section>
       ) : (
         <>

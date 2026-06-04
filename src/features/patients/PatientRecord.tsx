@@ -13,6 +13,7 @@ import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 import { ClinicalSummary } from './ClinicalSummary';
 import { useRole } from '../../shared/useRole';
 import { EvaluationSummary } from '../evaluations/EvaluationSummary';
+import { SkeletonList } from '../../components/Skeleton';
 
 export const getNextSessionNumber = (notes: Pick<SessionNote, 'session_number'>[] = []) => {
   const maxSession = notes.reduce((max, note) => {
@@ -253,7 +254,11 @@ export const PatientRecord = memo(function PatientRecord({
         </section>
       </div>
 
-      {(loading || isRefetching) && !record && <p className="muted">Cargando expediente...</p>}
+      {(loading || isRefetching) && !record && (
+        <section className="card" aria-busy="true">
+          <SkeletonList rows={3} label="Cargando expediente…" />
+        </section>
+      )}
 
       {error && !record && (
         <section className="card" style={{ textAlign: 'center', padding: '2rem' }}>
