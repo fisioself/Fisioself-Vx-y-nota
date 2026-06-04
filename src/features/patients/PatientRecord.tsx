@@ -13,7 +13,6 @@ import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 import { ClinicalSummary } from './ClinicalSummary';
 import { useRole } from '../../shared/useRole';
 import { EvaluationSummary } from '../evaluations/EvaluationSummary';
-import { PatientDocuments } from './PatientDocuments';
 
 export const getNextSessionNumber = (notes: Pick<SessionNote, 'session_number'>[] = []) => {
   const maxSession = notes.reduce((max, note) => {
@@ -336,16 +335,6 @@ export const PatientRecord = memo(function PatientRecord({
             appointments={record?.appointments || []}
             onChanged={refreshRecord}
           />
-
-          <section className="card">
-            <div className="form-header">
-              <div>
-                <p className="eyebrow">Documentos</p>
-                <h2>Archivos clínicos y estudios</h2>
-              </div>
-            </div>
-            <PatientDocuments patientId={current.id} />
-          </section>
 
           <section className="card">
             <div className="form-header">
