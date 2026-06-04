@@ -1,6 +1,10 @@
 import { useState, type ChangeEvent } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { documentsApi, type PatientDocument } from '../../services/documentsApi';
+import {
+  documentsApi,
+  validateUploadFile,
+  type PatientDocument
+} from '../../services/documentsApi';
 import { useToast } from '../../app/ToastProvider';
 import { getErrorMessage } from '../../shared/errors';
 
@@ -8,7 +12,6 @@ interface PatientDocumentsProps {
   patientId: string;
 }
 
-const MAX_BYTES = 15 * 1024 * 1024; // 15 MB (igual que el límite del bucket)
 const ACCEPT = 'image/jpeg,image/png,image/webp,image/heic,image/heif,application/pdf';
 
 const prettySize = (bytes: number | null): string => {
@@ -51,8 +54,12 @@ export function PatientDocuments({ patientId }: PatientDocumentsProps) {
     const file = event.target.files?.[0];
     event.target.value = ''; // permite volver a elegir el mismo archivo
     if (!file) return;
-    if (file.size > MAX_BYTES) {
-      notify({ tone: 'error', message: 'El archivo excede el límite de 15 MB.' });
+    // Validación local (tamaño + tipo) con la misma regla que usa el servicio,
+    // para dar feedback inmediato antes de intentar subir.
+    try {
+      validateUploadFile(file);
+    } catch (error) {
+      notify({ tone: 'error', message: getErrorMessage(error, 'Archivo no válido.') });
       return;
     }
     setUploading(true);

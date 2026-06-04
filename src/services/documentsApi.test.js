@@ -51,6 +51,57 @@ describe('documentsApi.list', () => {
   });
 });
 
+describe('documentsApi.upload validación de archivo', () => {
+  it('rechaza archivos que superan el límite de tamaño sin tocar la red', async () => {
+    const upload = vi.fn();
+    const storageFrom = vi.fn(() => ({ upload }));
+    const from = vi.fn();
+    const { documentsApi, MAX_FILE_BYTES } = await loadApi({
+      from,
+      storage: { from: storageFrom }
+    });
+
+    await expect(
+      documentsApi.upload({
+        patientId: 'p1',
+        file: fakeFile('enorme.pdf', 'application/pdf', MAX_FILE_BYTES + 1)
+      })
+    ).rejects.toThrow(/pesa demasiado/i);
+    // No debe intentar subir ni registrar nada.
+    expect(upload).not.toHaveBeenCalled();
+    expect(from).not.toHaveBeenCalled();
+  });
+
+  it('rechaza tipos de archivo no permitidos (p. ej. ejecutables)', async () => {
+    const upload = vi.fn();
+    const storageFrom = vi.fn(() => ({ upload }));
+    const { documentsApi } = await loadApi({ from: vi.fn(), storage: { from: storageFrom } });
+
+    await expect(
+      documentsApi.upload({
+        patientId: 'p1',
+        file: fakeFile('virus.exe', 'application/x-msdownload', 100)
+      })
+    ).rejects.toThrow(/no permitido/i);
+    expect(upload).not.toHaveBeenCalled();
+  });
+
+  it('acepta imágenes por prefijo de tipo (image/*)', async () => {
+    vi.spyOn(crypto, 'randomUUID').mockReturnValue('img-1');
+    const upload = vi.fn().mockResolvedValue({ error: null });
+    const storageFrom = vi.fn(() => ({ upload }));
+    const single = vi.fn().mockResolvedValue({ data: { id: 'd1' }, error: null });
+    const insert = vi.fn(() => ({ select: vi.fn(() => ({ single })) }));
+    const from = vi.fn(() => ({ insert }));
+    const { documentsApi } = await loadApi({ from, storage: { from: storageFrom } });
+
+    await expect(
+      documentsApi.upload({ patientId: 'p1', file: fakeFile('rx.png', 'image/png', 2048) })
+    ).resolves.toMatchObject({ id: 'd1' });
+    expect(upload).toHaveBeenCalled();
+  });
+});
+
 describe('documentsApi.upload', () => {
   it('sube al bucket con una ruta que empieza por el patient_id y registra metadatos', async () => {
     vi.spyOn(crypto, 'randomUUID').mockReturnValue('uuid-123');
@@ -103,12 +154,16 @@ describe('documentsApi.upload', () => {
     const from = vi.fn(() => ({ insert }));
     const { documentsApi } = await loadApi({ from, storage: { from: storageFrom } });
 
-    await documentsApi.upload({ patientId: 'p1', file: fakeFile('sinextension', '') });
+    // Nombre sin extensión pero con un tipo permitido: el path cae a ".bin".
+    await documentsApi.upload({
+      patientId: 'p1',
+      file: fakeFile('sinextension', 'application/pdf')
+    });
 
     expect(upload).toHaveBeenCalledWith(
       'p1/uuid-xyz.bin',
       expect.anything(),
-      expect.objectContaining({ contentType: undefined })
+      expect.objectContaining({ contentType: 'application/pdf' })
     );
   });
 
