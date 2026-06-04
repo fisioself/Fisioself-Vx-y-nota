@@ -1,0 +1,92 @@
+name: Verificar restauración de backup
+
+# Prueba de restauración segura y automática.
+# 1) Descarga el último backup cifrado producido por "Backup base de datos".
+# 2) Lo descifra con BACKUP_GPG_PASSPHRASE (secret, nunca se expone).
+# 3) Verifica integridad con `pg_restore --list`.
+# 4) Lo restaura de verdad en una base Postgres TEMPORAL y desechable del runner.
+# NUNCA toca la base de datos de producción.
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  actions: read   # necesario para descargar artifacts de otros runs
+
+jobs:
+  verify:
+    name: Restaurar en BD desechable
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: verify
+          POSTGRES_DB: verifydb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    steps:
+      - name: Instalar pg_restore 17
+        run: |
+          sudo sh -c 'echo "deb https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/pgdg.gpg
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-17
+
+      - name: Descargar el último backup cifrado
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          RUN_ID=$(gh run list --workflow "backup.yml" --status success -L 1 --json databaseId -q '.[0].databaseId')
+          if [ -z "${RUN_ID:-}" ]; then
+            echo "::error::No hay ningún run exitoso de 'Backup base de datos' del cual descargar."
+            exit 1
+          fi
+          echo "Descargando artifacts del run de backup #$RUN_ID"
+          gh run download "$RUN_ID" -D artifact
+          echo "Contenido descargado:"
+          find artifact -type f
+
+      - name: Descifrar y verificar restauración
+        env:
+          PASSPHRASE: ${{ secrets.BACKUP_GPG_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          FILE=$(find artifact -name '*.dump.gpg' | head -n1)
+          if [ -z "${FILE:-}" ]; then
+            echo "::error::No se encontró ningún archivo .dump.gpg en el artifact."
+            exit 1
+          fi
+          echo "Archivo cifrado: $FILE"
+
+          # Descifrar
+          gpg --batch --yes --passphrase "$PASSPHRASE" -o restored.dump -d "$FILE"
+          echo "Descifrado correcto."
+
+          # 1) Integridad: listar el contenido del dump
+          echo "----- pg_restore --list (primeras 30 lineas) -----"
+          pg_restore --list restored.dump | head -n 30
+
+          # 2) Restauracion real en la BD desechable
+          export PGPASSWORD=verify
+          pg_restore --no-owner --no-privileges --if-exists --clean \
+            -h localhost -U postgres -d verifydb restored.dump
+          echo "Restauracion completada en la BD desechable."
+
+          # Resumen de lo restaurado
+          echo "----- Tablas restauradas -----"
+          psql -h localhost -U postgres -d verifydb -c "\dt" || true
+          echo "----- Conteo de objetos -----"
+          psql -h localhost -U postgres -d verifydb -t -c \
+            "select count(*) || ' tablas en schema public' from information_schema.tables where table_schema='public';"
+          echo "Backup verificado: descifra y restaura correctamente."
