@@ -4,6 +4,7 @@ import { clinicalApi } from '../../services/clinicalApi';
 import { calendarService } from '../../services/calendarService';
 import { useToast } from '../../app/ToastProvider';
 import { getErrorMessage } from '../../shared/errors';
+import { SkeletonList } from '../../components/Skeleton';
 import { PatientTrash } from './PatientTrash';
 import type { Patient } from '../../types/clinical';
 
@@ -109,7 +110,7 @@ export function PatientList({ selectedId, onSelect }: PatientListProps) {
           </button>
         )}
 
-        {isLoading && showList && <p className="muted">Cargando...</p>}
+        {isLoading && showList && <SkeletonList rows={4} label="Cargando pacientes…" />}
 
         {showList && (
           <div className="list-stack">

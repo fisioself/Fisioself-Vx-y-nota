@@ -1,0 +1,62 @@
+.skeleton {
+  display: block;
+  background: var(--bg-sunken);
+  background-image: linear-gradient(
+    90deg,
+    var(--bg-sunken) 0%,
+    var(--border) 50%,
+    var(--bg-sunken) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.3s ease-in-out infinite;
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.skeleton-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 12px;
+}
+
+.skeleton-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.skeleton-row:last-child {
+  border-bottom: none;
+}
+
+/* Texto solo para lectores de pantalla (anuncia el estado de carga). */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Respeta a quien prefiere menos movimiento: sin shimmer, solo un tono fijo. */
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+    background-image: none;
+    background: var(--border);
+  }
+}

@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { clinicalApi } from '../../services/clinicalApi';
 import { calendarService } from '../../services/calendarService';
 import { NativeCalendar } from '../../components/calendar/NativeCalendar';
+import { Skeleton } from '../../components/Skeleton';
 
 interface ClinicDashboardProps {
   onPatientSelect?: (patientId: string) => void;
@@ -35,7 +36,14 @@ export function ClinicDashboard({ onPatientSelect }: ClinicDashboardProps) {
   if (isLoading)
     return (
       <section className="card" aria-busy="true">
-        Cargando estadisticas...
+        <Skeleton width="35%" height={20} />
+        <div style={{ display: 'flex', gap: 12, marginTop: 16, flexWrap: 'wrap' }}>
+          <Skeleton width={110} height={64} radius={14} />
+          <Skeleton width={110} height={64} radius={14} />
+          <Skeleton width={110} height={64} radius={14} />
+          <Skeleton width={110} height={64} radius={14} />
+        </div>
+        <span className="sr-only">Cargando estadísticas…</span>
       </section>
     );
   if (error || !stats)

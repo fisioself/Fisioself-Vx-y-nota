@@ -8,6 +8,7 @@ import {
 import { useToast } from '../../app/ToastProvider';
 import { getErrorMessage } from '../../shared/errors';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
+import { SkeletonList } from '../../components/Skeleton';
 
 interface PatientDocumentsProps {
   patientId: string;
@@ -124,9 +125,7 @@ export function PatientDocuments({ patientId }: PatientDocumentsProps) {
       </div>
 
       {isLoading ? (
-        <p className="muted" style={{ marginTop: 12 }}>
-          Cargando archivos…
-        </p>
+        <SkeletonList rows={2} label="Cargando archivos…" />
       ) : docs.length === 0 ? (
         <p className="muted" style={{ marginTop: 12 }}>
           No hay archivos adjuntos todavía.
