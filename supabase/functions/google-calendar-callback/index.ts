@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { setCalendarTokens } from '../_shared/calendarTokens.ts';
 
 const html = (status: number, body: string) =>
   new Response(body, {
@@ -96,6 +97,8 @@ Deno.serve(async (req) => {
     });
     const profile = await profileResponse.json().catch(() => ({}));
 
+    // Upsert SIN tokens en claro: solo metadatos y expiración. Los tokens
+    // (secretos) se guardan cifrados justo después vía calendar_tokens_set.
     const { data: upserted, error: upsertError } = await supabase
       .from('calendar_connections')
       .upsert(
@@ -104,8 +107,6 @@ Deno.serve(async (req) => {
           provider: 'google',
           provider_account_email: profile.email || null,
           calendar_id: 'primary',
-          access_token: accessToken,
-          refresh_token: refreshToken || null,
           token_expires_at: tokenExpiresAt,
           updated_at: new Date().toISOString()
         },
@@ -115,6 +116,10 @@ Deno.serve(async (req) => {
       .single();
 
     if (upsertError || !upserted) throw upsertError || new Error('Upsert sin id');
+
+    // Cifra y guarda los tokens vía Vault (o texto plano si el RPC aún no
+    // existe). Se hace por id de conexión, ya conocido tras el upsert.
+    await setCalendarTokens(supabase, upserted.id, accessToken, refreshToken || null);
 
     await supabase
       .from('google_oauth_states')

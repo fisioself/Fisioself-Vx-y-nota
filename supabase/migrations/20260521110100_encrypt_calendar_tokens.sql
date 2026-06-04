@@ -1,40 +1,23 @@
--- Encrypt Google OAuth tokens at rest with pgsodium.
+-- Cifra los tokens de Google OAuth en reposo usando Supabase Vault.
 --
--- Background:
---   calendar_connections.access_token / refresh_token are stored plaintext.
---   RLS blocks the client from reading them (see migration 005), but anyone
---   with the service-role key or direct DB access can read every token. The
---   refresh_token in particular grants long-lived access to the connected
---   Google Calendar without needing the user's password.
+-- Antecedente:
+--   calendar_connections.access_token / refresh_token se guardaban en texto
+--   plano. RLS impide que el cliente los lea (migración 005), pero cualquiera
+--   con la service-role key o acceso directo a la BD veía cada token. El
+--   refresh_token, en particular, da acceso prolongado al Google Calendar.
 --
--- Strategy:
---   * Use pgsodium deterministic AEAD with connection_id as associated data.
---   * Store ciphertext in *_enc bytea columns. The plaintext columns are
---     kept (nulled out) for one release as a reversibility safety net; a
---     follow-up migration drops them once edge functions are verified.
---   * Expose two SECURITY DEFINER RPCs (calendar_tokens_set / _get) that
---     edge functions invoke with the service role. Clients have no execute
---     grant on them.
+-- Estrategia (Vault, no pgsodium — pgsodium está deprecado en Supabase):
+--   * Los tokens se guardan como secretos cifrados en Supabase Vault, con la
+--     clave gestionada por Supabase (fuera de la tabla). Un volcado de la BD ya
+--     no revela los tokens.
+--   * Dos RPC SECURITY DEFINER (calendar_tokens_set / _get) cifran/descifran.
+--     Solo las edge functions (service_role) pueden ejecutarlas; ni anon ni
+--     authenticated tienen permiso.
+--   * Las columnas access_token / refresh_token quedan para respaldo durante la
+--     transición y se anulan en cuanto el token se mueve a Vault.
 
-create extension if not exists pgsodium with schema pgsodium;
+-- Nombres de secreto determinísticos por conexión: gcal_access_<id> / gcal_refresh_<id>.
 
--- Idempotent key creation. Re-running the migration is a no-op once the key
--- exists.
-do $$
-begin
-  if not exists (select 1 from pgsodium.valid_key where name = 'fisioself_calendar_tokens') then
-    perform pgsodium.create_key(
-      key_type := 'aead-det',
-      name := 'fisioself_calendar_tokens'
-    );
-  end if;
-end $$;
-
-alter table public.calendar_connections
-  add column if not exists access_token_enc bytea,
-  add column if not exists refresh_token_enc bytea;
-
--- Write path: encrypt and store. Service role only.
 create or replace function public.calendar_tokens_set(
   p_connection_id uuid,
   p_access_token text,
@@ -43,125 +26,78 @@ create or replace function public.calendar_tokens_set(
 returns void
 language plpgsql
 security definer
-set search_path = public, pgsodium
+set search_path = public, vault
 as $$
 declare
-  v_key_id uuid;
-  v_ad bytea;
+  v_access_name text := 'gcal_access_' || p_connection_id::text;
+  v_refresh_name text := 'gcal_refresh_' || p_connection_id::text;
+  v_id uuid;
 begin
-  select id into v_key_id from pgsodium.valid_key where name = 'fisioself_calendar_tokens';
-  if v_key_id is null then
-    raise exception 'Encryption key fisioself_calendar_tokens not found';
+  -- ACCESS token (corto plazo): null => borrar el secreto.
+  select id into v_id from vault.secrets where name = v_access_name;
+  if p_access_token is null then
+    if v_id is not null then delete from vault.secrets where id = v_id; end if;
+  elsif v_id is null then
+    perform vault.create_secret(p_access_token, v_access_name, 'Google Calendar access token');
+  else
+    perform vault.update_secret(v_id, p_access_token);
   end if;
 
-  v_ad := convert_to(p_connection_id::text, 'utf8');
+  -- REFRESH token (largo plazo): null => PRESERVAR el existente (Google solo lo
+  -- envía en el primer consentimiento). Nunca se borra por accidente.
+  select id into v_id from vault.secrets where name = v_refresh_name;
+  if p_refresh_token is not null then
+    if v_id is null then
+      perform vault.create_secret(p_refresh_token, v_refresh_name, 'Google Calendar refresh token');
+    else
+      perform vault.update_secret(v_id, p_refresh_token);
+    end if;
+  end if;
 
+  -- Borra cualquier texto plano que quedara en la fila de conexión.
   update public.calendar_connections
-    set access_token_enc = case
-          when p_access_token is null then null
-          else pgsodium.crypto_aead_det_encrypt(
-            convert_to(p_access_token, 'utf8'),
-            v_ad,
-            v_key_id
-          )
-        end,
-        refresh_token_enc = case
-          when p_refresh_token is null then null
-          else pgsodium.crypto_aead_det_encrypt(
-            convert_to(p_refresh_token, 'utf8'),
-            v_ad,
-            v_key_id
-          )
-        end,
-        access_token = null,
-        refresh_token = null,
-        updated_at = now()
+    set access_token = null, refresh_token = null, updated_at = now()
     where id = p_connection_id;
 end;
 $$;
 
-revoke all on function public.calendar_tokens_set(uuid, text, text) from public;
-grant execute on function public.calendar_tokens_set(uuid, text, text) to service_role;
-
--- Read path: decrypt and return. Service role only. Returns NULLs for any
--- token that has not been encrypted yet (defensive against partial migration
--- state).
 create or replace function public.calendar_tokens_get(p_connection_id uuid)
-returns table (
-  access_token text,
-  refresh_token text
-)
+returns table (access_token text, refresh_token text)
 language plpgsql
 security definer
-set search_path = public, pgsodium
+set search_path = public, vault
 as $$
 declare
-  v_key_id uuid;
-  v_ad bytea;
-  v_row record;
+  v_access_name text := 'gcal_access_' || p_connection_id::text;
+  v_refresh_name text := 'gcal_refresh_' || p_connection_id::text;
 begin
-  select id into v_key_id from pgsodium.valid_key where name = 'fisioself_calendar_tokens';
-  if v_key_id is null then
-    raise exception 'Encryption key fisioself_calendar_tokens not found';
-  end if;
-
-  select access_token_enc, refresh_token_enc
-    into v_row
-    from public.calendar_connections
-   where id = p_connection_id;
-
-  if not found then return; end if;
-
-  v_ad := convert_to(p_connection_id::text, 'utf8');
-
-  access_token := case
-    when v_row.access_token_enc is null then null
-    else convert_from(
-      pgsodium.crypto_aead_det_decrypt(v_row.access_token_enc, v_ad, v_key_id),
-      'utf8'
-    )
-  end;
-
-  refresh_token := case
-    when v_row.refresh_token_enc is null then null
-    else convert_from(
-      pgsodium.crypto_aead_det_decrypt(v_row.refresh_token_enc, v_ad, v_key_id),
-      'utf8'
-    )
-  end;
-
+  access_token := (select decrypted_secret from vault.decrypted_secrets where name = v_access_name);
+  refresh_token := (select decrypted_secret from vault.decrypted_secrets where name = v_refresh_name);
   return next;
 end;
 $$;
 
-revoke all on function public.calendar_tokens_get(uuid) from public;
+-- Solo las edge functions (service_role) pueden cifrar/descifrar tokens.
+revoke all on function public.calendar_tokens_set(uuid, text, text) from public, anon, authenticated;
+revoke all on function public.calendar_tokens_get(uuid) from public, anon, authenticated;
+grant execute on function public.calendar_tokens_set(uuid, text, text) to service_role;
 grant execute on function public.calendar_tokens_get(uuid) to service_role;
 
--- One-time data migration: encrypt any existing plaintext rows. Safe to re-run
--- because calendar_tokens_set is idempotent on the encrypted output.
+-- Migración de datos (idempotente): mueve a Vault cualquier token que siga en
+-- texto plano y anula la columna. En una BD nueva no hay filas: no-op.
 do $$
-declare
-  v_row record;
+declare r record;
 begin
-  for v_row in
+  for r in
     select id, access_token, refresh_token
       from public.calendar_connections
-     where (access_token is not null or refresh_token is not null)
+     where access_token is not null or refresh_token is not null
   loop
-    perform public.calendar_tokens_set(v_row.id, v_row.access_token, v_row.refresh_token);
+    perform public.calendar_tokens_set(r.id, r.access_token, r.refresh_token);
   end loop;
 end $$;
 
--- Belt-and-suspenders: ensure no plaintext lingers after the loop. The
--- calendar_tokens_set RPC already nulls them, but a direct UPDATE here covers
--- the case where someone wrote plaintext between the loop and now (very
--- unlikely inside a single migration transaction, but cheap insurance).
-update public.calendar_connections
-   set access_token = null,
-       refresh_token = null
- where access_token is not null or refresh_token is not null;
-
 comment on column public.calendar_connections.access_token is
-  'DEPRECATED: kept temporarily for migration rollback safety. Always NULL in production. Use calendar_tokens_set / calendar_tokens_get instead.';
+  'DEPRECATED: respaldo de transición. Siempre NULL en producción. Los tokens viven cifrados en Supabase Vault; usa calendar_tokens_set / calendar_tokens_get.';
 comment on column public.calendar_connections.refresh_token is
-  'DEPRECATED: kept temporarily for migration rollback safety. Always NULL in production. Use calendar_tokens_set / calendar_tokens_get instead.';
+  'DEPRECATED: respaldo de transición. Siempre NULL en producción. Los tokens viven cifrados en Supabase Vault; usa calendar_tokens_set / calendar_tokens_get.';
