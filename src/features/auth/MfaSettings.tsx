@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { authService } from '../../services/authService';
 import { useToast } from '../../app/ToastProvider';
 import { getErrorMessage } from '../../shared/errors';
+import { ConfirmDialog } from '../../components/ConfirmDialog';
 
 // Panel para que cada miembro del equipo active o desactive su segundo factor
 // (TOTP). Aparece en la cabecera. Cada usuario gestiona su propio autenticador.
@@ -26,6 +27,8 @@ export function MfaSettings({ onClose }: { onClose: () => void }) {
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  // Factor pendiente de confirmar su desactivación (null = sin diálogo abierto).
+  const [confirmDisableId, setConfirmDisableId] = useState<string | null>(null);
 
   const startEnroll = async () => {
     setBusy(true);
@@ -61,7 +64,7 @@ export function MfaSettings({ onClose }: { onClose: () => void }) {
   };
 
   const disable = async (factorId: string) => {
-    if (!window.confirm('¿Desactivar la verificación en dos pasos para tu cuenta?')) return;
+    setConfirmDisableId(null);
     setBusy(true);
     try {
       await authService.unenrollFactor(factorId);
@@ -99,7 +102,7 @@ export function MfaSettings({ onClose }: { onClose: () => void }) {
               <button
                 type="button"
                 className="danger"
-                onClick={() => disable(verified.id)}
+                onClick={() => setConfirmDisableId(verified.id)}
                 disabled={busy}
               >
                 Desactivar 2FA
@@ -178,6 +181,17 @@ export function MfaSettings({ onClose }: { onClose: () => void }) {
         <p className="error" role="alert">
           {error}
         </p>
+      )}
+
+      {confirmDisableId && (
+        <ConfirmDialog
+          title="Desactivar verificación en dos pasos"
+          message="¿Desactivar la verificación en dos pasos para tu cuenta? Tu cuenta quedará protegida solo con contraseña."
+          confirmLabel="Desactivar 2FA"
+          busy={busy}
+          onConfirm={() => disable(confirmDisableId)}
+          onCancel={() => setConfirmDisableId(null)}
+        />
       )}
     </section>
   );

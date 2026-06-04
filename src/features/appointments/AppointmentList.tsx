@@ -4,6 +4,7 @@ import { clinicalApi } from '../../services/clinicalApi';
 import { AppointmentForm } from './AppointmentForm';
 import { getErrorMessage } from '../../shared/errors';
 import { useToast } from '../../app/ToastProvider';
+import { ConfirmDialog } from '../../components/ConfirmDialog';
 import type { Appointment, Patient } from '../../types/clinical';
 import './appointments.css';
 
@@ -17,6 +18,8 @@ export function AppointmentList({ patient, appointments = [], onChanged }: Appoi
   const [showForm, setShowForm] = useState(false);
   const [syncing, setSyncing] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState<string | null>(null);
+  // Cita pendiente de confirmar su cancelación (null = sin diálogo abierto).
+  const [confirmCancelId, setConfirmCancelId] = useState<string | null>(null);
   const { notify } = useToast();
 
   const syncAppointment = async (id: string) => {
@@ -32,12 +35,7 @@ export function AppointmentList({ patient, appointments = [], onChanged }: Appoi
   };
 
   const cancelAppointment = async (id: string) => {
-    if (
-      !window.confirm(
-        '¿Cancelar esta cita? Si estaba sincronizada, también se eliminará el evento de tu Google Calendar.'
-      )
-    )
-      return;
+    setConfirmCancelId(null);
     setCancelling(id);
     try {
       await clinicalApi.updateAppointment(id, { status: 'cancelled' });
@@ -156,7 +154,7 @@ export function AppointmentList({ patient, appointments = [], onChanged }: Appoi
                       <button
                         className="danger"
                         disabled={cancelling === appointment.id}
-                        onClick={() => cancelAppointment(appointment.id)}
+                        onClick={() => setConfirmCancelId(appointment.id)}
                       >
                         {cancelling === appointment.id ? 'Cancelando...' : 'Cancelar cita'}
                       </button>
@@ -176,6 +174,18 @@ export function AppointmentList({ patient, appointments = [], onChanged }: Appoi
           <p className="muted">No hay citas programadas para este paciente.</p>
         )}
       </div>
+
+      {confirmCancelId && (
+        <ConfirmDialog
+          title="Cancelar cita"
+          message="¿Cancelar esta cita? Si estaba sincronizada, también se eliminará el evento de tu Google Calendar."
+          confirmLabel="Cancelar cita"
+          cancelLabel="Volver"
+          busy={cancelling === confirmCancelId}
+          onConfirm={() => cancelAppointment(confirmCancelId)}
+          onCancel={() => setConfirmCancelId(null)}
+        />
+      )}
     </section>
   );
 }

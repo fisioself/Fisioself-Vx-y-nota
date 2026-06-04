@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ToastProvider } from '../../app/ToastProvider.jsx';
@@ -69,12 +69,20 @@ describe('SessionNotesList', () => {
 
   it('deletes a session note after confirmation', async () => {
     clinicalApi.deleteSessionNote.mockResolvedValueOnce(null);
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
     const onChanged = vi.fn();
 
     renderWithToast(<SessionNotesList notes={notes} onChanged={onChanged} />);
 
-    await userEvent.click(screen.getAllByRole('button', { name: /eliminar/i })[0]);
+    // Primer clic en "Eliminar" de la fila: abre el diálogo accesible.
+    await userEvent.click(screen.getAllByRole('button', { name: /^eliminar$/i })[0]);
+    const dialog = await screen.findByRole('dialog');
+    // El diálogo todavía no borra nada por sí mismo.
+    expect(clinicalApi.deleteSessionNote).not.toHaveBeenCalled();
+
+    // Confirmar dentro del diálogo.
+    await userEvent.click(
+      within(dialog).getByRole('button', { name: /eliminar permanentemente/i })
+    );
 
     await waitFor(() => {
       expect(clinicalApi.deleteSessionNote).toHaveBeenCalledWith('2');
