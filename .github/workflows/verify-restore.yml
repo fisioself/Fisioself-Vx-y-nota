@@ -12,7 +12,7 @@ on:
 
 permissions:
   contents: read
-  actions: read   # necesario para descargar artifacts de otros runs
+  actions: read # necesario para descargar artifacts de otros runs
 
 jobs:
   verify:
