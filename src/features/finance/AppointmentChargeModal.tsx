@@ -5,11 +5,8 @@ import { clinicalApi } from '../../services/clinicalApi';
 import { useToast } from '../../app/ToastProvider';
 import { getErrorMessage } from '../../shared/errors';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
+import { money, netAfterCommission, cdmxLabel } from './financeUtils';
 import './AppointmentChargeModal.css';
-
-const CARD_COMMISSION = 0.0406; // 4.06 % comisión terminal
-
-const netAfterCommission = (gross: number) => Math.round(gross * (1 - CARD_COMMISSION) * 100) / 100;
 
 export interface ChargeAppointmentTarget {
   id: string;
@@ -30,25 +27,6 @@ interface AppointmentChargeModalProps {
   onViewPatient?: (patientId: string) => void;
   onDeleted?: () => void;
 }
-
-const money = (n: number) =>
-  new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(n);
-
-const cdmxLabel = (iso: string | null) => {
-  if (!iso) return '';
-  try {
-    return new Intl.DateTimeFormat('es-MX', {
-      timeZone: 'America/Mexico_City',
-      weekday: 'short',
-      day: '2-digit',
-      month: 'short',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(new Date(iso));
-  } catch {
-    return '';
-  }
-};
 
 export function AppointmentChargeModal({
   appointment,

@@ -59,6 +59,24 @@ export const fmtDate = (iso: string): string => {
   return `${date} · ${time}`;
 };
 
+// Etiqueta corta de fecha+hora en CDMX, estilo "lun, 02 jun, 14:30". Usada en
+// el modal de cobro para contextualizar la cita.
+export const cdmxLabel = (iso: string | null): string => {
+  if (!iso) return '';
+  try {
+    return new Intl.DateTimeFormat('es-MX', {
+      timeZone: 'America/Mexico_City',
+      weekday: 'short',
+      day: '2-digit',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(new Date(iso));
+  } catch {
+    return '';
+  }
+};
+
 export const methodLabel = (m: string) => {
   if (m === 'tarjeta' || m === 'transferencia') return 'Tarjeta / Trans.';
   if (m === 'efectivo') return 'Efectivo';
