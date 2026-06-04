@@ -237,8 +237,8 @@ describe('financeApi.listActivePatientPackages', () => {
 });
 
 describe('financeApi.chargeAppointment', () => {
-  it('sesión suelta: crea un pago con monto y método', async () => {
-    const db = makeDb({ payments: { single: { id: 'pay-1', amount: 350, method: 'efectivo' } } });
+  it('sesión suelta: llama al RPC atómico con monto y método', async () => {
+    const db = makeDb({ __rpc: { id: 'pay-1', amount: 350, method: 'efectivo' } });
     const { financeApi } = await loadFinanceApi(db);
 
     const payment = await financeApi.chargeAppointment({
@@ -250,36 +250,52 @@ describe('financeApi.chargeAppointment', () => {
     });
 
     expect(payment).toMatchObject({ id: 'pay-1' });
-    expect(db.from).toHaveBeenCalledWith('payments');
+    // El cobro se hace en UNA transacción del servidor (RPC), no con escrituras
+    // sueltas desde el cliente.
+    expect(db.rpc).toHaveBeenCalledWith(
+      'charge_appointment',
+      expect.objectContaining({
+        p_appointment_id: 'appt-1',
+        p_patient_id: 'patient-1',
+        p_use_package: false,
+        p_patient_package_id: null,
+        p_amount: 350,
+        p_method: 'efectivo'
+      })
+    );
   });
 
-  it('con paquete: descuenta una sesión y registra pago de seguimiento', async () => {
-    const db = makeDb({
-      patient_packages: {
-        single: { id: 'pk1', name: 'Paquete 10', sessions_total: 10, sessions_used: 3 }
-      },
-      payments: { single: { id: 'track-1', amount: 0, method: 'paquete' } }
-    });
+  it('con paquete: llama al RPC con el paquete y devuelve el pago de seguimiento', async () => {
+    const db = makeDb({ __rpc: { id: 'track-1', amount: 0, method: 'paquete' } });
     const { financeApi } = await loadFinanceApi(db);
 
     const tracking = await financeApi.chargeAppointment({
       appointmentId: 'appt-1',
       patientId: 'patient-1',
       usePackage: true,
-      patientPackageId: 'pk1'
+      patientPackageId: 'pk1',
+      amount: 200
     });
 
     expect(tracking).toMatchObject({ id: 'track-1', method: 'paquete' });
-    expect(db.from).toHaveBeenCalledWith('patient_packages');
-    expect(db.from).toHaveBeenCalledWith('payments');
+    expect(db.rpc).toHaveBeenCalledWith(
+      'charge_appointment',
+      expect.objectContaining({
+        p_use_package: true,
+        p_patient_package_id: 'pk1',
+        p_amount: 200
+      })
+    );
   });
 
-  it('con paquete sin sesiones disponibles lanza error', async () => {
-    const db = makeDb({
-      patient_packages: {
-        single: { id: 'pk1', name: 'Paquete', sessions_total: 5, sessions_used: 5 }
-      }
-    });
+  it('propaga el error del RPC (p. ej. paquete sin sesiones)', async () => {
+    const db = makeDb();
+    db.rpc = vi.fn(() =>
+      Promise.resolve({
+        data: null,
+        error: new Error('Ese paquete ya no tiene sesiones disponibles.')
+      })
+    );
     const { financeApi } = await loadFinanceApi(db);
 
     await expect(
@@ -289,7 +305,36 @@ describe('financeApi.chargeAppointment', () => {
         usePackage: true,
         patientPackageId: 'pk1'
       })
-    ).rejects.toThrow();
+    ).rejects.toThrow(/sesiones disponibles/i);
+  });
+
+  it('rechaza montos negativos sin tocar la red', async () => {
+    const db = makeDb();
+    const { financeApi } = await loadFinanceApi(db);
+
+    await expect(
+      financeApi.chargeAppointment({
+        appointmentId: 'appt-1',
+        patientId: 'patient-1',
+        usePackage: false,
+        amount: -50
+      })
+    ).rejects.toThrow(/no puede ser negativo/i);
+    expect(db.rpc).not.toHaveBeenCalled();
+  });
+
+  it('exige paquete cuando usePackage es true', async () => {
+    const db = makeDb();
+    const { financeApi } = await loadFinanceApi(db);
+
+    await expect(
+      financeApi.chargeAppointment({
+        appointmentId: 'appt-1',
+        patientId: 'patient-1',
+        usePackage: true
+      })
+    ).rejects.toThrow(/seleccionar el paquete/i);
+    expect(db.rpc).not.toHaveBeenCalled();
   });
 });
 

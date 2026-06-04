@@ -174,8 +174,9 @@ Deno.serve(async (req: Request) => {
 
   const gh = await createIssue(ev);
   if (!gh.ok) {
-    const detail = await gh.text();
-    return new Response(JSON.stringify({ error: 'GitHub issue creation failed', detail }), {
+    // El detalle de la respuesta de GitHub se registra en el log, no se devuelve.
+    console.error('sentry_to_github_create_failed', gh.status, await gh.text());
+    return new Response(JSON.stringify({ error: 'GitHub issue creation failed' }), {
       status: 502,
       headers: { 'Content-Type': 'application/json' }
     });

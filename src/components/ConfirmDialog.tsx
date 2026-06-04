@@ -34,14 +34,20 @@ export function ConfirmDialog({
 }: ConfirmDialogProps) {
   const confirmRef = useRef<HTMLButtonElement>(null);
 
-  // Foco inicial en el botón de confirmar + cierre con Escape.
+  // Foco inicial en el botón de confirmar + cierre con Escape + bloqueo del
+  // scroll de fondo (evita que en móvil se pueda hacer scroll "detrás" del modal).
   useEffect(() => {
     confirmRef.current?.focus();
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && !busy) onCancel();
     };
     document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = previousOverflow;
+    };
   }, [busy, onCancel]);
 
   return (
