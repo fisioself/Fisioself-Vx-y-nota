@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { financeApi } from '../../services/financeApi';
 import { useToast } from '../../app/ToastProvider';
+import { getErrorMessage } from '../../shared/errors';
 import type { Patient } from '../../types/clinical';
 import { money, netAfterCommission } from './financeUtils';
 
@@ -68,8 +69,8 @@ export function PatientFinancePanel({ patient }: PatientFinancePanelProps) {
       setInitPayAmount('');
       refresh();
       notify({ tone: 'success', message: 'Servicio agregado.' });
-    } catch {
-      notify({ tone: 'error', message: 'No se pudo agregar el servicio.' });
+    } catch (err) {
+      notify({ tone: 'error', message: getErrorMessage(err, 'No se pudo agregar el servicio.') });
     } finally {
       setBusy(false);
     }
@@ -77,7 +78,7 @@ export function PatientFinancePanel({ patient }: PatientFinancePanelProps) {
 
   const registerPayment = async () => {
     const value = Number(payAmount);
-    if (!value || value <= 0) {
+    if (!Number.isFinite(value) || value <= 0) {
       notify({ tone: 'error', message: 'Indica un monto válido.' });
       return;
     }
@@ -88,8 +89,8 @@ export function PatientFinancePanel({ patient }: PatientFinancePanelProps) {
       setPayAmount('');
       refresh();
       notify({ tone: 'success', message: 'Pago registrado.' });
-    } catch {
-      notify({ tone: 'error', message: 'No se pudo registrar el pago.' });
+    } catch (err) {
+      notify({ tone: 'error', message: getErrorMessage(err, 'No se pudo registrar el pago.') });
     } finally {
       setBusy(false);
     }
@@ -99,8 +100,8 @@ export function PatientFinancePanel({ patient }: PatientFinancePanelProps) {
     try {
       await financeApi.setSessionsUsed(id, used);
       refresh();
-    } catch {
-      notify({ tone: 'error', message: 'No se pudo actualizar sesiones.' });
+    } catch (err) {
+      notify({ tone: 'error', message: getErrorMessage(err, 'No se pudo actualizar sesiones.') });
     }
   };
 
@@ -108,8 +109,8 @@ export function PatientFinancePanel({ patient }: PatientFinancePanelProps) {
     try {
       await financeApi.deletePatientPackage(id);
       refresh();
-    } catch {
-      notify({ tone: 'error', message: 'No se pudo eliminar.' });
+    } catch (err) {
+      notify({ tone: 'error', message: getErrorMessage(err, 'No se pudo eliminar.') });
     }
   };
 

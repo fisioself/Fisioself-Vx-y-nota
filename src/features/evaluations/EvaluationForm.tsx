@@ -309,6 +309,7 @@ export function EvaluationForm({
             Numero telefonico
             <input
               inputMode="tel"
+              maxLength={25}
               value={values.phone}
               onChange={(e) => setField('phone', e.target.value)}
             />
@@ -316,6 +317,7 @@ export function EvaluationForm({
           <label className="span-2">
             Fisioterapeuta
             <input
+              maxLength={180}
               value={values.therapist_name}
               onChange={(e) => setField('therapist_name', e.target.value)}
             />

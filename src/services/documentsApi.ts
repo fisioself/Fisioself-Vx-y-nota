@@ -117,7 +117,9 @@ export const documentsApi = {
       await db.storage
         .from(BUCKET)
         .remove([path])
-        .catch(() => {});
+        .catch((cleanupErr) => {
+          console.error('[documentsApi] orphan cleanup failed after DB error:', cleanupErr);
+        });
       throw err;
     }
   },

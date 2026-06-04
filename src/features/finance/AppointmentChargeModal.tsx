@@ -166,7 +166,9 @@ export function AppointmentChargeModal({
         queryClient.invalidateQueries({ queryKey: ['patient-finance', patientId] });
         queryClient.invalidateQueries({ queryKey: ['active-packages', patientId] });
       })
-      .catch(() => {});
+      .catch((err) => {
+        console.error('[AppointmentChargeModal] syncPackageSessionsUsed failed:', err);
+      });
   }, [patientId, queryClient]);
 
   // Prefill del monto sugerido y selección del primer paquete disponible.
