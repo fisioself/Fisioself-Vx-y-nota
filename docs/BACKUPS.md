@@ -59,3 +59,39 @@ Tras configurar los secrets, lanza el workflow manualmente una vez
 (**Run workflow**) y confirma que el run termina en verde y genera el artifact.
 Descarga ese primer respaldo y verifica que puedes descifrarlo con tu
 passphrase. Si el `gpg -d` funciona, el respaldo es válido.
+
+## Verificación automática de restauración
+
+Además del backup diario, el workflow
+[`.github/workflows/verify-restore.yml`](../.github/workflows/verify-restore.yml)
+corre **cada lunes a las 09:00 UTC** (1 hora después del backup) y comprueba que
+el último respaldo sigue siendo restaurable, **sin tocar nunca producción**:
+
+1. Descarga el último backup cifrado del workflow de backup.
+2. Lo descifra con `BACKUP_GPG_PASSPHRASE`.
+3. Verifica la integridad del archivo con `pg_restore --list` (parsea todo el TOC).
+4. Lo restaura en una base Postgres **temporal y desechable** del runner y
+   cuenta las tablas restauradas.
+
+Si el run termina en verde, tienes la garantía semanal de que tus respaldos no
+solo se generan, sino que de verdad se pueden restaurar.
+
+## Runbook: qué hacer si la verificación falla
+
+Cuando el workflow **"Verificar restauración de backup"** sale en rojo, actúa
+según el paso que falló (lo indica el log del run):
+
+| Paso que falló                       | Qué significa                                             | Qué hacer                                                                                                                                                 |
+| ------------------------------------ | --------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Descargar el último backup**       | No hay ningún run exitoso de backup del cual descargar.   | Revisa el workflow de backup: ¿corrió hoy? ¿está en verde? Si falló, arréglalo primero (suele ser `SUPABASE_DB_URL` caducado o puerto 6543 por error).    |
+| **Descifrar / verificar integridad** | El archivo está corrupto o la passphrase no coincide.     | Confirma que `BACKUP_GPG_PASSPHRASE` es la misma con la que se cifró. Si cambió, los backups viejos no se podrán abrir; genera uno nuevo y guárdala bien. |
+| **Restauración (best-effort)**       | El TOC es válido pero `pg_restore` no logró cargar datos. | Abre el log: los avisos de extensiones/roles de Supabase son normales. Si **0 tablas** restauradas, el dump puede estar incompleto — investiga el backup. |
+
+**Regla de oro:** mientras el paso de _integridad_ pase (archivo descifrable y
+TOC válido), tu respaldo sirve aunque la restauración best-effort dé avisos. La
+restauración real en Supabase usa el procedimiento de la sección anterior, que
+no depende de Postgres vanilla.
+
+Si no puedes resolverlo, **descarga manualmente el último backup verde** y
+guárdalo fuera de GitHub mientras diagnosticas: nunca te quedes sin una copia
+buena a mano.
