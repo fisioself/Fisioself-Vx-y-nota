@@ -270,57 +270,37 @@ export const financeApi = {
   }): Promise<Payment> {
     const db = assertSupabase();
 
-    if (input.usePackage) {
-      if (!input.patientPackageId) throw new Error('Falta seleccionar el paquete.');
-      const pkg = unwrap<PatientPackage>(
-        await db.from('patient_packages').select('*').eq('id', input.patientPackageId).single()
-      );
-      const used = Number(pkg.sessions_used ?? 0);
-      const total = Number(pkg.sessions_total ?? 0);
-      if (used >= total) throw new Error('Ese paquete ya no tiene sesiones disponibles.');
-
-      const { error: upErr } = await db
-        .from('patient_packages')
-        .update({ sessions_used: used + 1, updated_at: new Date().toISOString() })
-        .eq('id', input.patientPackageId);
-      if (upErr) throw upErr;
-
-      // Registro de sesión usada (amount=0, method='paquete') — siempre.
-      const tracking = await this.addPayment({
-        patientId: input.patientId,
-        patientPackageId: input.patientPackageId,
-        appointmentId: input.appointmentId,
-        amount: 0,
-        method: 'paquete',
-        paidAt: input.paidAt,
-        notes: input.notes ?? `Sesión de paquete: ${pkg.name}`
-      });
-
-      // Abono parcial adicional (si el usuario indicó un monto > 0).
-      const abono = Number(input.amount ?? 0);
-      if (abono > 0) {
-        await this.addPayment({
-          patientId: input.patientId,
-          patientPackageId: input.patientPackageId,
-          appointmentId: input.appointmentId,
-          amount: abono,
-          method: input.method ?? 'efectivo',
-          paidAt: input.paidAt,
-          notes: input.notes
-        });
-      }
-
-      return tracking;
+    const amount = Number(input.amount ?? 0);
+    // Guard de feedback inmediato (la BD también lo valida en charge_appointment).
+    if (!Number.isFinite(amount) || amount < 0) {
+      throw new Error('El monto no puede ser negativo.');
+    }
+    if (input.usePackage && !input.patientPackageId) {
+      throw new Error('Falta seleccionar el paquete.');
     }
 
-    return this.addPayment({
-      patientId: input.patientId,
-      appointmentId: input.appointmentId,
-      amount: input.amount ?? 0,
-      method: input.method ?? 'efectivo',
-      paidAt: input.paidAt,
-      notes: input.notes
-    });
+    // Cobro ATÓMICO vía RPC: descuenta la sesión del paquete y registra el/los
+    // pago(s) en UNA sola transacción del lado del servidor. Evita el estado
+    // inconsistente que ocurría al hacer las escrituras por separado desde el
+    // cliente (sesión consumida sin pago, o pago sin descontar sesión).
+    // El RPC se creó por migración después de generar types/supabase.ts, así que
+    // casteamos rpc (mismo patrón que finance_appt_stats más abajo).
+    const rpc = db.rpc.bind(db) as unknown as (
+      name: string,
+      args?: Record<string, unknown>
+    ) => Promise<{ data: unknown; error: unknown }>;
+    return unwrap<Payment>(
+      await rpc('charge_appointment', {
+        p_appointment_id: input.appointmentId,
+        p_patient_id: input.patientId,
+        p_use_package: input.usePackage,
+        p_patient_package_id: input.usePackage ? (input.patientPackageId ?? null) : null,
+        p_amount: amount,
+        p_method: input.method ?? 'efectivo',
+        p_paid_at: input.paidAt ?? null,
+        p_notes: input.notes ?? null
+      })
+    );
   },
 
   // Elimina el cobro de una cita; si fue con paquete, devuelve la sesión.

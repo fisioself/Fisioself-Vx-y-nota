@@ -82,10 +82,9 @@ Deno.serve(async (req: Request) => {
 
   const { data: subscriptions, error: dbError } = await query;
   if (dbError) {
-    return jsonResponse(req, 500, {
-      error: 'DB error reading subscriptions',
-      detail: dbError.message
-    });
+    // No exponemos el mensaje crudo de la BD al cliente; se registra en el log.
+    console.error('send_push_db_error', dbError.message);
+    return jsonResponse(req, 500, { error: 'DB error reading subscriptions' });
   }
 
   if (!subscriptions || subscriptions.length === 0) {

@@ -3,6 +3,11 @@ import { buildCorsHeaders } from '../_shared/cors.ts';
 
 const MAX_AUDIO_BYTES = 10 * 1024 * 1024; // 10MB limit
 
+// Rate limit por usuario: la transcripción (Groq Whisper) es cara. Tope generoso
+// para dictado legítimo (varios clips por nota) pero que frena abusos.
+const RATE_WINDOW_MS = 60_000;
+const RATE_MAX_REQUESTS = 20;
+
 const getBearerToken = (req: Request) => {
   const authHeader = req.headers.get('authorization') || '';
   const match = authHeader.match(/^Bearer\s+(.+)$/i);
@@ -56,6 +61,34 @@ Deno.serve(async (req) => {
         status: 403,
         headers: { ...buildCorsHeaders(req), 'Content-Type': 'application/json' }
       });
+    }
+
+    // Rate limit por usuario (misma función que clinical-ai). Evita abuso de la
+    // API de transcripción, que tiene costo por uso.
+    const { data: rateRows, error: rateError } = await supabase.rpc('check_ai_rate_limit', {
+      target_user_id: userData.user.id,
+      window_seconds: Math.floor(RATE_WINDOW_MS / 1000),
+      max_requests: RATE_MAX_REQUESTS
+    });
+    if (rateError) {
+      return new Response(JSON.stringify({ error: 'Rate limit no disponible' }), {
+        status: 503,
+        headers: { ...buildCorsHeaders(req), 'Content-Type': 'application/json' }
+      });
+    }
+    const rate = Array.isArray(rateRows) ? rateRows[0] : rateRows;
+    if (!rate?.allowed) {
+      return new Response(
+        JSON.stringify({ error: 'Demasiadas transcripciones. Intenta de nuevo en un momento.' }),
+        {
+          status: 429,
+          headers: {
+            ...buildCorsHeaders(req),
+            'Content-Type': 'application/json',
+            'Retry-After': String(rate?.retry_after_seconds || 60)
+          }
+        }
+      );
     }
 
     const formData = await req.formData();
