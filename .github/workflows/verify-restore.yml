@@ -33,6 +33,9 @@ jobs:
           --health-timeout 5s
           --health-retries 20
 
+    env:
+      PGBIN: /usr/lib/postgresql/17/bin
+
     steps:
       - name: Instalar pg_restore 17
         run: |
@@ -73,20 +76,20 @@ jobs:
           gpg --batch --yes --passphrase "$PASSPHRASE" -o restored.dump -d "$FILE"
           echo "Descifrado correcto."
 
-          # 1) Integridad: listar el contenido del dump
+          # 1) Integridad: listar el contenido del dump (con pg_restore v17)
           echo "----- pg_restore --list (primeras 30 lineas) -----"
-          pg_restore --list restored.dump | head -n 30
+          "$PGBIN/pg_restore" --list restored.dump | head -n 30
 
           # 2) Restauracion real en la BD desechable
           export PGPASSWORD=verify
-          pg_restore --no-owner --no-privileges --if-exists --clean \
+          "$PGBIN/pg_restore" --no-owner --no-privileges --if-exists --clean \
             -h localhost -U postgres -d verifydb restored.dump
           echo "Restauracion completada en la BD desechable."
 
           # Resumen de lo restaurado
           echo "----- Tablas restauradas -----"
-          psql -h localhost -U postgres -d verifydb -c "\dt" || true
+          "$PGBIN/psql" -h localhost -U postgres -d verifydb -c "\dt" || true
           echo "----- Conteo de objetos -----"
-          psql -h localhost -U postgres -d verifydb -t -c \
+          "$PGBIN/psql" -h localhost -U postgres -d verifydb -t -c \
             "select count(*) || ' tablas en schema public' from information_schema.tables where table_schema='public';"
           echo "Backup verificado: descifra y restaura correctamente."
