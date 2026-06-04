@@ -26,8 +26,10 @@ jobs:
         run: npm ci
 
       - name: Audit production dependencies
+        # Rompe el build si hay vulnerabilidades HIGH o CRITICAL en dependencias
+        # de produccion. Es una app clinica con datos reales: no dejamos pasar
+        # una dependencia vulnerable sin enterarnos.
         run: npm audit --omit=dev --audit-level=high
-        continue-on-error: true
 
       - name: Check formatting
         run: npm run format:check

@@ -6,6 +6,7 @@ import {
   validatePatient,
   validateSessionNote
 } from './clinicalValidation.js';
+import { getLocalISODate } from './dateUtils.js';
 
 describe('clinicalValidation', () => {
   describe('validatePatient', () => {
@@ -54,6 +55,25 @@ describe('clinicalValidation', () => {
       expect(errors.birth_date).toMatch(/no puede ser futura/i);
     });
 
+    // Regresion: la fecha de HOY (calendario local) NO debe marcarse como
+    // futura. Antes, parsear "YYYY-MM-DD" como medianoche UTC hacia que en
+    // zonas UTC-negativas (Mexico, UTC-6) hoy se rechazara por error.
+    it('accepts today (local calendar) as a valid birth date', () => {
+      const errors = validatePatient({
+        full_name: 'Paciente Prueba',
+        birth_date: getLocalISODate()
+      });
+      expect(errors.birth_date).toBeUndefined();
+    });
+
+    it('accepts a clearly past birth date', () => {
+      const errors = validatePatient({
+        full_name: 'Paciente Prueba',
+        birth_date: '1990-01-15'
+      });
+      expect(errors.birth_date).toBeUndefined();
+    });
+
     it('rejects too short or too long phone numbers', () => {
       const short = validatePatient({ full_name: 'P', phone: '123' });
       const long = validatePatient({ full_name: 'P', phone: '1'.repeat(21) });
@@ -93,6 +113,18 @@ describe('clinicalValidation', () => {
         eva: 3
       });
       expect(errors.session_date).toMatch(/no puede ser futura/i);
+    });
+
+    // Regresion del bug de zona horaria: una nota fechada HOY (local) debe
+    // aceptarse siempre, sin importar la zona horaria del navegador.
+    it('accepts a note dated today (local) without a timezone false positive', () => {
+      const errors = validateSessionNote({
+        patient_id: '8fe9e728-9e1a-45a0-b9df-408c20a77a3d',
+        session_date: getLocalISODate(),
+        raw_text: 'Nota clinica valida',
+        eva: 3
+      });
+      expect(errors.session_date).toBeUndefined();
     });
 
     it('requires patient_id before saving notes', () => {

@@ -1,4 +1,5 @@
 import type { Patient, SessionNote, ValidationErrors } from '../types/clinical';
+import { getLocalISODate } from './dateUtils';
 
 export const PATIENT_STATUSES = ['En tratamiento', 'Alta', 'Seguimiento', 'Inactivo'] as const;
 export const SEX_OPTIONS = ['', 'M', 'F', 'Otro'] as const;
@@ -19,12 +20,23 @@ type SessionNoteInput = {
   session_date?: string | null;
 };
 
+// ¿La fecha es posterior a HOY (calendario local)?
+// Los campos de fecha de la app (nacimiento, fecha de sesion) son cadenas
+// "YYYY-MM-DD" que representan un dia de calendario LOCAL. Si las parseamos con
+// `new Date("YYYY-MM-DD")` JavaScript las interpreta como medianoche UTC y, al
+// compararlas contra una "hoy" local, en zonas como Mexico (UTC-6) un dia de
+// hoy podia salir marcado como futuro. Para evitarlo comparamos directamente
+// las cadenas de fecha local (comparacion lexicografica, valida para ISO).
 const isFutureDate = (value: string): boolean => {
-  const date = new Date(value);
+  const trimmed = value.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return trimmed > getLocalISODate();
+  }
+  // Fallback para timestamps completos u otros formatos: comparamos por dia
+  // local para no arrastrar el desfase de zona horaria.
+  const date = new Date(trimmed);
   if (Number.isNaN(date.getTime())) return false;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return date.getTime() > today.getTime();
+  return getLocalISODate(date) > getLocalISODate();
 };
 
 export const validatePatient = (values: PatientInput): ValidationErrors<Patient> => {
