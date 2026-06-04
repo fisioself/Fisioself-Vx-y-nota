@@ -355,6 +355,7 @@ export function SessionNoteEditor({
             type="number"
             min={0}
             max={10}
+            step={0.5}
             value={eva}
             onChange={(e) => {
               setEva(e.target.value);
