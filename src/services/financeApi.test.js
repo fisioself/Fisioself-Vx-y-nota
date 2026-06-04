@@ -91,6 +91,118 @@ describe('financeApi.getPatientSessionCount', () => {
   });
 });
 
+describe('financeApi.getPackageSessionPosition', () => {
+  it('cuenta las sesiones no-valoración del paquete hasta la fecha', async () => {
+    const db = makeDb({ appointments: { count: 4 } });
+    const { financeApi } = await loadFinanceApi(db);
+
+    const pos = await financeApi.getPackageSessionPosition(
+      'patient-1',
+      '2026-05-01T00:00:00Z',
+      '2026-06-01T10:00:00Z'
+    );
+
+    expect(pos).toBe(4);
+    expect(db.from).toHaveBeenCalledWith('appointments');
+  });
+
+  it('propaga el error de Supabase', async () => {
+    const db = makeDb({ appointments: { error: new Error('boom') } });
+    const { financeApi } = await loadFinanceApi(db);
+
+    await expect(
+      financeApi.getPackageSessionPosition('p1', '2026-05-01T00:00:00Z', '2026-06-01T00:00:00Z')
+    ).rejects.toThrow('boom');
+  });
+});
+
+describe('financeApi.syncPackageSessionsUsed', () => {
+  it('corrige sessions_used al número real de sesiones tomadas (con tope en el total)', async () => {
+    // El paquete dice 2 usadas, pero hay 5 sesiones reales tomadas; con total=10
+    // debe quedar en 5. Capturamos el update para verificar el valor corregido.
+    const updates = [];
+    const db = {
+      from: vi.fn((table) => {
+        const builder = {};
+        for (const m of ['select', 'eq', 'neq', 'gte', 'lte', 'or']) {
+          builder[m] = vi.fn(() => builder);
+        }
+        if (table === 'patient_packages') {
+          builder.update = vi.fn((vals) => {
+            updates.push(vals);
+            return builder;
+          });
+          // select(...).eq(...) → lista de paquetes (thenable).
+          builder.then = (resolve) =>
+            Promise.resolve({
+              data: [
+                {
+                  id: 'pkg-1',
+                  patient_id: 'p1',
+                  purchased_at: '2026-05-01T00:00:00Z',
+                  sessions_total: 10,
+                  sessions_used: 2
+                }
+              ],
+              error: null
+            }).then(resolve);
+          return builder;
+        }
+        // appointments: count head → 5 sesiones reales.
+        builder.then = (resolve) =>
+          Promise.resolve({ data: null, error: null, count: 5 }).then(resolve);
+        return builder;
+      })
+    };
+    const { financeApi } = await loadFinanceApi(db);
+
+    await financeApi.syncPackageSessionsUsed('p1');
+
+    expect(updates).toEqual([expect.objectContaining({ sessions_used: 5 })]);
+  });
+
+  it('no actualiza si sessions_used ya coincide con el conteo real', async () => {
+    const updates = [];
+    const db = {
+      from: vi.fn((table) => {
+        const builder = {};
+        for (const m of ['select', 'eq', 'neq', 'gte', 'lte', 'or']) {
+          builder[m] = vi.fn(() => builder);
+        }
+        if (table === 'patient_packages') {
+          builder.update = vi.fn((vals) => {
+            updates.push(vals);
+            return builder;
+          });
+          builder.then = (resolve) =>
+            Promise.resolve({
+              data: [
+                {
+                  id: 'pkg-1',
+                  patient_id: 'p1',
+                  purchased_at: '2026-05-01T00:00:00Z',
+                  sessions_total: 10,
+                  sessions_used: 3
+                }
+              ],
+              error: null
+            }).then(resolve);
+          return builder;
+        }
+        builder.then = (resolve) =>
+          Promise.resolve({ data: null, error: null, count: 3 }).then(resolve);
+        return builder;
+      })
+    };
+    const { financeApi } = await loadFinanceApi(db);
+
+    await financeApi.syncPackageSessionsUsed('p1');
+
+    // El conteo real (3) == sessions_used (3): no debe escribir nada.
+    expect(updates).toEqual([]);
+  });
+});
+
 describe('financeApi.suggestPriceForSessionType', () => {
   it('devuelve null cuando no hay tipo de sesión', async () => {
     const db = makeDb({});

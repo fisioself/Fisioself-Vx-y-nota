@@ -4,6 +4,7 @@ import { getLocalISODate } from '../../shared/dateUtils';
 import { draftStorage, getEvaluationDraftKey } from '../../shared/draftStorage';
 import { useDraftAutosave } from '../../shared/useDraftAutosave';
 import { getErrorMessage } from '../../shared/errors';
+import { PatientDocuments } from '../patients/PatientDocuments';
 import type { Patient, Evaluation, EvaluationSections } from '../../types/clinical';
 
 interface JointRow {
@@ -36,19 +37,16 @@ interface EvaluationFormValues {
   surgical_history: string;
   current_medications: string;
   known_allergies: string;
-  anticoagulants: string;
   physical_activity: string;
   medical_diagnosis: string;
   consultation_reason: string;
   clinical_history: string;
   pain_location: string;
-  pain_type: string;
   pain_intensity: string;
   aggravating_factors: string;
   easing_factors: string;
   physical_examination: string;
   general_inspection: string;
-  red_flags: string;
   prognosis: string;
   movement_ranges: JointRow[];
   muscle_strength: StrengthRow[];
@@ -81,19 +79,16 @@ const emptyEvaluation: EvaluationFormValues = {
   surgical_history: '',
   current_medications: '',
   known_allergies: '',
-  anticoagulants: '',
   physical_activity: '',
   medical_diagnosis: '',
   consultation_reason: '',
   clinical_history: '',
   pain_location: '',
-  pain_type: '',
   pain_intensity: '',
   aggravating_factors: '',
   easing_factors: '',
   physical_examination: '',
   general_inspection: '',
-  red_flags: '',
   prognosis: '',
   movement_ranges: [{ ...emptyJointRow }],
   muscle_strength: [{ ...emptyStrengthRow }],
@@ -212,7 +207,6 @@ export function EvaluationForm({
           surgical_history: toNullable(values.surgical_history),
           current_medications: toNullable(values.current_medications),
           known_allergies: toNullable(values.known_allergies),
-          anticoagulants: toNullable(values.anticoagulants),
           physical_activity: toNullable(values.physical_activity)
         },
         consultation: {
@@ -222,7 +216,6 @@ export function EvaluationForm({
         },
         pain: {
           location: toNullable(values.pain_location),
-          type: toNullable(values.pain_type),
           intensity: painIntensity,
           aggravating_factors: toNullable(values.aggravating_factors),
           easing_factors: toNullable(values.easing_factors)
@@ -241,7 +234,7 @@ export function EvaluationForm({
         therapist_id: therapistId || null,
         evaluation_date: values.admission_date || today(),
         eva_initial: painIntensity,
-        red_flags: values.red_flags.trim() || null,
+        red_flags: null,
         prognosis: values.prognosis.trim() || null,
         sections
       });
@@ -366,14 +359,6 @@ export function EvaluationForm({
             />
           </label>
           <label className="span-2">
-            Uso de anticoagulantes
-            <textarea
-              rows={2}
-              value={values.anticoagulants}
-              onChange={(e) => setField('anticoagulants', e.target.value)}
-            />
-          </label>
-          <label className="span-2">
             Actividad fisica y estilo de vida
             <textarea
               rows={3}
@@ -415,13 +400,6 @@ export function EvaluationForm({
             <input
               value={values.pain_location}
               onChange={(e) => setField('pain_location', e.target.value)}
-            />
-          </label>
-          <label>
-            Tipo de dolor
-            <input
-              value={values.pain_type}
-              onChange={(e) => setField('pain_type', e.target.value)}
             />
           </label>
           <label>
@@ -616,15 +594,6 @@ export function EvaluationForm({
       </fieldset>
 
       <label className="span-2">
-        Banderas rojas / alertas
-        <textarea
-          rows={2}
-          value={values.red_flags}
-          onChange={(e) => setField('red_flags', e.target.value)}
-        />
-      </label>
-
-      <label className="span-2">
         Diagnostico fisioterapeutico
         <textarea
           rows={3}
@@ -632,6 +601,13 @@ export function EvaluationForm({
           onChange={(e) => setField('prognosis', e.target.value)}
         />
       </label>
+
+      {resolvedPatientId && (
+        <fieldset className="form-section span-2">
+          <legend>Archivos clínicos y estudios</legend>
+          <PatientDocuments patientId={resolvedPatientId} />
+        </fieldset>
+      )}
 
       {error && (
         <p className="error span-2" role="alert">

@@ -3,6 +3,37 @@ import { assertSupabase } from '../lib/supabaseClient';
 
 const BUCKET = 'patient-files';
 
+// Límite de tamaño y tipos permitidos para documentos clínicos. Evita llenar el
+// bucket con archivos enormes y rechaza tipos que no tienen sentido en un
+// expediente (ejecutables, etc.). Si necesitas otro tipo, agrégalo aquí.
+export const MAX_FILE_BYTES = 15 * 1024 * 1024; // 15 MB (igual que el límite del bucket)
+export const ALLOWED_MIME_PREFIXES = ['image/'];
+export const ALLOWED_MIME_TYPES = [
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
+  'text/plain'
+];
+
+const prettyMB = (bytes: number): string => `${Math.round(bytes / (1024 * 1024))} MB`;
+
+// Valida tamaño y tipo antes de tocar la red. Lanza un Error con mensaje claro
+// (en español) listo para mostrarse al usuario. Exportada para poder testearla
+// y reutilizar la misma regla en la UI.
+export const validateUploadFile = (file: { name: string; type: string; size: number }): void => {
+  if (file.size > MAX_FILE_BYTES) {
+    throw new Error(
+      `El archivo pesa demasiado (máximo ${prettyMB(MAX_FILE_BYTES)}). Comprime o divide el documento.`
+    );
+  }
+  const type = file.type || '';
+  const ok =
+    ALLOWED_MIME_TYPES.includes(type) || ALLOWED_MIME_PREFIXES.some((p) => type.startsWith(p));
+  if (!ok) {
+    throw new Error('Tipo de archivo no permitido. Sube PDF, imágenes o documentos de Word/texto.');
+  }
+};
+
 // La tabla patient_documents se creó por migración después de generar
 // types/supabase.ts, así que el cliente tipado no la conoce todavía. Igual que
 // se hace con db.rpc en clinicalApi, usamos un cliente sin tipar SOLO para esta
@@ -57,6 +88,8 @@ export const documentsApi = {
   }): Promise<PatientDocument> {
     const db = assertSupabase();
     const { patientId, file, description } = input;
+    // Validación local (tamaño + tipo) antes de subir nada a la red.
+    validateUploadFile(file);
     const path = `${patientId}/${crypto.randomUUID()}.${extOf(file.name)}`;
 
     const { error: upErr } = await db.storage.from(BUCKET).upload(path, file, {

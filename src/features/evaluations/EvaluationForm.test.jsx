@@ -10,6 +10,10 @@ vi.mock('../../services/clinicalApi', () => ({
   }
 }));
 
+vi.mock('../patients/PatientDocuments', () => ({
+  PatientDocuments: () => <div data-testid="patient-documents-mock" />
+}));
+
 describe('EvaluationForm', () => {
   it('requires a patient before saving', async () => {
     render(<EvaluationForm />);
