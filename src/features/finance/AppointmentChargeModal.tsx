@@ -214,9 +214,19 @@ export function AppointmentChargeModal({
         setError('Ingresa un monto mayor a $0.');
         return;
       }
-    } else if (!packageId) {
-      setError('Selecciona un paquete con sesiones disponibles.');
-      return;
+    } else {
+      if (!packageId) {
+        setError('Selecciona un paquete con sesiones disponibles.');
+        return;
+      }
+      // El abono del paquete es opcional, pero si se escribe debe ser válido.
+      if (abonoAmount !== '') {
+        const abono = Number(abonoAmount);
+        if (!Number.isFinite(abono) || abono < 0) {
+          setError('El abono debe ser un monto válido.');
+          return;
+        }
+      }
     }
 
     setSaving(true);

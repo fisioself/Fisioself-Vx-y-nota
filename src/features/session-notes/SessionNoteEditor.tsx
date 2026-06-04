@@ -138,7 +138,11 @@ export function SessionNoteEditor({
 
   const dictation = useDictation(
     (chunk) => {
-      handleTextChange(rawText ? `${rawText} ${chunk}` : chunk);
+      // Actualización funcional: una grabación puede tardar y el usuario puede
+      // teclear mientras tanto; usar `rawText` capturado sobrescribiría esos
+      // cambios. `setRawText((prev) => ...)` siempre parte del valor más reciente.
+      setRawText((prev) => (prev ? `${prev} ${chunk}` : chunk));
+      setIsDirty(true);
     },
     (message) => {
       notify({ tone: 'error', message });

@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { clinicalApi } from '../../services/clinicalApi';
+import { calendarService } from '../../services/calendarService';
 import { useToast } from '../../app/ToastProvider';
+import { getErrorMessage } from '../../shared/errors';
 import { PatientTrash } from './PatientTrash';
 import type { Patient } from '../../types/clinical';
 
@@ -47,11 +49,22 @@ export function PatientList({ selectedId, onSelect }: PatientListProps) {
   const handleImport = async () => {
     setImporting(true);
     notify({ tone: 'success', message: 'Sincronizando pacientes desde Google Calendar...' });
-    setTimeout(() => {
+    try {
+      // Dispara la importación REAL en el servidor (la edge function
+      // google-calendar-fetch crea pacientes/citas a partir del calendario).
+      // Antes esto era un setTimeout falso que afirmaba éxito sin hacer nada.
+      await calendarService.fetchEvents();
+      await queryClient.invalidateQueries({ queryKey: ['patients'] });
+      await queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      notify({ tone: 'success', message: 'Pacientes importados desde Google Calendar.' });
+    } catch (err) {
+      notify({
+        tone: 'error',
+        message: getErrorMessage(err, 'No se pudo importar desde Google Calendar.')
+      });
+    } finally {
       setImporting(false);
-      notify({ tone: 'success', message: 'Pacientes importados de forma exitosa.' });
-      queryClient.invalidateQueries({ queryKey: ['patients'] });
-    }, 2500);
+    }
   };
 
   return (

@@ -63,32 +63,41 @@ export const aiService = {
     const reader = response.body.getReader();
     const decoder = new TextDecoder('utf-8');
     let output = '';
+    // Buffer entre lecturas: `reader.read()` devuelve trozos arbitrarios y una
+    // línea SSE `data: {...}` puede quedar partida entre dos reads. Sin acumular,
+    // la línea incompleta falla el JSON.parse y se perdería texto de la IA.
+    let buffer = '';
+
+    const processLine = (line: string) => {
+      if (!line.startsWith('data: ')) return;
+      const dataStr = line.slice(6);
+      if (dataStr === '[DONE]') return;
+      try {
+        const data = JSON.parse(dataStr) as {
+          type?: string;
+          delta?: { text?: string };
+        };
+        if (data.type === 'content_block_delta' && data.delta?.text) {
+          output += data.delta.text;
+          onChunk?.(output);
+        }
+      } catch {
+        // Ignore parse errors for incomplete chunks.
+      }
+    };
 
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
 
-      const chunk = decoder.decode(value, { stream: true });
-      const lines = chunk.split('\n');
-
-      for (const line of lines) {
-        if (!line.startsWith('data: ')) continue;
-        const dataStr = line.slice(6);
-        if (dataStr === '[DONE]') continue;
-        try {
-          const data = JSON.parse(dataStr) as {
-            type?: string;
-            delta?: { text?: string };
-          };
-          if (data.type === 'content_block_delta' && data.delta?.text) {
-            output += data.delta.text;
-            onChunk?.(output);
-          }
-        } catch {
-          // Ignore parse errors for incomplete chunks.
-        }
-      }
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      // Conserva el último segmento (posiblemente incompleto) para el próximo read.
+      buffer = lines.pop() ?? '';
+      for (const line of lines) processLine(line);
     }
+    // Procesa cualquier resto que no terminara en salto de línea.
+    if (buffer) processLine(buffer);
 
     if (!output.trim()) throw new Error('La IA no devolvio contenido.');
     return output;

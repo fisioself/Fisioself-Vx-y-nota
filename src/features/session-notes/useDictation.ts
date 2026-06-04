@@ -72,10 +72,13 @@ export const useDictation = (
       clearTimeout(timerRef.current);
       timerRef.current = null;
     }
-    if (mediaRecorderRef.current && listening) {
+    // Guard sobre el estado REAL del recorder, no sobre `listening`: el timer de
+    // auto-stop (5 min) captura un `listening` viejo (false) por cierre estático;
+    // si dependiéramos de él, .stop() no correría y el micrófono no se liberaría.
+    if (mediaRecorderRef.current?.state === 'recording') {
       mediaRecorderRef.current.stop();
-      setListening(false);
     }
+    setListening(false);
   };
 
   useEffect(() => {

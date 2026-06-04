@@ -31,12 +31,18 @@ describe('useDictation with Whisper', () => {
       }
     });
 
-    // Mock MediaRecorder
+    // Mock MediaRecorder — replica el API real: `state` pasa a 'recording' tras
+    // start() y a 'inactive' tras stop(). El hook depende de `state` para liberar
+    // el micrófono de forma segura.
     vi.stubGlobal(
       'MediaRecorder',
       vi.fn().mockImplementation(function () {
-        this.start = vi.fn();
+        this.state = 'inactive';
+        this.start = vi.fn(() => {
+          this.state = 'recording';
+        });
         this.stop = vi.fn(() => {
+          this.state = 'inactive';
           if (this.onstop) this.onstop();
         });
         this.ondataavailable = null;

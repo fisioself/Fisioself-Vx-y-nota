@@ -104,6 +104,32 @@ describe('aiService.transform streaming', () => {
     expect(seen.at(-1)).toBe('Hola mundo');
   });
 
+  it('no pierde texto cuando una línea SSE llega partida entre dos chunks', async () => {
+    // El payload `data: {...}` se corta a la mitad: el buffer entre lecturas debe
+    // reensamblarlo. Sin buffer, el JSON.parse fallaría y se perdería el texto.
+    const full =
+      'data: ' + JSON.stringify({ type: 'content_block_delta', delta: { text: 'Hola mundo' } });
+    const mid = Math.floor(full.length / 2);
+    const chunks = [full.slice(0, mid), full.slice(mid) + '\n', 'data: [DONE]\n'];
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(streamResponse(chunks)));
+    const { aiService: ai } = await loadAiMocked({ auth: sessionAuth() });
+
+    const out = await ai.transform({ text: 'nota', type: 'soap' });
+    expect(out).toBe('Hola mundo');
+  });
+
+  it('procesa la última línea aunque no termine en salto de línea', async () => {
+    const chunks = [
+      'data: ' + JSON.stringify({ type: 'content_block_delta', delta: { text: 'Final' } })
+      // sin '\n' al final: el resto del buffer debe procesarse igualmente
+    ];
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(streamResponse(chunks)));
+    const { aiService: ai } = await loadAiMocked({ auth: sessionAuth() });
+
+    const out = await ai.transform({ text: 'nota', type: 'soap' });
+    expect(out).toBe('Final');
+  });
+
   it('lanza error cuando la respuesta no es ok', async () => {
     vi.stubGlobal(
       'fetch',

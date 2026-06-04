@@ -24,7 +24,11 @@ export function AppointmentForm({ patient, onCancel, onCreated }: AppointmentFor
     if (newStartsAt && !endsAt) {
       const date = new Date(newStartsAt);
       date.setHours(date.getHours() + 1);
-      setEndsAt(date.toISOString().slice(0, 16));
+      // Formatear desde componentes LOCALES, no con toISOString(): este último
+      // convierte a UTC y en CDMX (UTC-6) desfasaría la hora de fin 6 horas.
+      const pad = (n: number) => String(n).padStart(2, '0');
+      const local = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+      setEndsAt(local);
     }
   };
 
