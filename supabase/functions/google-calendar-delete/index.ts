@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { jsonResponse, buildCorsHeaders } from '../_shared/cors.ts';
+import { getCalendarTokens, setCalendarTokens } from '../_shared/calendarTokens.ts';
 
 const json = (req: Request, status: number, body: unknown) => jsonResponse(req, status, body);
 const GENERIC_ERROR = 'No se pudo eliminar la cita. Intenta de nuevo más tarde.';
@@ -103,19 +104,21 @@ Deno.serve(async (req) => {
         .maybeSingle();
 
       if (conn) {
-        let accessToken: string | null = conn.access_token ?? null;
+        // Tokens descifrados vía RPC (respaldo a texto plano en la transición).
+        const tokens = await getCalendarTokens(supabase, conn.id, conn);
+        let accessToken: string | null = tokens.access_token;
         if (!accessToken || new Date(conn.token_expires_at || 0) <= new Date(Date.now() + 60_000)) {
-          if (conn.refresh_token) {
+          if (tokens.refresh_token) {
             const refreshed = await refreshGoogleToken({
-              refreshToken: conn.refresh_token,
+              refreshToken: tokens.refresh_token,
               clientId: googleClientId,
               clientSecret: googleClientSecret
             });
             accessToken = refreshed.access_token;
+            await setCalendarTokens(supabase, conn.id, accessToken, tokens.refresh_token);
             await supabase
               .from('calendar_connections')
               .update({
-                access_token: accessToken,
                 token_expires_at: new Date(
                   Date.now() + Number(refreshed.expires_in || 3600) * 1000
                 ).toISOString(),

@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { jsonResponse, buildCorsHeaders } from '../_shared/cors.ts';
+import { getCalendarTokens, setCalendarTokens } from '../_shared/calendarTokens.ts';
 
 const json = (req: Request, status: number, body: unknown) => jsonResponse(req, status, body);
 
@@ -114,8 +115,10 @@ const importConnection = async (
   googleClientId: string,
   googleClientSecret: string
 ): Promise<number> => {
-  let accessToken: string | null = connection.access_token ?? null;
-  const refreshTokenStored: string | null = connection.refresh_token ?? null;
+  // Tokens descifrados vía RPC (con respaldo a texto plano durante la transición).
+  const tokens = await getCalendarTokens(supabase, connection.id, connection);
+  let accessToken: string | null = tokens.access_token;
+  const refreshTokenStored: string | null = tokens.refresh_token;
 
   if (!accessToken || new Date(connection.token_expires_at || 0) <= new Date(Date.now() + 60_000)) {
     if (!refreshTokenStored) throw new Error('Falta refresh token de Google');
@@ -125,10 +128,11 @@ const importConnection = async (
       clientSecret: googleClientSecret
     });
     accessToken = refreshed.access_token;
+    // El access token (secreto) se guarda cifrado; el refresh se preserva igual.
+    await setCalendarTokens(supabase, connection.id, accessToken, refreshTokenStored);
     await supabase
       .from('calendar_connections')
       .update({
-        access_token: accessToken,
         token_expires_at: new Date(
           Date.now() + Number(refreshed.expires_in || 3600) * 1000
         ).toISOString(),
