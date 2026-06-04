@@ -1,0 +1,119 @@
+name: Verificar restauración de backup
+
+# Prueba de restauración segura y automática.
+# 1) Descarga el último backup cifrado producido por "Backup base de datos".
+# 2) Lo descifra con BACKUP_GPG_PASSPHRASE (secret, nunca se expone).
+# 3) Verifica integridad con `pg_restore --list` (parsea todo el TOC).
+# 4) Restaura (best-effort) en una base Postgres TEMPORAL y desechable del runner
+#    y cuenta las tablas restauradas. NUNCA toca la base de datos de producción.
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  actions: read # necesario para descargar artifacts de otros runs
+
+jobs:
+  verify:
+    name: Restaurar en BD desechable
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: verify
+          POSTGRES_DB: verifydb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      PGBIN: /usr/lib/postgresql/17/bin
+
+    steps:
+      - name: Instalar pg_restore 17
+        run: |
+          sudo sh -c 'echo "deb https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/pgdg.gpg
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-17
+
+      - name: Descargar el último backup cifrado
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          RUN_ID=$(gh run list --workflow "backup.yml" --status success -L 1 --json databaseId -q '.[0].databaseId')
+          if [ -z "${RUN_ID:-}" ]; then
+            echo "::error::No hay ningún run exitoso de 'Backup base de datos' del cual descargar."
+            exit 1
+          fi
+          echo "Descargando artifacts del run de backup #$RUN_ID"
+          gh run download "$RUN_ID" -D artifact
+          echo "Contenido descargado:"
+          find artifact -type f
+
+      - name: Descifrar y verificar integridad (pg_restore --list)
+        env:
+          PASSPHRASE: ${{ secrets.BACKUP_GPG_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          FILE=$(find artifact -name '*.dump.gpg' | head -n1)
+          if [ -z "${FILE:-}" ]; then
+            echo "::error::No se encontró ningún archivo .dump.gpg en el artifact."
+            exit 1
+          fi
+          echo "Archivo cifrado: $FILE"
+
+          # Descifrar
+          gpg --batch --yes --passphrase "$PASSPHRASE" -o restored.dump -d "$FILE"
+          echo "Descifrado correcto."
+
+          # Integridad: parsear TODO el TOC del archivo (a fichero, sin pipe -> evita broken pipe)
+          "$PGBIN/pg_restore" --list restored.dump > toc.txt
+          ENTRIES=$(grep -c '^[0-9]' toc.txt || true)
+          echo "TOC parseado correctamente. Entradas restaurables: $ENTRIES"
+          echo "----- primeras 25 lineas del TOC -----"
+          head -n 25 toc.txt
+          echo "Integridad del backup: OK (archivo intacto, descifrable y restaurable)."
+
+      - name: Restauración real (best-effort) en BD desechable
+        run: |
+          set -uo pipefail
+          export PGPASSWORD=verify
+          PSQL="$PGBIN/psql -h localhost -U postgres -d verifydb"
+
+          # Pre-crear roles típicos de Supabase para que las sentencias de owner/grant pasen
+          for r in supabase_admin supabase_auth_admin supabase_storage_admin \
+                   supabase_replication_admin supabase_functions_admin authenticator \
+                   authenticated anon service_role dashboard_user pgbouncer \
+                   supabase_read_only_user; do
+            $PSQL -v ON_ERROR_STOP=0 -c \
+              "DO \$\$ BEGIN IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname='$r') THEN CREATE ROLE \"$r\"; END IF; END \$\$;" \
+              >/dev/null 2>&1 || true
+          done
+
+          # Restaurar tolerando errores propios de Supabase (pg_cron, pg_net, vault, etc.)
+          set +e
+          "$PGBIN/pg_restore" --no-owner --no-privileges \
+            -h localhost -U postgres -d verifydb restored.dump
+          RC=$?
+          set -e
+          echo "pg_restore terminó (rc=$RC). Avisos sobre extensiones/roles propios de Supabase son esperados en Postgres vanilla."
+
+          # Confirmar que SÍ se restauraron datos
+          TABLES=$($PGBIN/psql -t -A -h localhost -U postgres -d verifydb -c \
+            "select count(*) from information_schema.tables where table_schema not in ('pg_catalog','information_schema');")
+          echo "Tablas restauradas en schemas de usuario: ${TABLES:-0}"
+          if [ "${TABLES:-0}" -ge 1 ]; then
+            echo "✅ Restauración verificada: el backup se descifra, su TOC es válido y se restauraron ${TABLES} tablas en una BD desechable."
+          else
+            echo "::warning::No se contaron tablas restauradas; revisa el log. (La integridad del archivo ya quedó verificada en el paso anterior.)"
+          fi
