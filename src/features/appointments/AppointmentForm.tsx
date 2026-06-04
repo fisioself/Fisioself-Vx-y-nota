@@ -34,6 +34,11 @@ export function AppointmentForm({ patient, onCancel, onCreated }: AppointmentFor
       setError('El titulo y las fechas son obligatorios.');
       return;
     }
+    // La cita no puede terminar antes (o al mismo tiempo) de empezar.
+    if (new Date(endsAt).getTime() <= new Date(startsAt).getTime()) {
+      setError('La hora de fin debe ser posterior a la de inicio.');
+      return;
+    }
 
     setSaving(true);
     setError('');

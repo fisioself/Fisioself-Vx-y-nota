@@ -7,6 +7,7 @@ import {
 } from '../../services/documentsApi';
 import { useToast } from '../../app/ToastProvider';
 import { getErrorMessage } from '../../shared/errors';
+import { ConfirmDialog } from '../../components/ConfirmDialog';
 
 interface PatientDocumentsProps {
   patientId: string;
@@ -40,6 +41,8 @@ export function PatientDocuments({ patientId }: PatientDocumentsProps) {
   const [uploading, setUploading] = useState(false);
   const [opening, setOpening] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  // Documento pendiente de confirmar su eliminación (null = sin diálogo abierto).
+  const [confirmDoc, setConfirmDoc] = useState<PatientDocument | null>(null);
 
   const { data: docs = [], isLoading } = useQuery<PatientDocument[], Error>({
     queryKey: ['patient-documents', patientId],
@@ -88,7 +91,7 @@ export function PatientDocuments({ patientId }: PatientDocumentsProps) {
   };
 
   const remove = async (doc: PatientDocument) => {
-    if (!window.confirm(`¿Eliminar «${doc.file_name}»? No se puede deshacer.`)) return;
+    setConfirmDoc(null);
     setDeletingId(doc.id);
     try {
       await documentsApi.remove(doc);
@@ -169,7 +172,7 @@ export function PatientDocuments({ patientId }: PatientDocumentsProps) {
                 <button
                   type="button"
                   className="danger"
-                  onClick={() => remove(doc)}
+                  onClick={() => setConfirmDoc(doc)}
                   disabled={deletingId === doc.id}
                 >
                   {deletingId === doc.id ? '…' : 'Eliminar'}
@@ -178,6 +181,21 @@ export function PatientDocuments({ patientId }: PatientDocumentsProps) {
             </li>
           ))}
         </ul>
+      )}
+
+      {confirmDoc && (
+        <ConfirmDialog
+          title="Eliminar archivo"
+          message={
+            <>
+              ¿Eliminar «<strong>{confirmDoc.file_name}</strong>»? No se puede deshacer.
+            </>
+          }
+          confirmLabel="Eliminar"
+          busy={deletingId === confirmDoc.id}
+          onConfirm={() => remove(confirmDoc)}
+          onCancel={() => setConfirmDoc(null)}
+        />
       )}
     </div>
   );

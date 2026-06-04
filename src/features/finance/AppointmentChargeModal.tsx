@@ -4,6 +4,7 @@ import { financeApi, PAYMENT_METHODS, type PaymentMethod } from '../../services/
 import { clinicalApi } from '../../services/clinicalApi';
 import { useToast } from '../../app/ToastProvider';
 import { getErrorMessage } from '../../shared/errors';
+import { ConfirmDialog } from '../../components/ConfirmDialog';
 import './AppointmentChargeModal.css';
 
 const CARD_COMMISSION = 0.0406; // 4.06 % comisión terminal
@@ -61,6 +62,8 @@ export function AppointmentChargeModal({
   const [deleting, setDeleting] = useState(false);
   // Confirmación de dos pasos para borrar la cita (en vez del confirm() nativo).
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // Paquete pendiente de confirmar su borrado (null = sin diálogo abierto).
+  const [confirmPkg, setConfirmPkg] = useState<{ id: string; name: string } | null>(null);
   const [mode, setMode] = useState<'suelta' | 'paquete'>('suelta');
   const [amount, setAmount] = useState('');
   const [method, setMethod] = useState<PaymentMethod>('efectivo');
@@ -298,14 +301,8 @@ export function AppointmentChargeModal({
   };
 
   // Borrar un paquete asignado por error (con su abono inicial y registros).
-  const deletePackage = async (patientPackageId: string, name: string) => {
-    if (
-      !window.confirm(
-        `¿Eliminar el paquete "${name}"? Se borrará también lo abonado a este paquete. Esta acción no se puede deshacer.`
-      )
-    ) {
-      return;
-    }
+  const deletePackage = async (patientPackageId: string) => {
+    setConfirmPkg(null);
     setSaving(true);
     setError('');
     try {
@@ -471,7 +468,7 @@ export function AppointmentChargeModal({
               <button
                 type="button"
                 className="charge-pkg-delete"
-                onClick={() => deletePackage(pkg.id, pkg.name)}
+                onClick={() => setConfirmPkg({ id: pkg.id, name: pkg.name })}
                 disabled={saving}
                 title="Eliminar este paquete (si lo asignaste por error)"
               >
@@ -851,6 +848,22 @@ export function AppointmentChargeModal({
           >
             Eliminar cita
           </button>
+        )}
+
+        {confirmPkg && (
+          <ConfirmDialog
+            title="Eliminar paquete"
+            message={
+              <>
+                ¿Eliminar el paquete «<strong>{confirmPkg.name}</strong>»? Se borrará también lo
+                abonado a este paquete. Esta acción no se puede deshacer.
+              </>
+            }
+            confirmLabel="Eliminar paquete"
+            busy={saving}
+            onConfirm={() => deletePackage(confirmPkg.id)}
+            onCancel={() => setConfirmPkg(null)}
+          />
         )}
       </section>
     </div>

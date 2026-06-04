@@ -409,6 +409,7 @@ export function SessionNoteEditor({
           rows={10}
           value={rawText}
           onChange={(e) => handleTextChange(e.target.value)}
+          maxLength={12000}
           placeholder={`S - Subjetivo: como llega el paciente y que refiere.
 O - Objetivo: que se trabajo, ejercicios, tecnica y respuesta.
 A - Analisis: interpretacion clinica de la sesion.

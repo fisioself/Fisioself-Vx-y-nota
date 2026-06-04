@@ -79,6 +79,7 @@ export function PatientForm({ onCreated, onCancel }: PatientFormProps) {
               setErrors((current) => ({ ...current, full_name: validation.full_name }));
           }}
           required
+          maxLength={180}
           aria-invalid={!!errors.full_name}
           aria-describedby={errors.full_name ? 'full_name-error' : undefined}
         />
@@ -95,6 +96,7 @@ export function PatientForm({ onCreated, onCancel }: PatientFormProps) {
           value={values.phone}
           onChange={(e) => setField('phone', e.target.value)}
           inputMode="tel"
+          maxLength={25}
         />
       </label>
 
@@ -104,6 +106,7 @@ export function PatientForm({ onCreated, onCancel }: PatientFormProps) {
           type="text"
           value={values.medical_diagnosis}
           onChange={(e) => setField('medical_diagnosis', e.target.value)}
+          maxLength={180}
         />
       </label>
 

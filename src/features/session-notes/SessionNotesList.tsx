@@ -4,6 +4,7 @@ import { clinicalApi } from '../../services/clinicalApi';
 import { SessionNoteEditor } from './SessionNoteEditor';
 import type { SessionNote } from '../../types/clinical';
 import { getErrorMessage } from '../../shared/errors';
+import { ConfirmDialog } from '../../components/ConfirmDialog';
 
 interface SessionNotesListProps {
   notes?: SessionNote[];
@@ -16,6 +17,8 @@ export function SessionNotesList({ notes = [], onChanged }: SessionNotesListProp
   const [openId, setOpenId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  // Nota pendiente de confirmar su borrado permanente (null = sin diálogo).
+  const [confirmNote, setConfirmNote] = useState<SessionNote | null>(null);
   const { notify } = useToast();
 
   useEffect(() => {
@@ -37,16 +40,7 @@ export function SessionNotesList({ notes = [], onChanged }: SessionNotesListProp
   }, [notes, debouncedQuery]);
 
   const deleteNote = async (note: SessionNote) => {
-    const confirmed = window.confirm(
-      `¿Seguro que quieres eliminar la nota de la sesion #${note.session_number}?`
-    );
-    if (!confirmed) return;
-
-    const secondConfirm = window.confirm(
-      `CONFIRMACION FINAL: Esta accion borrara permanentemente el contenido clínico de la sesion #${note.session_number}. ¿Continuar?`
-    );
-    if (!secondConfirm) return;
-
+    setConfirmNote(null);
     setDeletingId(note.id);
     try {
       await clinicalApi.deleteSessionNote(note.id);
@@ -103,7 +97,7 @@ export function SessionNotesList({ notes = [], onChanged }: SessionNotesListProp
                   type="button"
                   className="danger"
                   disabled={deletingId === note.id}
-                  onClick={() => deleteNote(note)}
+                  onClick={() => setConfirmNote(note)}
                 >
                   {deletingId === note.id ? 'Eliminando...' : 'Eliminar'}
                 </button>
@@ -135,6 +129,17 @@ export function SessionNotesList({ notes = [], onChanged }: SessionNotesListProp
         })}
         {!filtered.length && <p className="muted">No hay notas que coincidan con la busqueda.</p>}
       </div>
+
+      {confirmNote && (
+        <ConfirmDialog
+          title={`Eliminar nota de la sesión #${confirmNote.session_number}`}
+          message="Esta acción borrará permanentemente el contenido clínico de esta sesión. No se puede deshacer."
+          confirmLabel="Eliminar permanentemente"
+          busy={deletingId === confirmNote.id}
+          onConfirm={() => deleteNote(confirmNote)}
+          onCancel={() => setConfirmNote(null)}
+        />
+      )}
     </section>
   );
 }

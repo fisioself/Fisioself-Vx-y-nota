@@ -5,9 +5,12 @@ export const buildCorsHeaders = (req: Request) => {
     .map((item) => item.trim())
     .filter(Boolean);
 
-  const isAllowed =
-    allowed.includes(origin) ||
-    (Deno.env.get('ENVIRONMENT') !== 'production' && origin.startsWith('http://localhost'));
+  // localhost solo se permite cuando el entorno se declara EXPLICITAMENTE como
+  // desarrollo/local. Asi, si ENVIRONMENT no esta seteado en las edge functions
+  // desplegadas, el default es seguro (NO se acepta localhost en produccion).
+  const env = (Deno.env.get('ENVIRONMENT') || '').toLowerCase();
+  const isDevEnv = env === 'development' || env === 'dev' || env === 'local';
+  const isAllowed = allowed.includes(origin) || (isDevEnv && origin.startsWith('http://localhost'));
   const allowOrigin = isAllowed ? origin : allowed[0] || 'null';
 
   return {
