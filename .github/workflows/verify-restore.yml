@@ -8,7 +8,13 @@ name: Verificar restauración de backup
 #    y cuenta las tablas restauradas. NUNCA toca la base de datos de producción.
 
 on:
+  # Manual (botón "Run workflow") en cualquier momento.
   workflow_dispatch: {}
+  # Automático: cada lunes a las 09:00 UTC (03:00 CDMX), 1 hora después del
+  # backup diario (08:00 UTC). Monitorea que los respaldos sigan siendo
+  # restaurables sin tocar nunca la base de datos de producción.
+  schedule:
+    - cron: '0 9 * * 1'
 
 permissions:
   contents: read
