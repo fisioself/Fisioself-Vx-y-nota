@@ -29,6 +29,9 @@ export function CajaPanel({ caja }: CajaPanelProps) {
   const queryClient = useQueryClient();
   const { notify } = useToast();
   const [amount, setAmount] = useState('');
+  // Signo del ajuste: ingreso suma (+), gasto resta (−). Se elige con un par de
+  // botones en vez de pedir que el monto se escriba en negativo (más cómodo).
+  const [sign, setSign] = useState<'in' | 'out'>('in');
   const [method, setMethod] = useState('efectivo');
   const [description, setDescription] = useState('');
   const [occurredAt, setOccurredAt] = useState(today());
@@ -96,23 +99,26 @@ export function CajaPanel({ caja }: CajaPanelProps) {
   });
 
   const submit = async () => {
-    const value = Number(amount);
+    const value = Math.abs(Number(amount));
     if (!value) {
       notify({
         tone: 'error',
-        message: 'Indica un monto válido (positivo = ingreso, negativo = gasto).'
+        message: 'Indica un monto válido y elige Ingreso o Gasto.'
       });
       return;
     }
+    // El botón Ingreso/Gasto define el signo; el monto siempre se escribe positivo.
+    const signed = sign === 'out' ? -value : value;
     setBusy(true);
     try {
       await financeApi.addCajaMovement({
-        amount: value,
+        amount: signed,
         method: method as PaymentMethod,
         description,
         occurredAt
       });
       setAmount('');
+      setSign('in');
       setDescription('');
       refresh();
       notify({ tone: 'success', message: 'Movimiento registrado.' });
@@ -165,15 +171,40 @@ export function CajaPanel({ caja }: CajaPanelProps) {
       {/* Ajuste manual de caja */}
       <div style={{ marginTop: 16 }}>
         <p className="eyebrow">Ajustar caja manualmente</p>
-        <p className="muted" style={{ fontSize: '0.82rem', marginTop: 2, marginBottom: 8 }}>
-          Positivo (+) = ingreso · Negativo (−) = gasto
-        </p>
         <div style={{ display: 'grid', gap: 10 }}>
+          {/* Selector de signo: más cómodo que escribir el monto en negativo. */}
+          <div role="group" aria-label="Tipo de movimiento" style={{ display: 'flex', gap: 8 }}>
+            <button
+              type="button"
+              onClick={() => setSign('in')}
+              aria-pressed={sign === 'in'}
+              className={sign === 'in' ? '' : 'secondary'}
+              style={{
+                flex: 1,
+                ...(sign === 'in' ? { background: '#1f9d57', borderColor: '#1f9d57' } : {})
+              }}
+            >
+              + Ingreso
+            </button>
+            <button
+              type="button"
+              onClick={() => setSign('out')}
+              aria-pressed={sign === 'out'}
+              className={sign === 'out' ? '' : 'secondary'}
+              style={{
+                flex: 1,
+                ...(sign === 'out' ? { background: '#c0392b', borderColor: '#c0392b' } : {})
+              }}
+            >
+              − Gasto
+            </button>
+          </div>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <input
               type="number"
               inputMode="decimal"
-              placeholder="Monto (+ingreso / −gasto)"
+              min="0"
+              placeholder="Monto"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               style={{ flex: '1 1 140px', minWidth: 0 }}
@@ -205,7 +236,7 @@ export function CajaPanel({ caja }: CajaPanelProps) {
             />
           </div>
           <button type="button" onClick={submit} disabled={busy} style={{ width: '100%' }}>
-            {busy ? 'Guardando…' : 'Registrar movimiento'}
+            {busy ? 'Guardando…' : sign === 'out' ? 'Registrar gasto' : 'Registrar ingreso'}
           </button>
         </div>
       </div>

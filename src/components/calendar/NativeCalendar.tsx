@@ -57,17 +57,17 @@ interface CalendarDateClickArg {
 // Colores oficiales de Google Calendar (mismos hex que usa Google), para que
 // la agenda se vea idéntica a Google. Texto blanco para legibilidad.
 const colorMap: Record<string, string> = {
-  '1': '#7986cb', // Lavender (valoración histórica)
-  '2': '#33b679', // Sage
-  '3': '#8e24aa', // Grape (Morado - Valoración NUEVA)
-  '4': '#e67c73', // Flamingo (Domicilio)
-  '5': '#f6bf26', // Banana (Descarga)
-  '6': '#f4511e', // Tangerine
-  '7': '#039be5', // Peacock
-  '8': '#616161', // Graphite
-  '9': '#3f51b5', // Blueberry (valoración histórica, azul)
-  '10': '#0b8043', // Basil
-  '11': '#d50000' // Tomato
+  '1': '#7986cb', // Lavanda (Valoración histórica)
+  '2': '#33b679', // Menta (Pendiente)
+  '3': '#8e24aa', // Uva (Morado - Valoración NUEVA)
+  '4': '#e67c73', // Flamingo (Dermatofuncional)
+  '5': '#f6bf26', // Girasol (Descarga muscular)
+  '6': '#f4511e', // Mandarina (Domicilio)
+  '7': '#039be5', // Turquesa (Sesión clínica)
+  '8': '#616161', // Grafito (Cortesía)
+  '9': '#3f51b5', // Índigo (Valoración histórica, azul)
+  '10': '#0b8043', // Albahaca (Pendiente)
+  '11': '#d50000' // Tomate (Domicilio)
 };
 
 const DEFAULT_COLOR = '#039be5'; // Peacock (azul Google por defecto)
