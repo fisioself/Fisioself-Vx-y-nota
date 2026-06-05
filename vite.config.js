@@ -21,6 +21,7 @@ export default defineConfig({
           // eager and defeat the lazy load.
           if (id.includes('@sentry')) return undefined;
           if (id.includes('@supabase')) return 'vendor-supabase';
+          if (id.includes('posthog-js')) return 'vendor-posthog';
           if (id.includes('react-markdown') || id.includes('remark-') || id.includes('micromark')) {
             return 'vendor-markdown';
           }

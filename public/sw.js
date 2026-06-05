@@ -1,5 +1,5 @@
 // Classic Service Worker — no ES module imports, no CDN dependencies
-const CACHE_NAME = 'fisioself-notas-vx-v7';
+const CACHE_NAME = 'fisioself-notas-vx-v8';
 const APP_SHELL = ['/', '/index.html', '/manifest.webmanifest'];
 const DB_NAME = 'fisioself-sync-db';
 const STORE_NAME = 'sync-queue';
@@ -243,4 +243,11 @@ self.addEventListener('notificationclick', (event) => {
       }
     })
   );
+});
+
+// ---- Skip waiting (allows instant update when user taps "Actualizar ahora") ----
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });

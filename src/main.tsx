@@ -7,11 +7,13 @@ import { ErrorBoundary } from './app/ErrorBoundary';
 import { registerServiceWorker } from './app/registerServiceWorker';
 import { ToastProvider } from './app/ToastProvider';
 import { initSentry } from './lib/sentry';
+import { initAnalytics } from './lib/analytics';
 import { createIDBPersister } from './lib/offlineSync';
 import './styles.css';
 import './app/toasts.css';
 
 initSentry();
+initAnalytics();
 
 // No tiene sentido reintentar errores "permanentes": si la BD dice 403/404 o RLS
 // niega el acceso, reintentar solo retrasa el mensaje. Reintentamos únicamente
