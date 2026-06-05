@@ -482,6 +482,36 @@ pre {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
+/* Historial financiero mes con mes */
+.monthly-history-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  min-width: 560px;
+}
+.monthly-history-table th,
+.monthly-history-table td {
+  padding: 8px 10px;
+  text-align: right;
+  white-space: nowrap;
+  border-bottom: 1px solid rgba(var(--primary-rgb), 0.1);
+}
+.monthly-history-table thead th {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  opacity: 0.7;
+}
+.monthly-history-table tbody tr:hover {
+  background: rgba(var(--primary-rgb), 0.05);
+}
+.monthly-history-table tfoot th,
+.monthly-history-table tfoot td {
+  border-top: 2px solid rgba(var(--primary-rgb), 0.2);
+  border-bottom: none;
+  font-weight: 700;
+}
+
 @media (max-width: 900px) {
   .app-grid {
     grid-template-columns: 1fr;

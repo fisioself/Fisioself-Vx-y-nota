@@ -8,6 +8,7 @@ import { BarChart, GroupedBarChart, GrowthBadge } from './FinanceCharts';
 import { ExpensesPanel } from './ExpensesPanel';
 import { PatientFinancePanel } from './PatientFinancePanel';
 import { CajaPanel } from './CajaPanel';
+import { MonthlyHistory } from './MonthlyHistory';
 import { Skeleton } from '../../components/Skeleton';
 
 interface FinanceViewProps {
@@ -226,6 +227,9 @@ export function FinanceView(_props: FinanceViewProps) {
               />
             </div>
           </section>
+
+          {/* === Historial detallado mes con mes (tabla + descarga CSV) === */}
+          <MonthlyHistory monthly={summary?.monthly ?? []} />
 
           {/* === Top pacientes por ingreso === */}
           <section className="card">
