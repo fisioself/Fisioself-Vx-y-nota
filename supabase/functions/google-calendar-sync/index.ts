@@ -218,6 +218,16 @@ Deno.serve(async (req) => {
     // no creen eventos duplicados: la segunda recibe 409 y se trata como éxito.
     const detEventId = String(appointment.id).replace(/-/g, '');
 
+    // El color del evento es lo que distingue el tipo de cita (valoración =
+    // morado '3', domicilio, descarga, etc.). Si no lo enviamos, Google usa el
+    // color por defecto del calendario y todas las citas creadas desde la app se
+    // ven iguales. color_id NULL = sesión clínica → sin colorId (color por
+    // defecto), igual que en la agenda.
+    const colorId =
+      typeof appointment.color_id === 'string' && appointment.color_id
+        ? appointment.color_id
+        : undefined;
+
     const eventPayload = isCreate
       ? {
           id: detEventId,
@@ -225,12 +235,14 @@ Deno.serve(async (req) => {
           location: safeLocation,
           description: SAFE_EVENT_DESCRIPTION,
           start: { dateTime: appointment.starts_at },
-          end: { dateTime: appointment.ends_at }
+          end: { dateTime: appointment.ends_at },
+          ...(colorId ? { colorId } : {})
         }
       : {
           location: safeLocation,
           start: { dateTime: appointment.starts_at },
-          end: { dateTime: appointment.ends_at }
+          end: { dateTime: appointment.ends_at },
+          ...(colorId ? { colorId } : {})
         };
 
     const calendarId = encodeURIComponent(connection.calendar_id || 'primary');

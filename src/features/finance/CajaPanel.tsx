@@ -98,7 +98,10 @@ export function CajaPanel({ caja }: CajaPanelProps) {
   const submit = async () => {
     const value = Number(amount);
     if (!value) {
-      notify({ tone: 'error', message: 'Indica un monto válido (positivo = ingreso, negativo = gasto).' });
+      notify({
+        tone: 'error',
+        message: 'Indica un monto válido (positivo = ingreso, negativo = gasto).'
+      });
       return;
     }
     setBusy(true);
