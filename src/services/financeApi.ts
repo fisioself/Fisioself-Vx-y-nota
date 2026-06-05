@@ -561,7 +561,7 @@ export const financeApi = {
     // Pagos, gastos y movimientos de caja son tablas pequeñas → todo el histórico.
     const [payRes, expRes, patRes, cajaRes] = await Promise.all([
       db.from('payments').select('amount, paid_at, patient_id, method'),
-      db.from('expenses').select('amount, spent_at, category'),
+      db.from('expenses').select('amount, spent_at, category, payment_id'),
       db.from('patients').select('id, full_name'),
       db.from('caja_movements').select('amount, method')
     ]);
@@ -569,7 +569,9 @@ export const financeApi = {
       unwrap<Array<{ amount: number; paid_at: string; patient_id: string; method: string }>>(
         payRes
       );
-    const expenses = unwrap<Array<{ amount: number; spent_at: string; category: string }>>(expRes);
+    const expenses = unwrap<
+      Array<{ amount: number; spent_at: string; category: string; payment_id: string | null }>
+    >(expRes);
     const patients = unwrap<Array<{ id: string; full_name: string }>>(patRes);
     const cajaMovements = unwrap<Array<{ amount: number; method: string }>>(cajaRes);
     const nameById = new Map(patients.map((p) => [p.id, p.full_name]));
@@ -669,6 +671,15 @@ export const financeApi = {
       cajaTotal += amt;
       const m = mv.method === 'transferencia' ? 'tarjeta' : (mv.method ?? 'efectivo');
       cajaByMethod[m] = (cajaByMethod[m] ?? 0) + amt;
+    }
+    // La comisión de terminal ya queda registrada como gasto; aquí la descontamos
+    // del bucket de tarjeta para que "¿cuánto hay en caja?" refleje lo real (neto).
+    for (const e of expenses) {
+      if (e.payment_id != null && e.category === 'comision') {
+        const comm = Number(e.amount ?? 0);
+        cajaTotal -= comm;
+        cajaByMethod['tarjeta'] = (cajaByMethod['tarjeta'] ?? 0) - comm;
+      }
     }
 
     // Crecimiento del mes en curso vs mes anterior
