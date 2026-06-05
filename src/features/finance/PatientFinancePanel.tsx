@@ -56,11 +56,11 @@ export function PatientFinancePanel({ patient }: PatientFinancePanelProps) {
         sessionsTotal: chosen.sessions_included
       });
       if (initAmt > 0) {
-        const initNet = initPayMethod === 'tarjeta' ? netAfterCommission(initAmt) : initAmt;
+        // Bruto: liquida el saldo. addPayment registra la comisión si es tarjeta.
         await financeApi.addPayment({
           patientId: patient.id!,
           patientPackageId: created.id,
-          amount: initNet,
+          amount: initAmt,
           method: initPayMethod
         });
       }
@@ -84,8 +84,8 @@ export function PatientFinancePanel({ patient }: PatientFinancePanelProps) {
     }
     setBusy(true);
     try {
-      const netValue = payMethod === 'tarjeta' ? netAfterCommission(value) : value;
-      await financeApi.addPayment({ patientId: patient.id!, amount: netValue, method: payMethod });
+      // Bruto: liquida el saldo. addPayment registra la comisión si es tarjeta.
+      await financeApi.addPayment({ patientId: patient.id!, amount: value, method: payMethod });
       setPayAmount('');
       refresh();
       notify({ tone: 'success', message: 'Pago registrado.' });

@@ -137,7 +137,7 @@ describe('AppointmentChargeModal', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  it('descuenta la comisión de la terminal (4.06%) al cobrar con tarjeta', async () => {
+  it('cobra el monto BRUTO con tarjeta (la comisión se registra como gasto, no como deuda)', async () => {
     render(<AppointmentChargeModal appointment={APPOINTMENT} onClose={vi.fn()} />, {
       wrapper: makeWrapper()
     });
@@ -145,10 +145,11 @@ describe('AppointmentChargeModal', () => {
     await userEvent.selectOptions(screen.getByLabelText(/^Método$/i), 'tarjeta');
     await userEvent.click(screen.getByRole('button', { name: /Registrar cobro/ }));
 
-    // 1000 * (1 - 0.0406) = 959.4 → es el neto que realmente entra a caja.
+    // El pago liquida el saldo en bruto ($1000). La comisión (4.06%) la registra
+    // financeApi como gasto ligado, NO se descuenta del saldo del paciente.
     await waitFor(() => {
       expect(financeApi.chargeAppointment).toHaveBeenCalledWith(
-        expect.objectContaining({ amount: 959.4, method: 'tarjeta', usePackage: false })
+        expect.objectContaining({ amount: 1000, method: 'tarjeta', usePackage: false })
       );
     });
   });
