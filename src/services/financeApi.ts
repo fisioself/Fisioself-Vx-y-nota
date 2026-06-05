@@ -1,5 +1,6 @@
 import { assertSupabase } from '../lib/supabaseClient';
 import { trackEvent } from '../lib/analytics';
+import { NOT_VALORACION_OR_FILTER } from './sessionColors';
 import type { Tables, TablesInsert } from '../types/supabase';
 
 export type Package = Tables<'packages'>;
@@ -361,8 +362,8 @@ export const financeApi = {
             .select('id', { count: 'exact', head: true })
             .eq('patient_id', patientId)
             .neq('status', 'cancelled')
-            // Las valoraciones (morado: 9 o 1) no consumen sesión del paquete.
-            .or('color_id.is.null,color_id.not.in.(9,1)')
+            // Las valoraciones (morado: '3', o histórico '9'/'1') no consumen sesión del paquete.
+            .or(NOT_VALORACION_OR_FILTER)
             .gte('starts_at', pkg.purchased_at!)
             // Solo sesiones ya tomadas (hasta ahora); las futuras no cuentan aún.
             .lte('starts_at', now);
@@ -389,7 +390,7 @@ export const financeApi = {
       .eq('patient_id', patientId)
       .neq('status', 'cancelled')
       // color_id NULL (sesión clínica sin color) o cualquiera que no sea valoración.
-      .or('color_id.is.null,color_id.not.in.(9,1)');
+      .or(NOT_VALORACION_OR_FILTER);
     if (upToDate) q = q.lte('starts_at', upToDate);
     const { count, error } = await q;
     if (error) throw error;
@@ -410,7 +411,7 @@ export const financeApi = {
       .select('id', { count: 'exact', head: true })
       .eq('patient_id', patientId)
       .neq('status', 'cancelled')
-      .or('color_id.is.null,color_id.not.in.(9,1)')
+      .or(NOT_VALORACION_OR_FILTER)
       .gte('starts_at', packagePurchasedAt)
       .lte('starts_at', upToDate);
     if (error) throw error;

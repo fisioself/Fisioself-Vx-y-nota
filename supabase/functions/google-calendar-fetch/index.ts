@@ -42,7 +42,8 @@ const refreshGoogleToken = async ({
 
 // Color → tipo de sesión (código de color de Google Calendar).
 // Mapa confirmado contra el calendario real de la clínica:
-//   9 (Arándano/morado) y 1 (Lavanda) → Valoración (primera visita)
+//   3 (Grape/morado) → Valoración (color actual de las valoraciones nuevas)
+//   9 (Arándano/azul) y 1 (Lavanda) → Valoración histórica (antes del morado)
 //   5 (Amarillo)                       → Descarga muscular
 //   6 (Mandarina/naranja)              → Terapia a domicilio
 //   4 (Flamingo/rosa)                  → Dermatofuncional
@@ -50,6 +51,7 @@ const refreshGoogleToken = async ({
 //   7 (Pavo real), 11 (Tomate), sin color → Sesión clínica (rehabilitación)
 const resolveSessionType = (colorId?: string) => {
   switch (colorId) {
+    case '3':
     case '9':
     case '1':
       return 'Valoración';
