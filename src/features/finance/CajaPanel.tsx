@@ -8,7 +8,7 @@ import {
   type PaymentWithPatient
 } from '../../services/financeApi';
 import { useToast } from '../../app/ToastProvider';
-import { fmtDate, methodLabel, money, today } from './financeUtils';
+import { fmtDate, methodLabel, money, netAfterCommission, today } from './financeUtils';
 
 type CajaEntry = {
   id: string;
@@ -72,16 +72,22 @@ export function CajaPanel({ caja }: CajaPanelProps) {
   const sortKey = (date: string) => (date.includes('T') ? date : date + 'T23:59:59');
 
   const entries: CajaEntry[] = [
-    ...payments.map((p) => ({
-      id: p.id,
-      kind: 'payment' as const,
-      label: patientName(p),
-      sublabel: sessionTypeOf(p) ?? 'Cobro',
-      method: p.method,
-      date: p.paid_at,
-      amount: Number(p.amount),
-      raw: p
-    })),
+    ...payments.map((p) => {
+      const gross = Number(p.amount);
+      // En el historial de caja mostramos lo que realmente entró al banco:
+      // para tarjeta es el neto (descontando la comisión de terminal).
+      const displayAmt = p.method === 'tarjeta' ? netAfterCommission(gross) : gross;
+      return {
+        id: p.id,
+        kind: 'payment' as const,
+        label: patientName(p),
+        sublabel: sessionTypeOf(p) ?? 'Cobro',
+        method: p.method,
+        date: p.paid_at,
+        amount: displayAmt,
+        raw: p
+      };
+    }),
     ...movements.map((m) => ({
       id: m.id,
       kind: 'movement' as const,
