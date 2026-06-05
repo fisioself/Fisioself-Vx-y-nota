@@ -1,6 +1,6 @@
 {
-  "name": "FISIOSELF App Notas VX",
-  "short_name": "Notas VX",
+  "name": "Fisioself",
+  "short_name": "Fisioself",
   "description": "App clinica privada para notas, valoraciones y expediente del paciente.",
   "start_url": "/",
   "scope": "/",
@@ -11,22 +11,16 @@
   "lang": "es-MX",
   "icons": [
     {
-      "src": "/icons/icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "/logo.jpg",
+      "sizes": "853x1280",
+      "type": "image/jpeg",
       "purpose": "any"
-    },
-    {
-      "src": "/icons/icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "maskable"
     },
     {
       "src": "/logo.jpg",
       "sizes": "853x1280",
       "type": "image/jpeg",
-      "purpose": "any"
+      "purpose": "maskable"
     }
   ]
 }
