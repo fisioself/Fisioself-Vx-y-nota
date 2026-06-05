@@ -115,7 +115,9 @@ Deno.serve(async (req: Request) => {
   }
 
   if (!RESEND_API_KEY) {
-    return new Response(JSON.stringify({ error: 'RESEND_API_KEY not configured' }), { status: 503 });
+    return new Response(JSON.stringify({ error: 'RESEND_API_KEY not configured' }), {
+      status: 503
+    });
   }
 
   // Permite forzar otro mes con { month_offset } (default 1 = mes anterior).

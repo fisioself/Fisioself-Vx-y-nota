@@ -29,11 +29,7 @@ describe('MonthlyHistory', () => {
   });
 
   it('lista los meses con el más reciente arriba', () => {
-    render(
-      <MonthlyHistory
-        monthly={[point({ month: '2026-04' }), point({ month: '2026-05' })]}
-      />
-    );
+    render(<MonthlyHistory monthly={[point({ month: '2026-04' }), point({ month: '2026-05' })]} />);
     const rowHeaders = screen.getAllByRole('rowheader');
     // El primero del cuerpo debe ser mayo (más reciente); el último es el Total.
     expect(rowHeaders[0]).toHaveTextContent(/mayo.*2026/i);
@@ -44,8 +40,22 @@ describe('MonthlyHistory', () => {
     render(
       <MonthlyHistory
         monthly={[
-          point({ month: '2026-04', income: 10000, expenses: 2000, net: 8000, sessions: 12, valoraciones: 2 }),
-          point({ month: '2026-05', income: 5000, expenses: 1000, net: 4000, sessions: 8, valoraciones: 1 })
+          point({
+            month: '2026-04',
+            income: 10000,
+            expenses: 2000,
+            net: 8000,
+            sessions: 12,
+            valoraciones: 2
+          }),
+          point({
+            month: '2026-05',
+            income: 5000,
+            expenses: 1000,
+            net: 4000,
+            sessions: 8,
+            valoraciones: 1
+          })
         ]}
       />
     );
@@ -60,11 +70,7 @@ describe('MonthlyHistory', () => {
 
   it('al pulsar "Descargar CSV" dispara la descarga en orden cronológico', async () => {
     const spy = vi.spyOn(exportMonthly, 'downloadCsv').mockImplementation(() => {});
-    render(
-      <MonthlyHistory
-        monthly={[point({ month: '2026-04' }), point({ month: '2026-05' })]}
-      />
-    );
+    render(<MonthlyHistory monthly={[point({ month: '2026-04' }), point({ month: '2026-05' })]} />);
     await userEvent.click(screen.getByRole('button', { name: /descargar csv/i }));
     expect(spy).toHaveBeenCalledTimes(1);
     const [filename, csv] = spy.mock.calls[0];

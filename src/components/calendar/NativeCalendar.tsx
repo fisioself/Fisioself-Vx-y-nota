@@ -57,15 +57,15 @@ interface CalendarDateClickArg {
 // Colores oficiales de Google Calendar (mismos hex que usa Google), para que
 // la agenda se vea idéntica a Google. Texto blanco para legibilidad.
 const colorMap: Record<string, string> = {
-  '1': '#7986cb', // Lavender
+  '1': '#7986cb', // Lavender (valoración histórica)
   '2': '#33b679', // Sage
-  '3': '#8e24aa', // Grape (Morado - Valoración)
+  '3': '#8e24aa', // Grape (Morado - Valoración NUEVA)
   '4': '#e67c73', // Flamingo (Domicilio)
   '5': '#f6bf26', // Banana (Descarga)
   '6': '#f4511e', // Tangerine
   '7': '#039be5', // Peacock
   '8': '#616161', // Graphite
-  '9': '#3f51b5', // Blueberry (Clínica)
+  '9': '#3f51b5', // Blueberry (valoración histórica, azul)
   '10': '#0b8043', // Basil
   '11': '#d50000' // Tomato
 };

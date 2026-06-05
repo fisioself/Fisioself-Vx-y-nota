@@ -30,9 +30,7 @@ export function buildMonthlyCsv(rows: MonthlyPoint[]): string {
     m.sessions,
     m.valoraciones
   ]);
-  return [MONTHLY_CSV_HEADER, ...body]
-    .map((cols) => cols.map(csvField).join(','))
-    .join('\n');
+  return [MONTHLY_CSV_HEADER, ...body].map((cols) => cols.map(csvField).join(',')).join('\n');
 }
 
 // Dispara la descarga de un archivo CSV en el navegador. Antepone el BOM UTF-8

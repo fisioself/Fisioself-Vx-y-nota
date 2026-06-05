@@ -4,6 +4,7 @@ import { financeApi, PAYMENT_METHODS, type PaymentMethod } from '../../services/
 import { clinicalApi } from '../../services/clinicalApi';
 import { useToast } from '../../app/ToastProvider';
 import { getErrorMessage } from '../../shared/errors';
+import { isValoracionColorId } from '../../services/sessionColors';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { money, netAfterCommission, cdmxLabel } from './financeUtils';
 import './AppointmentChargeModal.css';
@@ -17,9 +18,9 @@ export interface ChargeAppointmentTarget {
   colorId?: string | null;
 }
 
-// Las valoraciones (morado: color 9 o 1) son aparte y NO son una "sesión".
+// Las valoraciones (morado: '3', o histórico '9'/'1') son aparte y NO son una "sesión".
 const isValoracion = (t: ChargeAppointmentTarget): boolean =>
-  t.colorId === '9' || t.colorId === '1' || t.sessionType === 'Valoración';
+  isValoracionColorId(t.colorId) || t.sessionType === 'Valoración';
 
 interface AppointmentChargeModalProps {
   appointment: ChargeAppointmentTarget | null;

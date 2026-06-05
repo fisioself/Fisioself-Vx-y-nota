@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { clinicalApi } from '../../services/clinicalApi';
 import { useToast } from '../../app/ToastProvider';
 import { getErrorMessage } from '../../shared/errors';
+import { VALORACION_COLOR_ID } from '../../services/sessionColors';
 import type { Patient } from '../../types/clinical';
 import './AppointmentCreateModal.css';
 
@@ -17,14 +18,15 @@ interface AppointmentCreateModalProps {
 }
 
 // Tipos de sesión con su color de Google Calendar (mismo convenio que usa la
-// agenda al importar): null = sesión clínica (azul), 9 = valoración, etc.
+// agenda al importar): null = sesión clínica (color por defecto), Valoración =
+// morado (Grape, '3'), Domicilio = naranja, Descarga = amarillo, Cortesía = gris.
 interface SessionTypeOption {
   label: string;
   colorId: string | null;
 }
 const SESSION_TYPES: SessionTypeOption[] = [
   { label: 'Sesión clínica', colorId: null },
-  { label: 'Valoración', colorId: '9' },
+  { label: 'Valoración', colorId: VALORACION_COLOR_ID },
   { label: 'Domicilio', colorId: '6' },
   { label: 'Descarga', colorId: '5' },
   { label: 'Cortesía', colorId: '8' }

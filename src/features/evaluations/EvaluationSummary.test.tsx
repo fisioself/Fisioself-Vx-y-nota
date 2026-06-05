@@ -4,15 +4,25 @@ import type { Evaluation } from '../../types/clinical';
 import { EvaluationSummary } from './EvaluationSummary';
 
 const makeEvaluation = (sections: Record<string, unknown>): Evaluation =>
-  ({ id: 'eval-1', patient_id: 'patient-1', sections } as Evaluation);
+  ({ id: 'eval-1', patient_id: 'patient-1', sections }) as Evaluation;
 
 describe('EvaluationSummary', () => {
   it('muestra identidad, dolor y motivo de consulta', () => {
     render(
       <EvaluationSummary
         evaluation={makeEvaluation({
-          patient_identity: { age: '34', sex: 'F', occupation: 'Maestra', therapist_name: 'Lic. Paz' },
-          pain: { location: 'Lumbar', type: 'Punzante', intensity: 7, aggravating_factors: 'Sentarse' },
+          patient_identity: {
+            age: '34',
+            sex: 'F',
+            occupation: 'Maestra',
+            therapist_name: 'Lic. Paz'
+          },
+          pain: {
+            location: 'Lumbar',
+            type: 'Punzante',
+            intensity: 7,
+            aggravating_factors: 'Sentarse'
+          },
           consultation: { reason: 'Dolor lumbar', clinical_history: 'Hace 3 semanas' }
         })}
       />

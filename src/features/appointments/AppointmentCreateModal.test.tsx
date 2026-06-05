@@ -33,7 +33,9 @@ const makeWrapper = () => {
 beforeEach(() => {
   vi.mocked(clinicalApi.searchPatients).mockReset().mockResolvedValue([]);
   vi.mocked(clinicalApi.createPatient).mockReset();
-  vi.mocked(clinicalApi.addAppointment).mockReset().mockResolvedValue({ id: 'appt-1' } as never);
+  vi.mocked(clinicalApi.addAppointment)
+    .mockReset()
+    .mockResolvedValue({ id: 'appt-1' } as never);
 });
 
 describe('AppointmentCreateModal', () => {
@@ -90,7 +92,7 @@ describe('AppointmentCreateModal', () => {
           patient_id: 'patient-1',
           title: 'Ana García',
           session_type: 'Valoración',
-          color_id: '9'
+          color_id: '3'
         })
       );
     });
@@ -137,10 +139,14 @@ describe('AppointmentCreateModal', () => {
 
     // Primer clic: NO crea, pide confirmar por duplicado.
     expect(clinicalApi.createPatient).not.toHaveBeenCalled();
-    expect(screen.getByRole('button', { name: /toca otra vez para crear uno aparte/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /toca otra vez para crear uno aparte/i })
+    ).toBeInTheDocument();
 
     // Segundo clic: ahora sí crea.
-    await userEvent.click(screen.getByRole('button', { name: /toca otra vez para crear uno aparte/i }));
+    await userEvent.click(
+      screen.getByRole('button', { name: /toca otra vez para crear uno aparte/i })
+    );
     await waitFor(() => {
       expect(clinicalApi.createPatient).toHaveBeenCalledWith({ full_name: 'Ana García' });
     });

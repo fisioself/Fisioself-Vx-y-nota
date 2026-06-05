@@ -22,7 +22,15 @@ describe('buildMonthlyCsv', () => {
 
   it('emite los importes como número plano (sin símbolo) para que Excel sume', () => {
     const csv = buildMonthlyCsv([
-      point({ month: '2026-05', income: 12000, expenses: 3000, net: 9000, patients: 8, sessions: 20, valoraciones: 3 })
+      point({
+        month: '2026-05',
+        income: 12000,
+        expenses: 3000,
+        net: 9000,
+        patients: 8,
+        sessions: 20,
+        valoraciones: 3
+      })
     ]);
     const [, dataRow] = csv.split('\n');
     const cols = dataRow.split(',');
