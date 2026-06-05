@@ -1,5 +1,5 @@
 // Classic Service Worker — no ES module imports, no CDN dependencies
-const CACHE_NAME = 'fisioself-notas-vx-v9';
+const CACHE_NAME = 'fisioself-notas-vx-v10';
 const APP_SHELL = ['/', '/index.html', '/manifest.webmanifest'];
 const DB_NAME = 'fisioself-sync-db';
 const STORE_NAME = 'sync-queue';
