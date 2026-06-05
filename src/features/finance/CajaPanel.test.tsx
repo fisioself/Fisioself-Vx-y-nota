@@ -61,14 +61,15 @@ describe('CajaPanel', () => {
 
   it('does not call addCajaMovement when amount is empty', async () => {
     render(<CajaPanel caja={CAJA} />, { wrapper: makeWrapper() });
-    await userEvent.click(screen.getByRole('button', { name: /Registrar movimiento/ }));
+    await userEvent.click(screen.getByRole('button', { name: /Registrar ingreso/ }));
     expect(financeApi.addCajaMovement).not.toHaveBeenCalled();
   });
 
-  it('calls addCajaMovement with positive amount (ingreso)', async () => {
+  it('calls addCajaMovement with positive amount when Ingreso is selected', async () => {
     render(<CajaPanel caja={CAJA} />, { wrapper: makeWrapper() });
+    // Ingreso es el modo por defecto: solo se escribe el monto positivo.
     await userEvent.type(screen.getByPlaceholderText(/Monto/), '2000');
-    await userEvent.click(screen.getByRole('button', { name: /Registrar movimiento/ }));
+    await userEvent.click(screen.getByRole('button', { name: /Registrar ingreso/ }));
     await waitFor(() => {
       expect(financeApi.addCajaMovement).toHaveBeenCalledWith(
         expect.objectContaining({ amount: 2000 })
@@ -76,10 +77,13 @@ describe('CajaPanel', () => {
     });
   });
 
-  it('calls addCajaMovement with negative amount (gasto)', async () => {
+  it('calls addCajaMovement with negative amount when Gasto is selected', async () => {
     render(<CajaPanel caja={CAJA} />, { wrapper: makeWrapper() });
-    await userEvent.type(screen.getByPlaceholderText(/Monto/), '-500');
-    await userEvent.click(screen.getByRole('button', { name: /Registrar movimiento/ }));
+    // Se elige "Gasto" con el botón y el monto se escribe positivo: la app lo
+    // convierte a negativo automáticamente.
+    await userEvent.click(screen.getByRole('button', { name: /− Gasto/ }));
+    await userEvent.type(screen.getByPlaceholderText(/Monto/), '500');
+    await userEvent.click(screen.getByRole('button', { name: /Registrar gasto/ }));
     await waitFor(() => {
       expect(financeApi.addCajaMovement).toHaveBeenCalledWith(
         expect.objectContaining({ amount: -500 })
