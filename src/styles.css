@@ -186,6 +186,14 @@ details:focus-visible summary {
   gap: 20px;
   align-items: center;
 }
+/* Permite que el bloque de título (logo + textos) se encoja y haga wrap en
+   lugar de empujar el hero más ancho que la pantalla en celular. */
+.app-hero > div {
+  min-width: 0;
+}
+.app-hero h1 {
+  overflow-wrap: anywhere;
+}
 .hero-actions {
   display: flex;
   gap: 10px;
@@ -209,6 +217,11 @@ details:focus-visible summary {
   gap: 18px;
   align-items: start;
 }
+/* Mismo motivo: que ningún item del grid principal (hero, pestañas, paneles)
+   pueda crecer más que el ancho de la pantalla. */
+.app-grid > * {
+  min-width: 0;
+}
 /* Barra de pestañas principal (Panel / Finanzas / + Paciente) a todo lo ancho,
    en una cuadrícula de 3 columnas iguales que nunca se desborda. */
 .main-tabs {
@@ -226,6 +239,16 @@ details:focus-visible summary {
 .record-stack {
   display: grid;
   gap: 16px;
+  min-width: 0;
+}
+/* Los items de un grid traen min-width:auto, así que su contenido (tablas,
+   textos largos, gráficas) puede empujarlos más ancho que la pantalla y
+   desbordar horizontalmente. Forzamos min-width:0 en toda la cadena para que
+   cada nivel pueda encogerse al ancho real del celular. */
+.left-pane > *,
+.right-pane > *,
+.record-stack > * {
+  min-width: 0;
 }
 .card {
   background: var(--bg-card);

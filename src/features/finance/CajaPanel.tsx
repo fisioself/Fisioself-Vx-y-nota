@@ -28,7 +28,6 @@ interface CajaPanelProps {
 export function CajaPanel({ caja }: CajaPanelProps) {
   const queryClient = useQueryClient();
   const { notify } = useToast();
-  const [direction, setDirection] = useState<'in' | 'out'>('in');
   const [amount, setAmount] = useState('');
   const [method, setMethod] = useState('efectivo');
   const [description, setDescription] = useState('');
@@ -98,14 +97,14 @@ export function CajaPanel({ caja }: CajaPanelProps) {
 
   const submit = async () => {
     const value = Number(amount);
-    if (!value || value <= 0) {
-      notify({ tone: 'error', message: 'Indica un monto válido.' });
+    if (!value) {
+      notify({ tone: 'error', message: 'Indica un monto válido (positivo = ingreso, negativo = gasto).' });
       return;
     }
     setBusy(true);
     try {
       await financeApi.addCajaMovement({
-        amount: direction === 'out' ? -Math.abs(value) : Math.abs(value),
+        amount: value,
         method: method as PaymentMethod,
         description,
         occurredAt
@@ -163,42 +162,46 @@ export function CajaPanel({ caja }: CajaPanelProps) {
       {/* Ajuste manual de caja */}
       <div style={{ marginTop: 16 }}>
         <p className="eyebrow">Ajustar caja manualmente</p>
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
-            gap: 10,
-            marginTop: 8
-          }}
-        >
-          <select
-            value={direction}
-            onChange={(e) => setDirection(e.target.value as 'in' | 'out')}
-            aria-label="Tipo de movimiento"
-          >
-            <option value="in">Entrada (+)</option>
-            <option value="out">Salida (−)</option>
-          </select>
-          <input
-            type="number"
-            inputMode="decimal"
-            placeholder="Monto $"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-          />
-          <select value={method} onChange={(e) => setMethod(e.target.value)} aria-label="Método">
-            <option value="efectivo">Efectivo</option>
-            <option value="tarjeta">Tarjeta</option>
-            <option value="transferencia">Transferencia</option>
-          </select>
-          <input
-            type="text"
-            placeholder="Concepto (opcional)"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-          />
-          <input type="date" value={occurredAt} onChange={(e) => setOccurredAt(e.target.value)} />
-          <button type="button" onClick={submit} disabled={busy}>
+        <p className="muted" style={{ fontSize: '0.82rem', marginTop: 2, marginBottom: 8 }}>
+          Positivo (+) = ingreso · Negativo (−) = gasto
+        </p>
+        <div style={{ display: 'grid', gap: 10 }}>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <input
+              type="number"
+              inputMode="decimal"
+              placeholder="Monto (+ingreso / −gasto)"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              style={{ flex: '1 1 140px', minWidth: 0 }}
+            />
+            <select
+              value={method}
+              onChange={(e) => setMethod(e.target.value)}
+              aria-label="Método"
+              style={{ flex: '1 1 130px', minWidth: 0 }}
+            >
+              <option value="efectivo">Efectivo</option>
+              <option value="tarjeta">Tarjeta</option>
+              <option value="transferencia">Transferencia</option>
+            </select>
+          </div>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <input
+              type="text"
+              placeholder="Concepto (opcional)"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              style={{ flex: '2 1 180px', minWidth: 0 }}
+            />
+            <input
+              type="date"
+              value={occurredAt}
+              onChange={(e) => setOccurredAt(e.target.value)}
+              style={{ flex: '1 1 140px', minWidth: 0 }}
+            />
+          </div>
+          <button type="button" onClick={submit} disabled={busy} style={{ width: '100%' }}>
             {busy ? 'Guardando…' : 'Registrar movimiento'}
           </button>
         </div>
