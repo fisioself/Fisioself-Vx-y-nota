@@ -11,6 +11,12 @@
   "lang": "es-MX",
   "icons": [
     {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
       "src": "/logo.jpg",
       "sizes": "853x1280",
       "type": "image/jpeg",
