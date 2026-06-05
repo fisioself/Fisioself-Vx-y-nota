@@ -1,5 +1,6 @@
 import type { Session, Subscription } from '@supabase/supabase-js';
 import { supabase, isSupabaseConfigured, assertSupabase } from '../lib/supabaseClient';
+import { identifyUser, resetAnalyticsUser } from '../lib/analytics';
 
 const noopSubscription: Subscription = {
   id: 'noop',
@@ -39,6 +40,9 @@ export const authService = {
       options: captchaToken ? { captchaToken } : undefined
     });
     if (error) throw error;
+    if (data.session?.user?.id) {
+      identifyUser(data.session.user.id);
+    }
     return data.session;
   },
 
@@ -46,6 +50,7 @@ export const authService = {
     const db = assertSupabase();
     const { error } = await db.auth.signOut();
     if (error) throw error;
+    resetAnalyticsUser();
   },
 
   // --- MFA / Segundo factor (TOTP) ---

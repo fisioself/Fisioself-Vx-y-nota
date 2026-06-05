@@ -1,4 +1,5 @@
 import { assertSupabase } from '../lib/supabaseClient';
+import { trackEvent } from '../lib/analytics';
 import type { TablesInsert, TablesUpdate } from '../types/supabase';
 import type {
   Patient,
@@ -76,13 +77,15 @@ export const clinicalApi = {
 
   async createPatient(payload: Partial<Patient>): Promise<Patient> {
     const db = assertSupabase();
-    return unwrap(
+    const result = unwrap<Patient>(
       await db
         .from('patients')
         .insert(payload as TablesInsert<'patients'>)
         .select('*')
         .single()
     );
+    trackEvent('patient_created');
+    return result;
   },
 
   async updatePatient(id: string, payload: Partial<Patient>): Promise<Patient> {
@@ -145,13 +148,15 @@ export const clinicalApi = {
 
   async addEvaluation(payload: Partial<Evaluation>): Promise<Evaluation> {
     const db = assertSupabase();
-    return unwrap(
+    const result = unwrap<Evaluation>(
       await db
         .from('evaluations')
         .insert(payload as TablesInsert<'evaluations'>)
         .select('*')
         .single()
     );
+    trackEvent('evaluation_added');
+    return result;
   },
 
   async updateEvaluation(id: string, payload: Partial<Evaluation>): Promise<Evaluation> {
@@ -193,7 +198,9 @@ export const clinicalApi = {
         'Ya existe una nota con ese numero de sesion. Actualiza el expediente e intenta de nuevo.'
       );
     }
-    return unwrap(response);
+    const result = unwrap<SessionNote>(response);
+    trackEvent('session_note_saved', { session_number: payload.session_number ?? undefined });
+    return result;
   },
 
   async updateSessionNote(id: string, payload: Partial<SessionNote>): Promise<SessionNote> {
@@ -221,24 +228,28 @@ export const clinicalApi = {
 
   async addAiConsult(payload: Partial<AiConsult>): Promise<AiConsult> {
     const db = assertSupabase();
-    return unwrap(
+    const result = unwrap<AiConsult>(
       await db
         .from('ai_consults')
         .insert(payload as TablesInsert<'ai_consults'>)
         .select('*')
         .single()
     );
+    trackEvent('ai_consult_saved', { validated: payload.validated ?? undefined });
+    return result;
   },
 
   async addAppointment(payload: Partial<Appointment>): Promise<Appointment> {
     const db = assertSupabase();
-    return unwrap(
+    const result = unwrap<Appointment>(
       await db
         .from('appointments')
         .insert(payload as TablesInsert<'appointments'>)
         .select('*')
         .single()
     );
+    trackEvent('appointment_scheduled');
+    return result;
   },
 
   // Elimina una cita de la app Y de Google Calendar a la vez. Lo hace vía edge

@@ -1,4 +1,5 @@
 import { assertSupabase } from '../lib/supabaseClient';
+import { trackEvent } from '../lib/analytics';
 import type { Tables, TablesInsert } from '../types/supabase';
 
 export type Package = Tables<'packages'>;
@@ -173,7 +174,11 @@ export const financeApi = {
       purchased_at: input.purchasedAt,
       notes: input.notes ?? null
     };
-    return unwrap(await db.from('patient_packages').insert(payload).select('*').single());
+    const result = unwrap<PatientPackage>(
+      await db.from('patient_packages').insert(payload).select('*').single()
+    );
+    trackEvent('patient_package_added', { sessions_total: input.sessionsTotal });
+    return result;
   },
 
   async setSessionsUsed(patientPackageId: string, sessionsUsed: number): Promise<void> {
@@ -224,7 +229,12 @@ export const financeApi = {
       paid_at: input.paidAt,
       notes: input.notes ?? null
     };
-    return unwrap(await db.from('payments').insert(payload).select('*').single());
+    const result = unwrap<Payment>(await db.from('payments').insert(payload).select('*').single());
+    trackEvent('payment_registered', {
+      method: input.method ?? 'efectivo',
+      has_package: !!input.patientPackageId
+    });
+    return result;
   },
 
   async deletePayment(id: string): Promise<void> {
@@ -294,7 +304,7 @@ export const financeApi = {
       name: string,
       args?: Record<string, unknown>
     ) => Promise<{ data: unknown; error: unknown }>;
-    return unwrap<Payment>(
+    const result = unwrap<Payment>(
       await rpc('charge_appointment', {
         p_appointment_id: input.appointmentId,
         p_patient_id: input.patientId,
@@ -306,6 +316,11 @@ export const financeApi = {
         p_notes: input.notes ?? null
       })
     );
+    trackEvent('appointment_charged', {
+      method: input.usePackage ? 'paquete' : (input.method ?? 'efectivo'),
+      use_package: input.usePackage
+    });
+    return result;
   },
 
   // Elimina el cobro de una cita; si fue con paquete, devuelve la sesión.
@@ -439,7 +454,9 @@ export const financeApi = {
       amount: input.amount,
       spent_at: input.spentAt
     };
-    return unwrap(await db.from('expenses').insert(payload).select('*').single());
+    const result = unwrap<Expense>(await db.from('expenses').insert(payload).select('*').single());
+    trackEvent('expense_added', { category: input.category });
+    return result;
   },
 
   async deleteExpense(id: string): Promise<void> {
