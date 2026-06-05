@@ -1,5 +1,5 @@
 // Classic Service Worker — no ES module imports, no CDN dependencies
-const CACHE_NAME = 'fisioself-notas-vx-v12';
+const CACHE_NAME = 'fisioself-notas-vx-v13';
 const APP_SHELL = ['/', '/index.html', '/manifest.webmanifest'];
 const DB_NAME = 'fisioself-sync-db';
 const STORE_NAME = 'sync-queue';
@@ -155,51 +155,71 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// ---- Background sync ----
+// ---- Cola de escrituras offline: reenvío ----
+// Reenvía todas las escrituras encoladas mientras no había conexión. Se invoca
+// desde el evento `sync` (Background Sync, soportado en Chrome/Android) y también
+// desde un mensaje FLUSH_QUEUE que la app dispara al reconectar — esto último es
+// imprescindible porque iOS/Safari NO soporta Background Sync y, sin este camino,
+// las notas guardadas offline nunca se reenviaban solas.
+async function flushQueue() {
+  const db = await idbOpen();
+  const allReqs = await idbGetAll(db);
+  let synced = 0;
+
+  for (const reqData of allReqs) {
+    if (reqData.conflict) continue; // ya marcada como conflicto, no reintentar
+    try {
+      const response = await fetch(reqData.url, {
+        method: reqData.method,
+        headers: reqData.headers,
+        body: reqData.body
+      });
+
+      if (response.ok) {
+        await idbDelete(db, reqData.id);
+        synced += 1;
+      } else if (response.status === 401) {
+        const clients = await self.clients.matchAll();
+        clients.forEach((client) => {
+          client.postMessage({
+            type: 'SYNC_ERROR',
+            status: 401,
+            message: 'Sesion caducada. Inicia sesion para sincronizar tus notas.'
+          });
+        });
+        break;
+      } else if (response.status === 409) {
+        const clients = await self.clients.matchAll();
+        clients.forEach((client) => {
+          client.postMessage({
+            type: 'SYNC_CONFLICT',
+            id: reqData.id,
+            message: 'Conflicto detectado en una nota. Por favor revisa tus borradores.'
+          });
+        });
+        await idbPut(db, { ...reqData, conflict: true });
+      }
+      // Otros códigos (p. ej. 5xx transitorios): dejamos la petición en cola
+      // para reintentarla en el próximo reconectar/sync.
+    } catch (err) {
+      // Sin red de nuevo: abortamos; el resto sigue en cola para el próximo intento.
+      console.warn('[SW] Reenvío offline detenido (sin red) en req', reqData.id, err.message);
+      break;
+    }
+  }
+
+  if (synced > 0) {
+    const clients = await self.clients.matchAll();
+    clients.forEach((client) => {
+      client.postMessage({ type: 'SYNC_DONE', synced });
+    });
+  }
+}
+
+// ---- Background sync (Chrome/Android) ----
 self.addEventListener('sync', (event) => {
   if (event.tag === 'clinical-sync') {
-    event.waitUntil(
-      (async () => {
-        const db = await idbOpen();
-        const allReqs = await idbGetAll(db);
-
-        for (const reqData of allReqs) {
-          try {
-            const response = await fetch(reqData.url, {
-              method: reqData.method,
-              headers: reqData.headers,
-              body: reqData.body
-            });
-
-            if (response.ok) {
-              await idbDelete(db, reqData.id);
-            } else if (response.status === 401) {
-              const clients = await self.clients.matchAll();
-              clients.forEach((client) => {
-                client.postMessage({
-                  type: 'SYNC_ERROR',
-                  status: 401,
-                  message: 'Sesion caducada. Inicia sesion para sincronizar tus notas.'
-                });
-              });
-              break;
-            } else if (response.status === 409) {
-              const clients = await self.clients.matchAll();
-              clients.forEach((client) => {
-                client.postMessage({
-                  type: 'SYNC_CONFLICT',
-                  id: reqData.id,
-                  message: 'Conflicto detectado en una nota. Por favor revisa tus borradores.'
-                });
-              });
-              await idbPut(db, { ...reqData, conflict: true });
-            }
-          } catch (err) {
-            console.error('Background sync failed for req', reqData.id, err);
-          }
-        }
-      })()
-    );
+    event.waitUntil(flushQueue());
   }
 });
 
@@ -245,9 +265,14 @@ self.addEventListener('notificationclick', (event) => {
   );
 });
 
-// ---- Skip waiting (allows instant update when user taps "Actualizar ahora") ----
+// ---- Mensajes desde la app ----
 self.addEventListener('message', (event) => {
+  // Actualización instantánea cuando el usuario toca "Actualizar ahora".
   if (event.data?.type === 'SKIP_WAITING') {
     self.skipWaiting();
+  }
+  // Reenviar la cola offline al reconectar (camino que sí funciona en iOS).
+  if (event.data?.type === 'FLUSH_QUEUE') {
+    event.waitUntil(flushQueue());
   }
 });
