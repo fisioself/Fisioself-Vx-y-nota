@@ -65,9 +65,9 @@ describe('CajaPanel', () => {
     expect(financeApi.addCajaMovement).not.toHaveBeenCalled();
   });
 
-  it('calls addCajaMovement with positive amount for "in" direction', async () => {
+  it('calls addCajaMovement with positive amount (ingreso)', async () => {
     render(<CajaPanel caja={CAJA} />, { wrapper: makeWrapper() });
-    await userEvent.type(screen.getByPlaceholderText(/Monto \$/), '2000');
+    await userEvent.type(screen.getByPlaceholderText(/Monto/), '2000');
     await userEvent.click(screen.getByRole('button', { name: /Registrar movimiento/ }));
     await waitFor(() => {
       expect(financeApi.addCajaMovement).toHaveBeenCalledWith(
@@ -76,11 +76,9 @@ describe('CajaPanel', () => {
     });
   });
 
-  it('calls addCajaMovement with negative amount for "out" direction', async () => {
+  it('calls addCajaMovement with negative amount (gasto)', async () => {
     render(<CajaPanel caja={CAJA} />, { wrapper: makeWrapper() });
-    const dirSelect = screen.getByRole('combobox', { name: /Tipo de movimiento/ });
-    await userEvent.selectOptions(dirSelect, 'out');
-    await userEvent.type(screen.getByPlaceholderText(/Monto \$/), '500');
+    await userEvent.type(screen.getByPlaceholderText(/Monto/), '-500');
     await userEvent.click(screen.getByRole('button', { name: /Registrar movimiento/ }));
     await waitFor(() => {
       expect(financeApi.addCajaMovement).toHaveBeenCalledWith(

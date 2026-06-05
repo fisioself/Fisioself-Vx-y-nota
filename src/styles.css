@@ -226,6 +226,7 @@ details:focus-visible summary {
 .record-stack {
   display: grid;
   gap: 16px;
+  min-width: 0;
 }
 .card {
   background: var(--bg-card);
