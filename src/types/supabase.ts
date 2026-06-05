@@ -405,6 +405,7 @@ export type Database = {
           created_by: string | null;
           description: string | null;
           id: string;
+          payment_id: string | null;
           spent_at: string;
         };
         Insert: {
@@ -415,6 +416,7 @@ export type Database = {
           created_by?: string | null;
           description?: string | null;
           id?: string;
+          payment_id?: string | null;
           spent_at?: string;
         };
         Update: {
@@ -425,6 +427,7 @@ export type Database = {
           created_by?: string | null;
           description?: string | null;
           id?: string;
+          payment_id?: string | null;
           spent_at?: string;
         };
         Relationships: [
@@ -433,6 +436,13 @@ export type Database = {
             columns: ['clinic_id'];
             isOneToOne: false;
             referencedRelation: 'clinics';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'expenses_payment_id_fkey';
+            columns: ['payment_id'];
+            isOneToOne: false;
+            referencedRelation: 'payments';
             referencedColumns: ['id'];
           }
         ];

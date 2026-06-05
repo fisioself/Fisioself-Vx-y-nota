@@ -265,6 +265,44 @@ describe('financeApi.chargeAppointment', () => {
     );
   });
 
+  it('con tarjeta: cobra el BRUTO y pasa la comisión al RPC (no se descuenta del saldo)', async () => {
+    const db = makeDb({ __rpc: { id: 'pay-1', amount: 1000, method: 'tarjeta' } });
+    const { financeApi } = await loadFinanceApi(db);
+
+    await financeApi.chargeAppointment({
+      appointmentId: 'appt-1',
+      patientId: 'patient-1',
+      usePackage: false,
+      amount: 1000,
+      method: 'tarjeta'
+    });
+
+    // El pago va en bruto ($1000) y la comisión (1000 * 0.0406 = 40.6) se pasa
+    // aparte para registrarse como gasto ligado dentro del RPC.
+    expect(db.rpc).toHaveBeenCalledWith(
+      'charge_appointment',
+      expect.objectContaining({ p_amount: 1000, p_method: 'tarjeta', p_commission: 40.6 })
+    );
+  });
+
+  it('en efectivo no hay comisión (p_commission = 0)', async () => {
+    const db = makeDb({ __rpc: { id: 'pay-1', amount: 350, method: 'efectivo' } });
+    const { financeApi } = await loadFinanceApi(db);
+
+    await financeApi.chargeAppointment({
+      appointmentId: 'appt-1',
+      patientId: 'patient-1',
+      usePackage: false,
+      amount: 350,
+      method: 'efectivo'
+    });
+
+    expect(db.rpc).toHaveBeenCalledWith(
+      'charge_appointment',
+      expect.objectContaining({ p_commission: 0 })
+    );
+  });
+
   it('con paquete: llama al RPC con el paquete y devuelve el pago de seguimiento', async () => {
     const db = makeDb({ __rpc: { id: 'track-1', amount: 0, method: 'paquete' } });
     const { financeApi } = await loadFinanceApi(db);
@@ -498,11 +536,25 @@ describe('financeApi listers y borradores', () => {
     expect(db.from).toHaveBeenCalledWith('caja_movements');
   });
 
-  it('addPayment inserta un pago suelto', async () => {
+  it('addPayment inserta un pago suelto (efectivo: sin gasto de comisión)', async () => {
     const db = makeDb({ payments: { single: { id: 'p9', amount: 500 } } });
     const { financeApi } = await loadFinanceApi(db);
-    const pay = await financeApi.addPayment({ patientId: 'patient-1', amount: 500 });
+    const pay = await financeApi.addPayment({
+      patientId: 'patient-1',
+      amount: 500,
+      method: 'efectivo'
+    });
     expect(pay).toMatchObject({ id: 'p9' });
+    // Efectivo no genera comisión → no se toca la tabla expenses.
+    expect(db.from).not.toHaveBeenCalledWith('expenses');
+  });
+
+  it('addPayment con tarjeta registra la comisión como gasto ligado al pago', async () => {
+    const db = makeDb({ payments: { single: { id: 'p9', amount: 1000 } } });
+    const { financeApi } = await loadFinanceApi(db);
+    await financeApi.addPayment({ patientId: 'patient-1', amount: 1000, method: 'tarjeta' });
+    // El pago se guarda en bruto y la comisión (40.6) entra como gasto.
+    expect(db.from).toHaveBeenCalledWith('expenses');
   });
 
   it('deletePatientPackageFully borra los pagos del paquete y el paquete', async () => {

@@ -232,18 +232,17 @@ export function AppointmentChargeModal({
 
     setSaving(true);
     try {
-      // Con tarjeta se guarda el monto neto (descontada la comisión de la terminal).
+      // El pago se registra en BRUTO (liquida el saldo del paciente). Si es con
+      // tarjeta, financeApi/charge_appointment registra la comisión como gasto.
       const grossSuelta = Number(amount);
       const grossAbono = Number(abonoAmount || 0);
-      const netSuelta = method === 'tarjeta' ? netAfterCommission(grossSuelta) : grossSuelta;
-      const netAbono = abonoMethod === 'tarjeta' ? netAfterCommission(grossAbono) : grossAbono;
 
       await financeApi.chargeAppointment({
         appointmentId: appointment.id,
         patientId: appointment.patientId,
         usePackage: mode === 'paquete',
         patientPackageId: mode === 'paquete' ? packageId : null,
-        amount: mode === 'suelta' ? netSuelta : netAbono,
+        amount: mode === 'suelta' ? grossSuelta : grossAbono,
         method: mode === 'suelta' ? method : abonoAmount ? abonoMethod : undefined
       });
       await Promise.all([
@@ -353,11 +352,11 @@ export function AppointmentChargeModal({
         purchasedAt: assignStartDate || undefined
       });
       if (initAmt > 0) {
-        const initNet = assignInitMethod === 'tarjeta' ? netAfterCommission(initAmt) : initAmt;
+        // Bruto: liquida el saldo. addPayment registra la comisión si es tarjeta.
         await financeApi.addPayment({
           patientId,
           patientPackageId: created.id,
-          amount: initNet,
+          amount: initAmt,
           method: assignInitMethod
         });
       }

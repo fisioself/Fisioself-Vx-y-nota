@@ -1,6 +1,7 @@
 import { assertSupabase } from '../lib/supabaseClient';
 import { trackEvent } from '../lib/analytics';
 import { NOT_VALORACION_OR_FILTER } from './sessionColors';
+import { cardCommission } from '../features/finance/financeUtils';
 import type { Tables, TablesInsert } from '../types/supabase';
 
 export type Package = Tables<'packages'>;
@@ -211,6 +212,10 @@ export const financeApi = {
     if (error) throw error;
   },
 
+  // El `amount` es SIEMPRE el monto BRUTO que entregó el paciente (liquida su
+  // saldo). Si paga con tarjeta, la comisión de la terminal se registra como un
+  // GASTO ligado al pago (expenses.payment_id) — NO se descuenta del saldo. Al
+  // borrar el pago, su comisión se borra en cascada.
   async addPayment(input: {
     patientId: string;
     patientPackageId?: string | null;
@@ -221,20 +226,32 @@ export const financeApi = {
     notes?: string;
   }): Promise<Payment> {
     const db = assertSupabase();
+    const method = input.method ?? 'efectivo';
     const payload: TablesInsert<'payments'> = {
       patient_id: input.patientId,
       patient_package_id: input.patientPackageId ?? null,
       appointment_id: input.appointmentId ?? null,
       amount: input.amount,
-      method: input.method ?? 'efectivo',
+      method,
       paid_at: input.paidAt,
       notes: input.notes ?? null
     };
     const result = unwrap<Payment>(await db.from('payments').insert(payload).select('*').single());
-    trackEvent('payment_registered', {
-      method: input.method ?? 'efectivo',
-      has_package: !!input.patientPackageId
-    });
+
+    const commission = method === 'tarjeta' ? cardCommission(input.amount) : 0;
+    if (commission > 0) {
+      const expense: TablesInsert<'expenses'> = {
+        payment_id: result.id,
+        amount: commission,
+        category: 'comision',
+        description: 'Comisión terminal (tarjeta)',
+        spent_at: input.paidAt
+      };
+      const { error } = await db.from('expenses').insert(expense);
+      if (error) throw error;
+    }
+
+    trackEvent('payment_registered', { method, has_package: !!input.patientPackageId });
     return result;
   },
 
@@ -295,6 +312,11 @@ export const financeApi = {
       throw new Error('Falta seleccionar el paquete.');
     }
 
+    // El monto se cobra en BRUTO (liquida el saldo). Si es tarjeta, la comisión
+    // de la terminal se registra como gasto ligado dentro del RPC (atómico).
+    const method = input.method ?? 'efectivo';
+    const commission = method === 'tarjeta' ? cardCommission(amount) : 0;
+
     // Cobro ATÓMICO vía RPC: descuenta la sesión del paquete y registra el/los
     // pago(s) en UNA sola transacción del lado del servidor. Evita el estado
     // inconsistente que ocurría al hacer las escrituras por separado desde el
@@ -312,9 +334,10 @@ export const financeApi = {
         p_use_package: input.usePackage,
         p_patient_package_id: input.usePackage ? (input.patientPackageId ?? null) : null,
         p_amount: amount,
-        p_method: input.method ?? 'efectivo',
+        p_method: method,
         p_paid_at: input.paidAt ?? null,
-        p_notes: input.notes ?? null
+        p_notes: input.notes ?? null,
+        p_commission: commission
       })
     );
     trackEvent('appointment_charged', {

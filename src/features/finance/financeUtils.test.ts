@@ -3,6 +3,7 @@ import {
   CARD_COMMISSION,
   CATEGORY_COLORS,
   EXPENSE_CATEGORIES,
+  cardCommission,
   fmtDate,
   methodLabel,
   money,
@@ -42,6 +43,18 @@ describe('netAfterCommission', () => {
   it('rounds to 2 decimal places', () => {
     const net = netAfterCommission(100);
     expect(net).toBe(Math.round(100 * (1 - CARD_COMMISSION) * 100) / 100);
+  });
+});
+
+describe('cardCommission', () => {
+  it('returns the terminal fee (gross minus net)', () => {
+    // El bruto y la comisión deben reconstruir el monto original sin perder cents.
+    expect(cardCommission(1000)).toBe(40.6);
+    expect(cardCommission(1000) + netAfterCommission(1000)).toBeCloseTo(1000, 2);
+  });
+
+  it('is zero for a zero amount', () => {
+    expect(cardCommission(0)).toBe(0);
   });
 });
 
