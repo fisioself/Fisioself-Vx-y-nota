@@ -285,16 +285,21 @@ export const clinicalApi = {
       .select('*', { count: 'exact', head: true });
     if (pError) throw pError;
 
-    // 2. Sesiones de los ultimos 30 dias (citas del calendario)
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const { count: recentSessions, error: sError } = await db
-      .from('appointments')
-      .select('*', { count: 'exact', head: true })
-      .gte('starts_at', thirtyDaysAgo.toISOString())
-      .lte('starts_at', new Date().toISOString())
-      .neq('status', 'cancelled');
+    // 2. Sesiones y valoraciones del MES EN CURSO. Usamos la MISMA fuente que
+    //    Finanzas (finance_appt_stats) para que los numeros coincidan en toda la
+    //    app: esa funcion excluye canceladas y cortesias y separa la valoracion
+    //    (color morado) de la sesion de tratamiento. Antes el dashboard contaba
+    //    TODAS las citas como "sesiones" (incluyendo valoraciones y cortesias),
+    //    lo que inflaba el numero y no cuadraba con Finanzas.
+    const { data: apptStats, error: sError } = await db.rpc('finance_appt_stats', {
+      p_months_back: 1
+    });
     if (sError) throw sError;
+    const currentMonth = (
+      apptStats as { currentMonth?: { sessions?: number; valoraciones?: number } } | null
+    )?.currentMonth;
+    const monthSessions = currentMonth?.sessions ?? 0;
+    const monthValoraciones = currentMonth?.valoraciones ?? 0;
 
     // 3. Citas proximas
     const { count: upcomingAppointments, error: aError } = await db
@@ -316,7 +321,8 @@ export const clinicalApi = {
 
     return {
       totalPatients: totalPatients || 0,
-      recentSessions: recentSessions || 0,
+      monthSessions,
+      monthValoraciones,
       upcomingAppointments: upcomingAppointments || 0,
       latestActivity: (latestAppts || []) as ClinicStats['latestActivity']
     };

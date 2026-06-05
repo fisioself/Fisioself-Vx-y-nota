@@ -132,7 +132,11 @@ export interface ClinicStatsActivityItem {
 
 export interface ClinicStats {
   totalPatients: number;
-  recentSessions: number;
+  // Sesiones y valoraciones del MES EN CURSO (mes calendario), con la regla
+  // canonica de Finanzas: excluye canceladas y cortesias, y separa la
+  // valoracion (color morado 9/1) de la sesion de tratamiento.
+  monthSessions: number;
+  monthValoraciones: number;
   upcomingAppointments: number;
   latestActivity: ClinicStatsActivityItem[];
 }

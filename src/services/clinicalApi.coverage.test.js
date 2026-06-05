@@ -225,18 +225,29 @@ describe('clinicalApi.addSessionNote', () => {
 
 describe('clinicalApi.getClinicStats', () => {
   it('agrega conteos y actividad reciente', async () => {
-    // 4 llamadas a from(): 3 conteos + 1 lista de actividad.
+    // Ahora: from() se llama 3 veces (totalPatients, upcoming, actividad) y las
+    // sesiones/valoraciones del mes vienen de la RPC finance_appt_stats.
     const from = vi
       .fn()
       .mockReturnValueOnce(makeChain({ count: 10, error: null })) // totalPatients
-      .mockReturnValueOnce(makeChain({ count: 5, error: null })) // recentSessions
       .mockReturnValueOnce(makeChain({ count: 3, error: null })) // upcoming
       .mockReturnValueOnce(makeChain({ data: [{ id: 'a1', title: 'Cita' }], error: null }));
-    const { clinicalApi } = await loadApi(from);
+    const rpc = vi
+      .fn()
+      .mockResolvedValue({ data: { currentMonth: { sessions: 5, valoraciones: 2 } }, error: null });
+    vi.resetModules();
+    vi.doMock('../lib/supabaseClient.js', () => ({
+      isSupabaseConfigured: true,
+      supabase: { from, rpc },
+      assertSupabase: () => ({ from, rpc })
+    }));
+    const { clinicalApi } = await import('./clinicalApi');
     const stats = await clinicalApi.getClinicStats();
+    expect(rpc).toHaveBeenCalledWith('finance_appt_stats', { p_months_back: 1 });
     expect(stats).toMatchObject({
       totalPatients: 10,
-      recentSessions: 5,
+      monthSessions: 5,
+      monthValoraciones: 2,
       upcomingAppointments: 3
     });
     expect(stats.latestActivity).toHaveLength(1);

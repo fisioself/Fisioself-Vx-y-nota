@@ -85,8 +85,12 @@ export function ClinicDashboard({ onPatientSelect }: ClinicDashboardProps) {
           <strong>{stats.totalPatients}</strong>
         </div>
         <div className="card" style={{ background: 'var(--bg-sunken)' }}>
-          <span>Sesiones (Ult. 30 dias)</span>
-          <strong>{stats.recentSessions}</strong>
+          <span>Sesiones (este mes)</span>
+          <strong>{stats.monthSessions}</strong>
+        </div>
+        <div className="card" style={{ background: 'var(--bg-sunken)' }}>
+          <span>Valoraciones (este mes)</span>
+          <strong style={{ color: '#8e44ad' }}>{stats.monthValoraciones}</strong>
         </div>
         <div className="card">
           <span>Citas Pendientes</span>
