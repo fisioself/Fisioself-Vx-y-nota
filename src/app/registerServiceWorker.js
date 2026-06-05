@@ -1,5 +1,3 @@
-import { reportError } from '../lib/sentry.js';
-
 export const registerServiceWorker = () => {
   if (!('serviceWorker' in navigator)) return;
 
@@ -22,8 +20,10 @@ export const registerServiceWorker = () => {
         console.info('[SW] Registrado con exito:', registration.scope);
       })
       .catch((err) => {
-        console.warn('[SW] Registro fallido:', err.message);
-        reportError(err, { context: 'service_worker_registration' });
+        // El error "Rejected" ocurre durante el ciclo normal de actualización
+        // del SW (Chrome lo lanza cuando hay un SW en espera). Es transitorio
+        // y no afecta a los usuarios, así que solo lo logueamos en consola.
+        console.warn('[SW] Registro fallido (transitorio):', err.message);
       });
   });
 };
