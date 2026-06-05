@@ -30,6 +30,16 @@ export const monthLabel = (ym: string) => {
   return MONTH_ABBR[Number(m) - 1] ?? ym;
 };
 
+// Etiqueta completa "junio 2026" a partir de 'YYYY-MM'. Usada en el historial
+// mensual detallado y en el nombre del archivo exportado.
+export const monthYearLabel = (ym: string) => {
+  const [y, m] = ym.split('-').map(Number);
+  if (!y || !m) return ym;
+  return new Intl.DateTimeFormat('es-MX', { month: 'long', year: 'numeric' }).format(
+    new Date(y, m - 1, 1)
+  );
+};
+
 // Fecha de hoy en CDMX (no UTC): de noche en CDMX, toISOString() daría el día siguiente.
 export const today = () =>
   new Intl.DateTimeFormat('en-CA', {
