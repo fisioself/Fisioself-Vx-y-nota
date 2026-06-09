@@ -35,6 +35,19 @@ function buildSentryConfig(Sentry) {
     tracesSampleRate: 0,
     replaysSessionSampleRate: 0,
     replaysOnErrorSampleRate: 0,
+    // Ruido benigno que no representa un fallo accionable: conexiones abortadas
+    // cuando el usuario cierra/navega o el Service Worker se actualiza. Filtrarlo
+    // evita llenar el buzón de alertas y consumir la cuota del plan gratuito.
+    ignoreErrors: [
+      'AbortError',
+      'The connection was closed',
+      'The user aborted a request',
+      /^Rejected$/,
+      'ResizeObserver loop',
+      'Load failed',
+      'Failed to fetch',
+      'NetworkError when attempting to fetch resource'
+    ],
     integrations: [
       Sentry.browserTracingIntegration({ enableInp: false }),
       Sentry.breadcrumbsIntegration({
