@@ -108,12 +108,12 @@ Configurar en Vercel, no en el codigo:
 ```text
 VITE_SUPABASE_URL
 VITE_SUPABASE_ANON_KEY
-VITE_CLAUDE_PROXY_URL
+VITE_AI_PROXY_URL
 VITE_GOOGLE_CALENDAR_CONNECT_URL
 VITE_GOOGLE_CALENDAR_SYNC_URL
 ```
 
-`VITE_CLAUDE_PROXY_URL` debe apuntar a la URL publica de la Supabase Edge Function `clinical-ai`.
+`VITE_AI_PROXY_URL` debe apuntar a la URL publica de la Supabase Edge Function `clinical-ai`.
 
 Las variables de Google Calendar deben apuntar a las funciones:
 

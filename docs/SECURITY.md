@@ -19,7 +19,7 @@ Frontend publico:
 ```text
 VITE_SUPABASE_URL
 VITE_SUPABASE_ANON_KEY
-VITE_CLAUDE_PROXY_URL
+VITE_AI_PROXY_URL
 ```
 
 Servidor / Supabase Edge Functions:
