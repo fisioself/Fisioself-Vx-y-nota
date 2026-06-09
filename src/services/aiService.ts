@@ -2,7 +2,7 @@ import { assertSupabase } from '../lib/supabaseClient';
 import { getErrorMessage } from '../shared/errors';
 import type { AiType } from '../features/session-notes/types';
 
-const proxyUrl = import.meta.env.VITE_CLAUDE_PROXY_URL as string | undefined;
+const proxyUrl = import.meta.env.VITE_AI_PROXY_URL as string | undefined;
 
 export const AI_TYPES: AiType[] = [
   { id: 'soap', label: 'Formatear SOAP', traceable: false },
@@ -18,7 +18,7 @@ export const isAiConfigured = Boolean(proxyUrl);
 
 const buildAiConfigError = (): Error & { code: string } => {
   const error = new Error(
-    'IA no configurada. Define VITE_CLAUDE_PROXY_URL apuntando a la funcion segura clinical-ai.'
+    'IA no configurada. Define VITE_AI_PROXY_URL apuntando a la funcion segura clinical-ai.'
   ) as Error & { code: string };
   error.code = 'AI_NOT_CONFIGURED';
   return error;

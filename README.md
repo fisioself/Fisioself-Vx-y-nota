@@ -40,12 +40,12 @@ Configurar en local y en deploy:
 ```text
 VITE_SUPABASE_URL=
 VITE_SUPABASE_ANON_KEY=
-VITE_CLAUDE_PROXY_URL=
+VITE_AI_PROXY_URL=
 VITE_GOOGLE_CALENDAR_CONNECT_URL=
 VITE_GOOGLE_CALENDAR_SYNC_URL=
 ```
 
-`VITE_CLAUDE_PROXY_URL` debe apuntar a la Edge Function `clinical-ai`.
+`VITE_AI_PROXY_URL` debe apuntar a la Edge Function `clinical-ai`.
 
 ## Desarrollo local
 

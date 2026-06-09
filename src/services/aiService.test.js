@@ -11,7 +11,7 @@ afterEach(() => {
 // Carga aiService con el proxy configurado y supabase mockeado (con sesión).
 const loadAiMocked = async ({ auth, proxyUrl = 'https://example.com/clinical-ai' } = {}) => {
   vi.resetModules();
-  vi.stubEnv('VITE_CLAUDE_PROXY_URL', proxyUrl);
+  vi.stubEnv('VITE_AI_PROXY_URL', proxyUrl);
   vi.doMock('../lib/supabaseClient.js', () => ({
     isSupabaseConfigured: true,
     supabase: { auth },
@@ -72,7 +72,7 @@ describe('aiService', () => {
     vi.resetModules();
     vi.stubEnv('VITE_SUPABASE_URL', 'https://demo.supabase.co');
     vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'anon-key');
-    vi.stubEnv('VITE_CLAUDE_PROXY_URL', 'https://example.com/clinical-ai');
+    vi.stubEnv('VITE_AI_PROXY_URL', 'https://example.com/clinical-ai');
     const fetchSpy = vi.spyOn(globalThis, 'fetch');
     const { aiService: configuredAiService } = await import('./aiService.js');
 
