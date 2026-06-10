@@ -569,9 +569,10 @@ export const financeApi = {
       unwrap<Array<{ amount: number; paid_at: string; patient_id: string; method: string }>>(
         payRes
       );
-    const expenses = unwrap<
-      Array<{ amount: number; spent_at: string; category: string; payment_id: string | null }>
-    >(expRes);
+    const expenses =
+      unwrap<
+        Array<{ amount: number; spent_at: string; category: string; payment_id: string | null }>
+      >(expRes);
     const patients = unwrap<Array<{ id: string; full_name: string }>>(patRes);
     const cajaMovements = unwrap<Array<{ amount: number; method: string }>>(cajaRes);
     const nameById = new Map(patients.map((p) => [p.id, p.full_name]));
