@@ -32,6 +32,7 @@ const streamResponse = (chunks) => {
     ok: true,
     body: {
       getReader: () => ({
+        cancel: vi.fn().mockResolvedValue(undefined),
         read: vi.fn(async () => {
           if (i < chunks.length) {
             const value = enc.encode(chunks[i]);
@@ -149,5 +150,19 @@ describe('aiService.transform streaming', () => {
     await expect(ai.transform({ text: 'nota', type: 'soap' })).rejects.toThrow(
       /no devolvio contenido/i
     );
+  });
+
+  it('lanza mensaje claro cuando el fetch es abortado por timeout (AbortError)', async () => {
+    const abortError = new DOMException('The operation was aborted.', 'AbortError');
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(abortError));
+    const { aiService: ai } = await loadAiMocked({ auth: sessionAuth() });
+    await expect(ai.transform({ text: 'nota', type: 'soap' })).rejects.toThrow(/>30 s/i);
+  });
+
+  it('propaga errores de red que no son AbortError', async () => {
+    const netError = new TypeError('Failed to fetch');
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(netError));
+    const { aiService: ai } = await loadAiMocked({ auth: sessionAuth() });
+    await expect(ai.transform({ text: 'nota', type: 'soap' })).rejects.toThrow(/error de red/i);
   });
 });
