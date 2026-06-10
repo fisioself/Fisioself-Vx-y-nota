@@ -211,7 +211,9 @@ const importConnection = async (
 
     const { data: existingAppt } = await supabase
       .from('appointments')
-      .select('id')
+      .select(
+        'id, title, starts_at, ends_at, google_html_link, sync_status, color_id, session_type'
+      )
       .eq('google_event_id', event.id as string)
       .limit(1);
 
@@ -222,19 +224,49 @@ const importConnection = async (
       // para no recrear fichas duplicadas que el usuario ya fusionó.
       // El trigger handle_appointment_autosync hace un PATCH de vuelta a Google
       // (no-op en tiempos) pero NO genera bucle: solo toca sync_status/google_*.
-      await supabase
-        .from('appointments')
-        .update({
-          title: displayName,
-          starts_at: startsAt,
-          ends_at: endsAt,
-          google_html_link: event.htmlLink as string | undefined,
-          sync_status: 'synced',
-          color_id: colorId,
-          session_type: resolveSessionType(colorId ?? undefined),
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', existingAppt[0].id);
+      const cur = existingAppt[0] as {
+        id: string;
+        title: string | null;
+        starts_at: string;
+        ends_at: string;
+        google_html_link: string | null;
+        sync_status: string | null;
+        color_id: string | null;
+        session_type: string | null;
+      };
+      const newHtmlLink = (event.htmlLink as string | undefined) ?? null;
+      const newSessionType = resolveSessionType(colorId ?? undefined);
+      // IMPORTANTE: solo escribimos si algo cambió de verdad. Antes se hacía un
+      // UPDATE incondicional (con updated_at = now()) en CADA ciclo de sync, así
+      // que ~2400 citas se reescribían una y otra vez, disparando el trigger de
+      // auditoría y llenando audit_log (207k filas / 407 MB en 3 semanas). Las
+      // fechas se comparan como instante (no string) para ignorar formato/zona.
+      const sameTime =
+        new Date(cur.starts_at).getTime() === new Date(startsAt).getTime() &&
+        new Date(cur.ends_at).getTime() === new Date(endsAt).getTime();
+      const unchanged =
+        cur.title === displayName &&
+        sameTime &&
+        (cur.google_html_link ?? null) === newHtmlLink &&
+        cur.sync_status === 'synced' &&
+        (cur.color_id ?? null) === (colorId ?? null) &&
+        cur.session_type === newSessionType;
+
+      if (!unchanged) {
+        await supabase
+          .from('appointments')
+          .update({
+            title: displayName,
+            starts_at: startsAt,
+            ends_at: endsAt,
+            google_html_link: newHtmlLink ?? undefined,
+            sync_status: 'synced',
+            color_id: colorId,
+            session_type: newSessionType,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', cur.id);
+      }
       syncedCount++;
       continue;
     }
