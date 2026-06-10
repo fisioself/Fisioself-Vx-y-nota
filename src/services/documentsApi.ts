@@ -27,6 +27,15 @@ export const validateUploadFile = (file: { name: string; type: string; size: num
     );
   }
   const type = file.type || '';
+  // Los SVG son "imágenes" (pasarían el prefijo image/) pero pueden contener
+  // <script> ejecutable. Si se abren desde su URL firmada, se ejecutaría JS.
+  // Se rechazan por MIME y por extensión (el type del navegador puede venir vacío).
+  const ext = file.name.includes('.')
+    ? file.name.slice(file.name.lastIndexOf('.') + 1).toLowerCase()
+    : '';
+  if (type === 'image/svg+xml' || ext === 'svg') {
+    throw new Error('Por seguridad no se permiten archivos SVG. Sube PNG, JPG o PDF.');
+  }
   const ok =
     ALLOWED_MIME_TYPES.includes(type) || ALLOWED_MIME_PREFIXES.some((p) => type.startsWith(p));
   if (!ok) {

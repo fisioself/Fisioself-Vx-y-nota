@@ -86,6 +86,34 @@ describe('documentsApi.upload validación de archivo', () => {
     expect(upload).not.toHaveBeenCalled();
   });
 
+  it('rechaza SVG por MIME (image/svg+xml) por riesgo de XSS', async () => {
+    const upload = vi.fn();
+    const storageFrom = vi.fn(() => ({ upload }));
+    const { documentsApi } = await loadApi({ from: vi.fn(), storage: { from: storageFrom } });
+
+    await expect(
+      documentsApi.upload({
+        patientId: 'p1',
+        file: fakeFile('logo.svg', 'image/svg+xml', 100)
+      })
+    ).rejects.toThrow(/SVG/i);
+    expect(upload).not.toHaveBeenCalled();
+  });
+
+  it('rechaza SVG por extensión aunque el type venga vacío', async () => {
+    const upload = vi.fn();
+    const storageFrom = vi.fn(() => ({ upload }));
+    const { documentsApi } = await loadApi({ from: vi.fn(), storage: { from: storageFrom } });
+
+    await expect(
+      documentsApi.upload({
+        patientId: 'p1',
+        file: fakeFile('disfrazado.SVG', '', 100)
+      })
+    ).rejects.toThrow(/SVG/i);
+    expect(upload).not.toHaveBeenCalled();
+  });
+
   it('acepta imágenes por prefijo de tipo (image/*)', async () => {
     vi.spyOn(crypto, 'randomUUID').mockReturnValue('img-1');
     const upload = vi.fn().mockResolvedValue({ error: null });

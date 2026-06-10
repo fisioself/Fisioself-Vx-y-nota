@@ -4,6 +4,7 @@ import type { Session } from '@supabase/supabase-js';
 import { authService } from './services/authService';
 import { isSupabaseConfigured } from './lib/supabaseClient';
 import { draftStorage } from './shared/draftStorage';
+import { clearPersistedQueryCache } from './lib/offlineSync';
 import { setUser as sentrySetUser, clearUser as sentryClearUser } from './lib/sentry';
 import { AppLogo } from './components/AppLogo';
 import type { Patient } from './types/clinical';
@@ -165,6 +166,10 @@ export function App() {
   const logout = async () => {
     await authService.signOut();
     draftStorage.clearAll();
+    // Vacía el caché de React Query (memoria + IndexedDB) para no dejar datos
+    // clínicos de pacientes legibles en el navegador tras cerrar sesión.
+    queryClient.clear();
+    await clearPersistedQueryCache();
     sentryClearUser();
     setSelectedPatient(null);
     setShowFinance(false);
