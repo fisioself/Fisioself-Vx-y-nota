@@ -3,6 +3,7 @@ import { getErrorMessage } from '../shared/errors';
 import type { AiType } from '../features/session-notes/types';
 
 const proxyUrl = import.meta.env.VITE_AI_PROXY_URL as string | undefined;
+const AI_TIMEOUT_MS = 30_000;
 
 export const AI_TYPES: AiType[] = [
   { id: 'soap', label: 'Formatear SOAP', traceable: false },
@@ -42,25 +43,44 @@ export const aiService = {
     const token = sessionData.session?.access_token;
     if (!token) throw new Error('Inicia sesion antes de usar IA.');
 
-    const response = await fetch(proxyUrl, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ text, type })
-    }).catch((err: unknown) => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), AI_TIMEOUT_MS);
+
+    let response: Response;
+    try {
+      response = await fetch(proxyUrl, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ text, type }),
+        signal: controller.signal
+      });
+    } catch (err: unknown) {
+      clearTimeout(timeoutId);
+      if ((err as { name?: string })?.name === 'AbortError') {
+        throw new Error('La IA tardó demasiado (>30 s). Inténtalo de nuevo.');
+      }
       throw new Error(`Error de red al conectar con IA: ${getErrorMessage(err, 'desconocido')}`);
-    });
+    }
 
     if (!response.ok) {
+      clearTimeout(timeoutId);
       const data = (await response.json().catch(() => ({}))) as { error?: string };
       throw new Error(data.error || `IA respondio ${response.status}`);
     }
 
-    if (!response.body) throw new Error('La IA no devolvio un stream.');
+    if (!response.body) {
+      clearTimeout(timeoutId);
+      throw new Error('La IA no devolvio un stream.');
+    }
 
     const reader = response.body.getReader();
+    // Si el timeout dispara durante la lectura del stream, cancela el reader.
+    const abortReader = () => reader.cancel().catch(() => {});
+    controller.signal.addEventListener('abort', abortReader, { once: true });
+
     const decoder = new TextDecoder('utf-8');
     let output = '';
     // Buffer entre lecturas: `reader.read()` devuelve trozos arbitrarios y una
@@ -86,18 +106,28 @@ export const aiService = {
       }
     };
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
 
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      // Conserva el último segmento (posiblemente incompleto) para el próximo read.
-      buffer = lines.pop() ?? '';
-      for (const line of lines) processLine(line);
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        // Conserva el último segmento (posiblemente incompleto) para el próximo read.
+        buffer = lines.pop() ?? '';
+        for (const line of lines) processLine(line);
+      }
+      // Procesa cualquier resto que no terminara en salto de línea.
+      if (buffer) processLine(buffer);
+    } catch (err: unknown) {
+      if (controller.signal.aborted) {
+        throw new Error('La IA tardó demasiado (>30 s). Inténtalo de nuevo.');
+      }
+      throw err;
+    } finally {
+      clearTimeout(timeoutId);
+      controller.signal.removeEventListener('abort', abortReader);
     }
-    // Procesa cualquier resto que no terminara en salto de línea.
-    if (buffer) processLine(buffer);
 
     if (!output.trim()) throw new Error('La IA no devolvio contenido.');
     return output;
