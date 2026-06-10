@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { get, set, del } from 'idb-keyval';
-import { createIDBPersister } from './offlineSync';
+import { createIDBPersister, clearPersistedQueryCache } from './offlineSync';
 
 vi.mock('idb-keyval', () => ({
   get: vi.fn(),
@@ -35,5 +35,17 @@ describe('createIDBPersister', () => {
     const persister = createIDBPersister('otra');
     await persister.removeClient();
     expect(del).toHaveBeenCalledWith('otra');
+  });
+});
+
+describe('clearPersistedQueryCache', () => {
+  it('borra el caché de PHI persistido con la clave por defecto', async () => {
+    await clearPersistedQueryCache();
+    expect(del).toHaveBeenCalledWith('reactQuery');
+  });
+
+  it('acepta una clave personalizada', async () => {
+    await clearPersistedQueryCache('otraClave');
+    expect(del).toHaveBeenCalledWith('otraClave');
   });
 });
