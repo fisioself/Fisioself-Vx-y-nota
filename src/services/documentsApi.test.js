@@ -114,7 +114,25 @@ describe('documentsApi.upload validación de archivo', () => {
     expect(upload).not.toHaveBeenCalled();
   });
 
-  it('acepta imágenes por prefijo de tipo (image/*)', async () => {
+  it('rechaza documentos de Word (solo imágenes y PDF permitidos)', async () => {
+    const upload = vi.fn();
+    const storageFrom = vi.fn(() => ({ upload }));
+    const { documentsApi } = await loadApi({ from: vi.fn(), storage: { from: storageFrom } });
+
+    await expect(
+      documentsApi.upload({
+        patientId: 'p1',
+        file: fakeFile(
+          'informe.docx',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          5000
+        )
+      })
+    ).rejects.toThrow(/no permitido/i);
+    expect(upload).not.toHaveBeenCalled();
+  });
+
+  it('acepta imágenes de los tipos permitidos (image/png)', async () => {
     vi.spyOn(crypto, 'randomUUID').mockReturnValue('img-1');
     const upload = vi.fn().mockResolvedValue({ error: null });
     const storageFrom = vi.fn(() => ({ upload }));

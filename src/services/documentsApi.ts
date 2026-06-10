@@ -3,16 +3,19 @@ import { assertSupabase } from '../lib/supabaseClient';
 
 const BUCKET = 'patient-files';
 
-// Límite de tamaño y tipos permitidos para documentos clínicos. Evita llenar el
-// bucket con archivos enormes y rechaza tipos que no tienen sentido en un
-// expediente (ejecutables, etc.). Si necesitas otro tipo, agrégalo aquí.
+// Tipos permitidos para documentos clínicos: EXACTAMENTE los mismos que acepta
+// el bucket patient-files y el selector de archivos (PatientDocuments.tsx). Las
+// tres listas deben coincidir; si no, un archivo pasa la validación del cliente
+// y el bucket lo rechaza después ("subió pero falló"). Solo imágenes y PDF.
 export const MAX_FILE_BYTES = 15 * 1024 * 1024; // 15 MB (igual que el límite del bucket)
-export const ALLOWED_MIME_PREFIXES = ['image/'];
+export const ALLOWED_MIME_PREFIXES: string[] = [];
 export const ALLOWED_MIME_TYPES = [
-  'application/pdf',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
-  'text/plain'
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/heic',
+  'image/heif',
+  'application/pdf'
 ];
 
 const prettyMB = (bytes: number): string => `${Math.round(bytes / (1024 * 1024))} MB`;
@@ -39,7 +42,9 @@ export const validateUploadFile = (file: { name: string; type: string; size: num
   const ok =
     ALLOWED_MIME_TYPES.includes(type) || ALLOWED_MIME_PREFIXES.some((p) => type.startsWith(p));
   if (!ok) {
-    throw new Error('Tipo de archivo no permitido. Sube PDF, imágenes o documentos de Word/texto.');
+    throw new Error(
+      'Tipo de archivo no permitido. Sube una imagen (JPG, PNG, WEBP, HEIC) o un PDF.'
+    );
   }
 };
 
