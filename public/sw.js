@@ -1,5 +1,12 @@
 // Classic Service Worker — no ES module imports, no CDN dependencies
-const CACHE_NAME = 'fisioself-notas-vx-v14';
+// __BUILD_ID__ lo reemplaza scripts/stamp-sw.mjs tras `vite build` con un id
+// único por deploy, así el navegador detecta SIEMPRE una versión nueva del SW.
+// Antes el número de versión se subía a mano ('...-v14') y, si alguien lo
+// olvidaba en un deploy, sw.js quedaba byte-idéntico, el navegador no detectaba
+// actualización y la PWA instalada se quedaba con el bundle viejo. En desarrollo
+// el SW se desregistra (ver registerServiceWorker.js), así que el placeholder
+// literal nunca llega a usarse sin estampar.
+const CACHE_NAME = 'fisioself-notas-vx-__BUILD_ID__';
 const APP_SHELL = ['/', '/index.html', '/manifest.webmanifest'];
 const DB_NAME = 'fisioself-sync-db';
 const STORE_NAME = 'sync-queue';
@@ -46,7 +53,12 @@ function idbDelete(db, id) {
 // ---- Lifecycle ----
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));
-  self.skipWaiting();
+  // A propósito NO llamamos self.skipWaiting() aquí: dejamos que el SW nuevo
+  // espere en estado "waiting" para que la app muestre el banner "Actualizar
+  // ahora" (useSwUpdate) y sea el usuario quien decida cuándo recargar — así no
+  // interrumpimos a alguien a media nota clínica. El skipWaiting se dispara vía
+  // el mensaje SKIP_WAITING cuando el usuario toca el botón. Si nunca lo toca,
+  // el SW nuevo activa solo en el próximo arranque en frío de la app.
 });
 
 self.addEventListener('activate', (event) => {

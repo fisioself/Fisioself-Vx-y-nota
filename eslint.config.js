@@ -86,5 +86,15 @@ export default [
         ...globals.es2024
       }
     }
+  },
+  {
+    // Scripts de build/CI que corren en Node (no en el navegador).
+    files: ['scripts/**/*.{js,mjs}'],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+        ...globals.es2024
+      }
+    }
   }
 ];
