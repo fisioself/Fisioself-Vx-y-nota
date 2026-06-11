@@ -7,6 +7,7 @@ import { draftStorage } from './shared/draftStorage';
 import { clearPersistedQueryCache } from './lib/offlineSync';
 import { setUser as sentrySetUser, clearUser as sentryClearUser } from './lib/sentry';
 import { AppLogo } from './components/AppLogo';
+import { PushNotificationButton } from './features/notifications/PushNotificationButton';
 import type { Patient } from './types/clinical';
 
 interface LoginScreenProps {
@@ -248,6 +249,7 @@ export function App() {
         </div>
         <div className="hero-actions">
           <span className="pill">{session.user?.email}</span>
+          {session.user?.id && <PushNotificationButton userId={session.user.id} />}
           <button type="button" className="secondary" onClick={() => setShowMfaSettings(true)}>
             Seguridad
           </button>
