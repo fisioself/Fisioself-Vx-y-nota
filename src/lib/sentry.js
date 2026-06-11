@@ -128,10 +128,3 @@ export function clearUser() {
     Sentry.setUser(null);
   });
 }
-
-// Test-only hook to reset internal state between cases. Not part of the public
-// surface; if you find yourself reaching for it in app code, that is a smell.
-export function __resetSentryForTests() {
-  sentryModulePromise = null;
-  sentryReady = null;
-}
