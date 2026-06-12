@@ -16,7 +16,11 @@ type CajaEntry = {
   label: string;
   sublabel: string;
   method: string;
+  // Fecha que se MUESTRA (la que el usuario eligió para el movimiento/cobro).
   date: string;
+  // Fecha/hora de CAPTURA (created_at). Es la que define el orden del historial:
+  // el último registrado va arriba, sin importar la fecha que se le haya puesto.
+  createdAt: string;
   amount: number;
   raw: PaymentWithPatient | CajaMovement;
 };
@@ -36,6 +40,9 @@ export function CajaPanel({ caja }: CajaPanelProps) {
   const [description, setDescription] = useState('');
   const [occurredAt, setOccurredAt] = useState(today());
   const [busy, setBusy] = useState(false);
+  // El historial muestra solo los últimos 4 movimientos por defecto; el resto
+  // se despliega bajo demanda para no llenar la pantalla con decenas de filas.
+  const [showAllHistory, setShowAllHistory] = useState(false);
 
   const { data: movements = [] } = useQuery({
     queryKey: ['caja-movements'],
@@ -84,6 +91,7 @@ export function CajaPanel({ caja }: CajaPanelProps) {
         sublabel: sessionTypeOf(p) ?? 'Cobro',
         method: p.method,
         date: p.paid_at,
+        createdAt: p.created_at ?? p.paid_at,
         amount: displayAmt,
         raw: p
       };
@@ -95,14 +103,21 @@ export function CajaPanel({ caja }: CajaPanelProps) {
       sublabel: '',
       method: m.method,
       date: m.occurred_at,
+      createdAt: m.created_at ?? m.occurred_at,
       amount: Number(m.amount),
       raw: m
     }))
   ].sort((a, b) => {
-    const ka = sortKey(a.date);
-    const kb = sortKey(b.date);
+    // Orden por captura real (created_at): el último registrado arriba. Así un
+    // movimiento que se registra hoy pero se fecha en un día pasado igual aparece
+    // al principio, en el orden en que realmente se fue capturando.
+    const ka = sortKey(a.createdAt);
+    const kb = sortKey(b.createdAt);
     return ka < kb ? 1 : ka > kb ? -1 : 0;
   });
+
+  const HISTORY_PREVIEW = 4;
+  const visibleEntries = showAllHistory ? entries : entries.slice(0, HISTORY_PREVIEW);
 
   const submit = async () => {
     const value = Math.abs(Number(amount));
@@ -259,7 +274,7 @@ export function CajaPanel({ caja }: CajaPanelProps) {
         </span>
       </div>
       <ul className="list-stack" style={{ marginTop: 8, listStyle: 'none', padding: 0 }}>
-        {entries.map((e) => {
+        {visibleEntries.map((e) => {
           const positive = e.amount >= 0;
           return (
             <li
@@ -314,6 +329,18 @@ export function CajaPanel({ caja }: CajaPanelProps) {
         })}
         {entries.length === 0 && <p className="muted">Aún no hay cobros ni ajustes de caja.</p>}
       </ul>
+
+      {entries.length > HISTORY_PREVIEW && (
+        <button
+          type="button"
+          className="secondary"
+          onClick={() => setShowAllHistory((v) => !v)}
+          aria-expanded={showAllHistory}
+          style={{ width: '100%', marginTop: 10 }}
+        >
+          {showAllHistory ? 'Ver menos' : `Ver historial completo (${entries.length} movimientos)`}
+        </button>
+      )}
     </section>
   );
 }
