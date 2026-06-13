@@ -2,6 +2,13 @@ import { useState } from 'react';
 import type { TimelineEntry } from '../../types/clinical';
 import './ClinicalTimeline.css';
 
+const fmtDate = (iso: string) =>
+  new Date(iso.length === 10 ? `${iso}T12:00:00` : iso).toLocaleDateString('es-MX', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  });
+
 const typeLabels: Record<TimelineEntry['type'], string> = {
   evaluation: 'Valoracion',
   session_note: 'Nota',
@@ -40,13 +47,23 @@ export function ClinicalTimeline({ items = [] }: ClinicalTimelineProps) {
                 <span className="timeline-type">{typeLabels[item.type] || item.type}</span>
               </div>
               <p className="muted">
-                {item.date ? new Date(item.date).toLocaleDateString() : 'Sin fecha'}
+                {item.date ? fmtDate(item.date) : 'Sin fecha'}
               </p>
               <p>{item.description}</p>
             </div>
           </article>
         ))}
-        {!items.length && <p className="muted">Aun no hay actividad clinica para mostrar.</p>}
+        {!items.length && (
+          <div style={{ textAlign: 'center', padding: '28px 0', opacity: 0.5 }}>
+            <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/>
+              <rect x="9" y="3" width="6" height="4" rx="1"/>
+              <line x1="9" y1="12" x2="15" y2="12"/>
+              <line x1="9" y1="16" x2="13" y2="16"/>
+            </svg>
+            <p className="muted" style={{ margin: '8px 0 0' }}>Aún no hay actividad clínica registrada.</p>
+          </div>
+        )}
       </div>
 
       {!expanded && hasMore && (

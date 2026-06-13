@@ -4,7 +4,9 @@
   display: grid;
   place-items: center;
   padding: 20px;
-  background: rgba(18, 55, 42, 0.42);
+  background: rgba(18, 55, 42, 0.28);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   z-index: 950;
 }
 

@@ -46,6 +46,11 @@ export const useDictation = (
 
       mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
+        if (audioBlob.size > 9.5 * 1024 * 1024) {
+          onError?.('Audio demasiado largo (límite ~10 MB). Graba segmentos más cortos.');
+          stream.getTracks().forEach((track) => track.stop());
+          return;
+        }
         await transcribeAudio(audioBlob);
         stream.getTracks().forEach((track) => track.stop());
       };
