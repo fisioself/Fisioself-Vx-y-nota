@@ -183,7 +183,7 @@ export const PatientRecord = memo(function PatientRecord({
           <button
             type="button"
             className="secondary"
-            onClick={() => exportToPdf(current, timeline)}
+            onClick={() => exportToPdf(current)}
           >
             Exportar PDF
           </button>
