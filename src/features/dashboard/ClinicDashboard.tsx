@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { clinicalApi } from '../../services/clinicalApi';
 import { calendarService } from '../../services/calendarService';
@@ -10,18 +9,11 @@ interface ClinicDashboardProps {
 }
 
 export function ClinicDashboard({ onPatientSelect }: ClinicDashboardProps) {
-  const [calStatus, setCalStatus] = useState({ loading: true, connected: false });
-
-  useEffect(() => {
-    calendarService
-      .getConnectionStatus()
-      .then((res) => {
-        setCalStatus({ loading: false, connected: res.connected });
-      })
-      .catch(() => {
-        setCalStatus({ loading: false, connected: false });
-      });
-  }, []);
+  const { data: calStatus, isLoading: calLoading } = useQuery({
+    queryKey: ['calendar-connection'],
+    queryFn: () => calendarService.getConnectionStatus(),
+    retry: false
+  });
 
   const {
     data: stats,
@@ -62,11 +54,11 @@ export function ClinicDashboard({ onPatientSelect }: ClinicDashboardProps) {
 
         {/* The NativeCalendar inherits the dark background nicely or can be overridden via css if needed */}
         <div style={{ background: 'white', borderRadius: '18px', padding: '4px' }}>
-          {calStatus.loading ? (
+          {calLoading ? (
             <p style={{ padding: '20px', textAlign: 'center', color: '#666', margin: 0 }}>
               Comprobando conexión con Google...
             </p>
-          ) : calStatus.connected ? (
+          ) : calStatus?.connected ? (
             <NativeCalendar onEventClick={onPatientSelect} />
           ) : (
             <p style={{ padding: '20px', textAlign: 'center', color: '#666', margin: 0 }}>

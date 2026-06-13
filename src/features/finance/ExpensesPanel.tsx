@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { financeApi } from '../../services/financeApi';
 import { useToast } from '../../app/ToastProvider';
-import { EXPENSE_CATEGORIES, money, today } from './financeUtils';
+import { EXPENSE_CATEGORIES, fmtDate, money, today } from './financeUtils';
 
 export function ExpensesPanel() {
   const queryClient = useQueryClient();
@@ -116,7 +116,7 @@ export function ExpensesPanel() {
                 {e.category}
               </strong>
               <span className="muted" style={{ fontSize: '0.85rem' }}>
-                {e.description || 'Sin descripción'} · {e.spent_at}
+                {e.description || 'Sin descripción'} · {fmtDate(e.spent_at ?? '')}
               </span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

@@ -16,6 +16,7 @@ export default defineConfig({
           // configured. Forcing it into a named chunk here would make it
           // eager and defeat the lazy load.
           if (id.includes('@sentry')) return undefined;
+          if (id.includes('@fullcalendar')) return 'vendor-calendar';
           if (id.includes('@supabase')) return 'vendor-supabase';
           if (id.includes('posthog-js')) return 'vendor-posthog';
           if (id.includes('react-markdown') || id.includes('remark-') || id.includes('micromark')) {
