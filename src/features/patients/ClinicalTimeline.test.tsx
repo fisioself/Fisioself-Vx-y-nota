@@ -16,7 +16,7 @@ const makeItems = (n: number): TimelineEntry[] =>
 describe('ClinicalTimeline', () => {
   it('muestra mensaje vacío sin items', () => {
     render(<ClinicalTimeline items={[]} />);
-    expect(screen.getByText(/aun no hay actividad clinica/i)).toBeInTheDocument();
+    expect(screen.getByText(/no hay actividad/i)).toBeInTheDocument();
   });
 
   it('muestra solo los primeros 2 items cuando hay más', () => {
