@@ -250,7 +250,13 @@ export function AppointmentChargeModal({
         queryClient.invalidateQueries({ queryKey: ['active-packages', patientId] }),
         queryClient.invalidateQueries({ queryKey: ['finance-global'] }),
         queryClient.invalidateQueries({ queryKey: ['caja-payments'] }),
-        queryClient.invalidateQueries({ queryKey: ['patient-finance', patientId] })
+        queryClient.invalidateQueries({ queryKey: ['patient-finance', patientId] }),
+        // Un cobro con tarjeta inserta un gasto de comisión y mueve la caja; sin
+        // estas dos, ExpensesPanel y el historial de caja quedaban desfasados.
+        queryClient.invalidateQueries({ queryKey: ['expenses'] }),
+        queryClient.invalidateQueries({ queryKey: ['caja-movements'] }),
+        // El cobro marca la cita como atendida → refresca los KPIs del panel.
+        queryClient.invalidateQueries({ queryKey: ['clinic-stats'] })
       ]);
       notify({ tone: 'success', message: 'Cobro registrado.' });
       onClose();
@@ -280,7 +286,13 @@ export function AppointmentChargeModal({
         queryClient.invalidateQueries({ queryKey: ['active-packages', patientId] }),
         queryClient.invalidateQueries({ queryKey: ['finance-global'] }),
         queryClient.invalidateQueries({ queryKey: ['caja-payments'] }),
-        queryClient.invalidateQueries({ queryKey: ['patient-finance', patientId] })
+        queryClient.invalidateQueries({ queryKey: ['patient-finance', patientId] }),
+        // Un cobro con tarjeta inserta un gasto de comisión y mueve la caja; sin
+        // estas dos, ExpensesPanel y el historial de caja quedaban desfasados.
+        queryClient.invalidateQueries({ queryKey: ['expenses'] }),
+        queryClient.invalidateQueries({ queryKey: ['caja-movements'] }),
+        // El cobro marca la cita como atendida → refresca los KPIs del panel.
+        queryClient.invalidateQueries({ queryKey: ['clinic-stats'] })
       ]);
       notify({ tone: 'success', message: 'Cobro eliminado.' });
     } catch (err) {
@@ -302,7 +314,13 @@ export function AppointmentChargeModal({
         queryClient.invalidateQueries({ queryKey: ['active-packages', patientId] }),
         queryClient.invalidateQueries({ queryKey: ['finance-global'] }),
         queryClient.invalidateQueries({ queryKey: ['caja-payments'] }),
-        queryClient.invalidateQueries({ queryKey: ['patient-finance', patientId] })
+        queryClient.invalidateQueries({ queryKey: ['patient-finance', patientId] }),
+        // Un cobro con tarjeta inserta un gasto de comisión y mueve la caja; sin
+        // estas dos, ExpensesPanel y el historial de caja quedaban desfasados.
+        queryClient.invalidateQueries({ queryKey: ['expenses'] }),
+        queryClient.invalidateQueries({ queryKey: ['caja-movements'] }),
+        // El cobro marca la cita como atendida → refresca los KPIs del panel.
+        queryClient.invalidateQueries({ queryKey: ['clinic-stats'] })
       ]);
       notify({ tone: 'success', message: 'Paquete eliminado.' });
     } catch (err) {

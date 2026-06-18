@@ -51,7 +51,17 @@ if (!rootElement) throw new Error('Root element #root not found in document.');
 createRoot(rootElement).render(
   <React.StrictMode>
     <ErrorBoundary>
-      <PersistQueryClientProvider client={queryClient} persistOptions={{ persister }}>
+      <PersistQueryClientProvider
+        client={queryClient}
+        persistOptions={{
+          persister,
+          // El caché persistido contiene PHI (nombres, notas, finanzas). Lo
+          // acotamos: maxAge limita cuánto vive en disco; buster lo descarta al
+          // publicar una versión nueva (evita PHI vieja/incompatible entre deploys).
+          maxAge: 1000 * 60 * 60 * 12,
+          buster: __BUILD_ID__
+        }}
+      >
         <ToastProvider>
           <AppRoot />
         </ToastProvider>

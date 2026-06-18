@@ -6,6 +6,11 @@ import react from '@vitejs/plugin-react';
 // bundles in the browser cache.
 export default defineConfig({
   plugins: [react()],
+  // ID de build único por deploy (sha de Vercel) para invalidar cachés que
+  // dependan de la versión, como el caché persistido de React Query (PHI).
+  define: {
+    __BUILD_ID__: JSON.stringify(process.env.VERCEL_GIT_COMMIT_SHA || 'dev')
+  },
   build: {
     rollupOptions: {
       output: {
