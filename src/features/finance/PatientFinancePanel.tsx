@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { financeApi } from '../../services/financeApi';
 import { useToast } from '../../app/ToastProvider';
 import { getErrorMessage } from '../../shared/errors';
+import { ConfirmDialog } from '../../components/ConfirmDialog';
 import type { Patient } from '../../types/clinical';
 import { money, netAfterCommission } from './financeUtils';
 
@@ -20,6 +21,10 @@ export function PatientFinancePanel({ patient }: PatientFinancePanelProps) {
   const [payAmount, setPayAmount] = useState('');
   const [payMethod, setPayMethod] = useState('efectivo');
   const [busy, setBusy] = useState(false);
+  // Guarda contra doble-clic en operaciones por fila (steppers / borrar): sin
+  // esto, dos clics rápidos disparaban dos writes sobre el mismo estado obsoleto.
+  const [pendingId, setPendingId] = useState<string | null>(null);
+  const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
 
   const { data: catalog = [] } = useQuery({
     queryKey: ['packages-catalog'],
@@ -45,7 +50,15 @@ export function PatientFinancePanel({ patient }: PatientFinancePanelProps) {
       return;
     }
     const totalAmount = customAmount !== '' ? Number(customAmount) : Number(chosen.price);
+    if (!Number.isFinite(totalAmount) || totalAmount < 0) {
+      notify({ tone: 'error', message: 'Indica un precio válido.' });
+      return;
+    }
     const initAmt = initPayAmount !== '' ? Number(initPayAmount) : totalAmount;
+    if (!Number.isFinite(initAmt) || initAmt < 0) {
+      notify({ tone: 'error', message: 'Indica un pago inicial válido.' });
+      return;
+    }
     setBusy(true);
     try {
       const created = await financeApi.addPatientPackage({
@@ -97,20 +110,28 @@ export function PatientFinancePanel({ patient }: PatientFinancePanelProps) {
   };
 
   const adjustSessions = async (id: string, used: number) => {
+    if (pendingId) return;
+    setPendingId(id);
     try {
       await financeApi.setSessionsUsed(id, used);
       refresh();
     } catch (err) {
       notify({ tone: 'error', message: getErrorMessage(err, 'No se pudo actualizar sesiones.') });
+    } finally {
+      setPendingId(null);
     }
   };
 
   const removePackage = async (id: string) => {
+    setPendingId(id);
     try {
       await financeApi.deletePatientPackage(id);
       refresh();
     } catch (err) {
       notify({ tone: 'error', message: getErrorMessage(err, 'No se pudo eliminar.') });
+    } finally {
+      setPendingId(null);
+      setConfirmRemoveId(null);
     }
   };
 
@@ -134,11 +155,11 @@ export function PatientFinancePanel({ patient }: PatientFinancePanelProps) {
           </div>
           <div className="card" style={{ background: 'var(--bg-sunken)' }}>
             <span>Pagado</span>
-            <strong style={{ color: '#1f9d57' }}>{money(finance.totalPaid)}</strong>
+            <strong style={{ color: 'var(--income)' }}>{money(finance.totalPaid)}</strong>
           </div>
           <div className="card">
             <span>Saldo</span>
-            <strong style={{ color: finance.balance > 0 ? '#c0392b' : '#1f9d57' }}>
+            <strong style={{ color: finance.balance > 0 ? 'var(--expense)' : 'var(--income)' }}>
               {money(finance.balance)}
             </strong>
           </div>
@@ -234,7 +255,8 @@ export function PatientFinancePanel({ patient }: PatientFinancePanelProps) {
                     type="button"
                     className="secondary"
                     onClick={() => adjustSessions(p.id, p.sessions_used - 1)}
-                    disabled={p.sessions_used <= 0}
+                    disabled={p.sessions_used <= 0 || pendingId === p.id}
+                    aria-label="Quitar sesión usada"
                     title="Quitar sesión usada"
                   >
                     −
@@ -246,7 +268,8 @@ export function PatientFinancePanel({ patient }: PatientFinancePanelProps) {
                     type="button"
                     className="secondary"
                     onClick={() => adjustSessions(p.id, p.sessions_used + 1)}
-                    disabled={p.sessions_used >= p.sessions_total}
+                    disabled={p.sessions_used >= p.sessions_total || pendingId === p.id}
+                    aria-label="Marcar sesión usada"
                     title="Marcar sesión usada"
                   >
                     +
@@ -256,7 +279,9 @@ export function PatientFinancePanel({ patient }: PatientFinancePanelProps) {
               <button
                 type="button"
                 className="secondary"
-                onClick={() => removePackage(p.id)}
+                onClick={() => setConfirmRemoveId(p.id)}
+                disabled={pendingId === p.id}
+                aria-label="Eliminar paquete"
                 title="Eliminar"
               >
                 ✕
@@ -277,6 +302,7 @@ export function PatientFinancePanel({ patient }: PatientFinancePanelProps) {
           type="number"
           inputMode="decimal"
           placeholder="Abono $"
+          aria-label="Monto del abono"
           value={payAmount}
           onChange={(e) => setPayAmount(e.target.value)}
           style={{ maxWidth: 120 }}
@@ -295,11 +321,22 @@ export function PatientFinancePanel({ patient }: PatientFinancePanelProps) {
           Registrar abono
         </button>
         {payMethod === 'tarjeta' && Number(payAmount) > 0 && (
-          <span style={{ fontSize: '0.8rem', color: '#c0392b' }}>
+          <span style={{ fontSize: '0.8rem', color: 'var(--expense)' }}>
             Recibes {money(netAfterCommission(Number(payAmount)))} (−4.06 % comisión)
           </span>
         )}
       </div>
+
+      {confirmRemoveId && (
+        <ConfirmDialog
+          title="Eliminar paquete"
+          message="¿Eliminar este paquete/servicio del paciente? Esta acción no se puede deshacer."
+          confirmLabel="Eliminar"
+          busy={pendingId === confirmRemoveId}
+          onConfirm={() => removePackage(confirmRemoveId)}
+          onCancel={() => setConfirmRemoveId(null)}
+        />
+      )}
     </section>
   );
 }

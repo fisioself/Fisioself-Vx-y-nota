@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { financeApi } from '../../services/financeApi';
 import { useToast } from '../../app/ToastProvider';
+import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { EXPENSE_CATEGORIES, fmtDate, money, today } from './financeUtils';
 
 export function ExpensesPanel() {
@@ -12,6 +13,8 @@ export function ExpensesPanel() {
   const [amount, setAmount] = useState('');
   const [spentAt, setSpentAt] = useState(today());
   const [busy, setBusy] = useState(false);
+  const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [removing, setRemoving] = useState(false);
 
   const { data: expenses = [] } = useQuery({
     queryKey: ['expenses'],
@@ -25,7 +28,7 @@ export function ExpensesPanel() {
 
   const submit = async () => {
     const value = Number(amount);
-    if (!value || value <= 0) {
+    if (!Number.isFinite(value) || value <= 0) {
       notify({ tone: 'error', message: 'Indica un monto válido.' });
       return;
     }
@@ -44,11 +47,15 @@ export function ExpensesPanel() {
   };
 
   const remove = async (id: string) => {
+    setRemoving(true);
     try {
       await financeApi.deleteExpense(id);
       refresh();
     } catch {
       notify({ tone: 'error', message: 'No se pudo eliminar.' });
+    } finally {
+      setRemoving(false);
+      setConfirmId(null);
     }
   };
 
@@ -83,6 +90,7 @@ export function ExpensesPanel() {
         <input
           type="text"
           placeholder="Descripción (opcional)"
+          aria-label="Descripción del gasto"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
         />
@@ -90,10 +98,17 @@ export function ExpensesPanel() {
           type="number"
           inputMode="decimal"
           placeholder="Monto $"
+          aria-label="Monto del gasto"
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
         />
-        <input type="date" value={spentAt} onChange={(e) => setSpentAt(e.target.value)} />
+        <input
+          type="date"
+          value={spentAt}
+          max={today()}
+          aria-label="Fecha del gasto"
+          onChange={(e) => setSpentAt(e.target.value)}
+        />
         <button type="button" onClick={submit} disabled={busy}>
           {busy ? 'Guardando…' : 'Agregar gasto'}
         </button>
@@ -120,11 +135,13 @@ export function ExpensesPanel() {
               </span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <strong style={{ color: '#c0392b' }}>-{money(Number(e.amount))}</strong>
+              <strong style={{ color: 'var(--expense)' }}>-{money(Number(e.amount))}</strong>
               <button
                 type="button"
                 className="secondary"
-                onClick={() => remove(e.id)}
+                onClick={() => setConfirmId(e.id)}
+                disabled={removing && confirmId === e.id}
+                aria-label="Eliminar gasto"
                 title="Eliminar"
               >
                 ✕
@@ -134,6 +151,17 @@ export function ExpensesPanel() {
         ))}
         {expenses.length === 0 && <p className="muted">Aún no hay gastos registrados.</p>}
       </ul>
+
+      {confirmId && (
+        <ConfirmDialog
+          title="Eliminar gasto"
+          message="¿Eliminar este gasto registrado?"
+          confirmLabel="Eliminar"
+          busy={removing}
+          onConfirm={() => remove(confirmId)}
+          onCancel={() => setConfirmId(null)}
+        />
+      )}
     </section>
   );
 }

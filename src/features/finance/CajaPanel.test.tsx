@@ -159,6 +159,8 @@ describe('CajaPanel', () => {
     render(<CajaPanel caja={CAJA} />, { wrapper: makeWrapper() });
     const deleteBtn = await screen.findByTitle('Eliminar');
     await userEvent.click(deleteBtn);
+    // El borrado ahora pasa por un diálogo de confirmación.
+    await userEvent.click(await screen.findByRole('button', { name: /^Eliminar$/ }));
     await waitFor(() => {
       expect(financeApi.deleteCajaMovement).toHaveBeenCalledWith('mov-1');
     });

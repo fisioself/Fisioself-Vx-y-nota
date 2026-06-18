@@ -5,8 +5,18 @@ import { AppointmentForm } from './AppointmentForm';
 import { getErrorMessage } from '../../shared/errors';
 import { useToast } from '../../app/ToastProvider';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
+import { fmtDate } from '../finance/financeUtils';
 import type { Appointment, Patient } from '../../types/clinical';
 import './appointments.css';
+
+// Hora en CDMX, formato 24h (consistente con el resto de la app).
+const cdmxTime = (iso: string): string =>
+  new Date(iso).toLocaleTimeString('es-MX', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: 'America/Mexico_City'
+  });
 
 interface AppointmentListProps {
   patient: Patient;
@@ -56,15 +66,13 @@ export function AppointmentList({ patient, appointments = [], onChanged }: Appoi
       return;
     }
 
-    const date = new Date(appointment.starts_at).toLocaleDateString('es-ES', {
+    const date = new Date(appointment.starts_at).toLocaleDateString('es-MX', {
       weekday: 'long',
       day: 'numeric',
-      month: 'long'
+      month: 'long',
+      timeZone: 'America/Mexico_City'
     });
-    const time = new Date(appointment.starts_at).toLocaleTimeString('es-ES', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    const time = cdmxTime(appointment.starts_at);
 
     // Formatting the phone number: remove spaces and special characters. Assuming a country code is needed,
     // it's best if the user stores it with the country code. If not, this might need adjustment per region.
@@ -163,8 +171,8 @@ export function AppointmentList({ patient, appointments = [], onChanged }: Appoi
                 </div>
               </div>
               <p className="muted">
-                {new Date(appointment.starts_at).toLocaleString()}
-                {appointment.ends_at && ` - ${new Date(appointment.ends_at).toLocaleTimeString()}`}
+                {fmtDate(appointment.starts_at)}
+                {appointment.ends_at && ` - ${cdmxTime(appointment.ends_at)}`}
               </p>
               <p>{appointment.description || 'Sin notas adicionales'}</p>
             </article>

@@ -95,10 +95,20 @@ const unwrap = <T>({ data, error }: { data: unknown; error: unknown }): T => {
 const sum = (rows: Array<{ amount?: number | null }>, key: 'amount' = 'amount'): number =>
   rows.reduce((acc, r) => acc + Number(r[key] ?? 0), 0);
 
+// Redondea a 2 decimales para cerrar el error de coma flotante al acumular montos
+// (p. ej. comisiones de $13.53): así la UI y el CSV exportan 1726.92, no
+// 1726.9200000000001.
+const round2 = (n: number): number => Math.round(n * 100) / 100;
+
 // Toda fecha se interpreta en horario de CDMX (la base corre en UTC). Sin esto,
 // los cortes mensuales se desfasan hasta 6 h respecto a la función SQL.
 const CDMX_TZ = 'America/Mexico_City';
 const cdmxDay = (d: Date | string): string => {
+  // Una cadena solo-fecha (YYYY-MM-DD) YA representa un día de calendario CDMX:
+  // las columnas `date` de la BD y today() se escriben así. Parsearla con
+  // new Date() la interpreta como medianoche UTC y la corre al día anterior en
+  // CDMX (un pago del día 1 caía en el mes anterior). La devolvemos tal cual.
+  if (typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
   const date = typeof d === 'string' ? new Date(d) : d;
   // Defensa: una fecha inválida haría que Intl.format lance RangeError y tumbe
   // todo el cálculo del dashboard. Devolver '' la deja fuera de los buckets.
@@ -140,7 +150,14 @@ export const financeApi = {
     const packages = unwrap<PatientPackage[]>(pkgRes);
     const payments = unwrap<Payment[]>(payRes);
 
-    const totalBilled = packages.reduce((a, p) => a + Number(p.total_amount ?? 0), 0);
+    // Los abonos sueltos (sin patient_package_id) son cobros de servicios fuera de
+    // paquete: cuentan como facturado Y pagado a la vez. Si solo se sumaran a
+    // totalPaid, el saldo se volvía negativo (se mostraba "a favor" en verde).
+    const loosePaid = payments
+      .filter((p) => p.patient_package_id == null)
+      .reduce((a, p) => a + Number(p.amount ?? 0), 0);
+    const totalBilled =
+      packages.reduce((a, p) => a + Number(p.total_amount ?? 0), 0) + loosePaid;
     const totalPaid = sum(payments);
     const sessionsTotal = packages.reduce((a, p) => a + Number(p.sessions_total ?? 0), 0);
     const sessionsUsed = packages.reduce((a, p) => a + Number(p.sessions_used ?? 0), 0);
@@ -582,8 +599,10 @@ export const financeApi = {
     const curMonthKey = cdmxDay(now).slice(0, 7); // 'YYYY-MM' en CDMX
     const [cy, cm] = curMonthKey.split('-').map(Number);
     const prevMonthKey = `${cm === 1 ? cy - 1 : cy}-${String(cm === 1 ? 12 : cm - 1).padStart(2, '0')}`;
-    // Últimos 30 días: comparación por instante (independiente de zona horaria).
-    const since30 = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    // Últimos 30 días por DÍA de calendario CDMX. Antes se comparaba un instante
+    // (since30) contra paid_at (date-only → medianoche UTC), lo que excluía el día
+    // borde más antiguo y usaba una ventana distinta a la de sesiones/pacientes.
+    const since30Day = cdmxDay(new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000));
 
     // Ingresos / gastos por mes
     const incomeByMonth = new Map<string, number>();
@@ -608,14 +627,14 @@ export const financeApi = {
     const monthly: MonthlyPoint[] = Array.from(monthSet)
       .sort()
       .map((m) => {
-        const income = incomeByMonth.get(m) ?? 0;
-        const exp = expenseByMonth.get(m) ?? 0;
+        const income = round2(incomeByMonth.get(m) ?? 0);
+        const exp = round2(expenseByMonth.get(m) ?? 0);
         const a = apptByMonth.get(m);
         return {
           month: m,
           income,
           expenses: exp,
-          net: income - exp,
+          net: round2(income - exp),
           patients: a?.patients ?? 0,
           sessions: a?.sessions ?? 0,
           newPatients: a?.newPatients ?? 0,
@@ -639,12 +658,12 @@ export const financeApi = {
       valoraciones: appt.currentMonth?.valoraciones ?? 0
     };
 
-    // Periodo: últimos 30 días
+    // Periodo: últimos 30 días (comparación lexicográfica de fechas CDMX solo-fecha)
     const d30Income = payments
-      .filter((p) => new Date(p.paid_at) >= since30)
+      .filter((p) => cdmxDay(p.paid_at) >= since30Day)
       .reduce((a, p) => a + Number(p.amount ?? 0), 0);
     const d30Expense = expenses
-      .filter((e) => new Date(e.spent_at) >= since30)
+      .filter((e) => cdmxDay(e.spent_at) >= since30Day)
       .reduce((a, e) => a + Number(e.amount ?? 0), 0);
     const last30d: PeriodSummary = {
       income: d30Income,

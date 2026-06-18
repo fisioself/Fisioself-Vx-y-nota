@@ -8,6 +8,7 @@ import {
   type PaymentWithPatient
 } from '../../services/financeApi';
 import { useToast } from '../../app/ToastProvider';
+import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { fmtDate, methodLabel, money, netAfterCommission, today } from './financeUtils';
 
 type CajaEntry = {
@@ -43,6 +44,9 @@ export function CajaPanel({ caja }: CajaPanelProps) {
   // El historial muestra solo los últimos 4 movimientos por defecto; el resto
   // se despliega bajo demanda para no llenar la pantalla con decenas de filas.
   const [showAllHistory, setShowAllHistory] = useState(false);
+  // Confirmación + guarda contra doble-clic al eliminar (borra dinero de caja).
+  const [confirmEntry, setConfirmEntry] = useState<CajaEntry | null>(null);
+  const [removing, setRemoving] = useState(false);
 
   const { data: movements = [] } = useQuery({
     queryKey: ['caja-movements'],
@@ -151,6 +155,7 @@ export function CajaPanel({ caja }: CajaPanelProps) {
   };
 
   const remove = async (entry: CajaEntry) => {
+    setRemoving(true);
     try {
       if (entry.kind === 'movement') {
         await financeApi.deleteCajaMovement(entry.id);
@@ -160,6 +165,9 @@ export function CajaPanel({ caja }: CajaPanelProps) {
       refresh();
     } catch {
       notify({ tone: 'error', message: 'No se pudo eliminar.' });
+    } finally {
+      setRemoving(false);
+      setConfirmEntry(null);
     }
   };
 
@@ -185,7 +193,7 @@ export function CajaPanel({ caja }: CajaPanelProps) {
         </div>
         <div className="card">
           <span>Total en caja</span>
-          <strong style={{ color: '#1f9d57' }}>{money(caja?.total ?? 0)}</strong>
+          <strong style={{ color: 'var(--income)' }}>{money(caja?.total ?? 0)}</strong>
         </div>
       </div>
 
@@ -202,7 +210,9 @@ export function CajaPanel({ caja }: CajaPanelProps) {
               className={sign === 'in' ? '' : 'secondary'}
               style={{
                 flex: 1,
-                ...(sign === 'in' ? { background: '#1f9d57', borderColor: '#1f9d57' } : {})
+                ...(sign === 'in'
+                  ? { background: 'var(--income)', borderColor: 'var(--income)' }
+                  : {})
               }}
             >
               + Ingreso
@@ -214,7 +224,9 @@ export function CajaPanel({ caja }: CajaPanelProps) {
               className={sign === 'out' ? '' : 'secondary'}
               style={{
                 flex: 1,
-                ...(sign === 'out' ? { background: '#c0392b', borderColor: '#c0392b' } : {})
+                ...(sign === 'out'
+                  ? { background: 'var(--expense)', borderColor: 'var(--expense)' }
+                  : {})
               }}
             >
               − Gasto
@@ -252,6 +264,8 @@ export function CajaPanel({ caja }: CajaPanelProps) {
             <input
               type="date"
               value={occurredAt}
+              max={today()}
+              aria-label="Fecha del movimiento"
               onChange={(e) => setOccurredAt(e.target.value)}
               style={{ flex: '1 1 140px', minWidth: 0 }}
             />
@@ -311,14 +325,21 @@ export function CajaPanel({ caja }: CajaPanelProps) {
                 </span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-                <strong style={{ color: positive ? '#1f9d57' : '#c0392b', whiteSpace: 'nowrap' }}>
+                <strong
+                  style={{
+                    color: positive ? 'var(--income)' : 'var(--expense)',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
                   {positive ? '+' : '−'}
                   {money(Math.abs(e.amount))}
                 </strong>
                 <button
                   type="button"
                   className="secondary"
-                  onClick={() => remove(e)}
+                  onClick={() => setConfirmEntry(e)}
+                  disabled={removing && confirmEntry?.id === e.id}
+                  aria-label="Eliminar movimiento"
                   title="Eliminar"
                 >
                   ✕
@@ -340,6 +361,21 @@ export function CajaPanel({ caja }: CajaPanelProps) {
         >
           {showAllHistory ? 'Ver menos' : `Ver historial completo (${entries.length} movimientos)`}
         </button>
+      )}
+
+      {confirmEntry && (
+        <ConfirmDialog
+          title="Eliminar movimiento"
+          message={
+            confirmEntry.kind === 'payment'
+              ? '¿Eliminar este cobro? Se borrará el pago del paciente y su comisión asociada.'
+              : '¿Eliminar este ajuste manual de caja?'
+          }
+          confirmLabel="Eliminar"
+          busy={removing}
+          onConfirm={() => remove(confirmEntry)}
+          onCancel={() => setConfirmEntry(null)}
+        />
       )}
     </section>
   );
