@@ -50,8 +50,8 @@ Deno.serve(async (req: Request) => {
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-  // Verify x-push-secret against integration_config (same pattern as gcal_autosync_secret)
   if (pushSecretHeader) {
+    // Verify x-push-secret against integration_config (same pattern as gcal_autosync_secret)
     const { data: configRow } = await supabase
       .from('integration_config')
       .select('value')
@@ -60,6 +60,24 @@ Deno.serve(async (req: Request) => {
 
     if (!configRow || configRow.value !== pushSecretHeader) {
       return jsonResponse(req, 401, { error: 'Invalid push secret' });
+    }
+  } else {
+    // Rama de llamada directa con JWT: ANTES solo se comprobaba que el header
+    // existiera, sin validarlo — cualquier string permitía mandar notificaciones
+    // arbitrarias a cualquier user_id. Ahora se valida el token y se exige un
+    // usuario clínico activo (admin/therapist) antes de continuar.
+    const token = authHeader!.replace(/^Bearer\s+/i, '');
+    const { data: userData, error: userError } = await supabase.auth.getUser(token);
+    if (userError || !userData.user) {
+      return jsonResponse(req, 401, { error: 'Invalid session' });
+    }
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role, active')
+      .eq('id', userData.user.id)
+      .single();
+    if (!profile?.active || !['admin', 'therapist'].includes(profile.role)) {
+      return jsonResponse(req, 403, { error: 'Not authorized to send push' });
     }
   }
 

@@ -63,6 +63,23 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Paridad con clinical-ai: exige membresía de clínica activa. Un perfil con
+    // rol clínico pero sin membresía (p. ej. dado de baja) no debe consumir la
+    // API de transcripción (costo + procesa voz del paciente = PHI).
+    const { data: membership } = await supabase
+      .from('clinic_memberships')
+      .select('clinic_id')
+      .eq('user_id', userData.user.id)
+      .eq('active', true)
+      .limit(1)
+      .maybeSingle();
+    if (!membership) {
+      return new Response(JSON.stringify({ error: 'No tienes acceso a una clinica activa' }), {
+        status: 403,
+        headers: { ...buildCorsHeaders(req), 'Content-Type': 'application/json' }
+      });
+    }
+
     // Rate limit por usuario (misma función que clinical-ai). Evita abuso de la
     // API de transcripción, que tiene costo por uso.
     const { data: rateRows, error: rateError } = await supabase.rpc('check_ai_rate_limit', {
@@ -123,11 +140,26 @@ Deno.serve(async (req) => {
       body: openaiFormData
     });
 
-    const data = await response.json();
+    // No reenviamos el JSON crudo de Groq al cliente: ante un error del upstream
+    // podría filtrar detalles internos (cuota, configuración). Registramos el
+    // error server-side y devolvemos un mensaje genérico; en éxito solo el texto.
+    if (!response.ok) {
+      const errBody = await response.json().catch(() => ({}));
+      console.error('whisper_upstream_failed', {
+        status: response.status,
+        error: (errBody as { error?: { message?: string } })?.error?.message || 'unknown'
+      });
+      return new Response(JSON.stringify({ error: 'No se pudo transcribir el audio' }), {
+        status: response.status >= 500 ? 502 : response.status,
+        headers: { ...buildCorsHeaders(req), 'Content-Type': 'application/json' }
+      });
+    }
 
-    return new Response(JSON.stringify(data), {
+    const data = (await response.json()) as { text?: string };
+
+    return new Response(JSON.stringify({ text: data.text ?? '' }), {
       headers: { ...buildCorsHeaders(req), 'Content-Type': 'application/json' },
-      status: response.status
+      status: 200
     });
   } catch (error) {
     console.error('whisper_failed', error);

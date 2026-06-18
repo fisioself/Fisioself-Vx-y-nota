@@ -1,0 +1,46 @@
+# Configuración versionada de las Edge Functions.
+#
+# `verify_jwt` controla si el gateway de Supabase valida un JWT antes de invocar
+# la función. Antes no estaba versionado: la postura dependía de configuración
+# manual en el dashboard y podía quedar mal tras un redeploy. Aquí queda fija y
+# reproducible. Todas las funciones hacen además su propia validación de auth.
+#
+# verify_jwt = true  → llamadas desde el cliente con JWT de usuario (se valida en
+#                       el gateway y además dentro de la función).
+# verify_jwt = false → la función usa su propio secreto/HMAC o es un callback de
+#                       OAuth (Google no envía JWT de Supabase). El gateway NO
+#                       debe exigir JWT o rompería el flujo.
+
+project_id = "fisioself-notas-vx"
+
+# --- Llamadas desde el cliente (JWT de usuario) ---
+[functions.clinical-ai]
+verify_jwt = true
+
+[functions.whisper-transcribe]
+verify_jwt = true
+
+[functions.google-calendar-connect]
+verify_jwt = true
+
+# --- Secreto propio / HMAC / OAuth callback (sin JWT de Supabase) ---
+[functions.google-calendar-callback]
+verify_jwt = false
+
+[functions.google-calendar-sync]
+verify_jwt = false
+
+[functions.google-calendar-delete]
+verify_jwt = false
+
+[functions.google-calendar-fetch]
+verify_jwt = false
+
+[functions.monthly-finance-report]
+verify_jwt = false
+
+[functions.send-push]
+verify_jwt = false
+
+[functions.sentry-to-github]
+verify_jwt = false

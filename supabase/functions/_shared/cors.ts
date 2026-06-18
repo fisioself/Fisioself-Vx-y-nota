@@ -11,7 +11,11 @@ export const buildCorsHeaders = (req: Request) => {
   const env = (Deno.env.get('ENVIRONMENT') || '').toLowerCase();
   const isDevEnv = env === 'development' || env === 'dev' || env === 'local';
   const isAllowed = allowed.includes(origin) || (isDevEnv && origin.startsWith('http://localhost'));
-  const allowOrigin = isAllowed ? origin : allowed[0] || 'null';
+  // Si el origen no está permitido caemos al primer origen de la allowlist. Como
+  // último recurso (APP_ORIGIN sin configurar) usamos un sentinel que ningún
+  // navegador acepta como origen real — NO 'null', que es tratado como válido en
+  // contextos sandbox (iframes, file://, data:) y abriría CORS no deseado.
+  const allowOrigin = isAllowed ? origin : allowed[0] || 'https://invalid.invalid';
 
   return {
     'Access-Control-Allow-Origin': allowOrigin,
