@@ -234,6 +234,10 @@ export const PatientRecord = memo(function PatientRecord({
 
       {showEvaluation && (
         <EvaluationForm
+          // key por paciente: fuerza remount al cambiar de paciente para que el
+          // borrador (lazy-init desde draftKey) se recargue correctamente y no
+          // se "filtre" el del paciente anterior a la nueva draftKey.
+          key={current?.id}
           patient={current}
           onCancel={() => setShowEvaluation(false)}
           onCreated={() => {

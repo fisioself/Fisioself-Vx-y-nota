@@ -29,10 +29,14 @@ interface TransformParams {
   text: string;
   type: string;
   onChunk?: (accumulated: string) => void;
+  // Señal externa para cancelar (p. ej. al desmontar el editor o lanzar otra
+  // consulta): aborta el fetch y la lectura del stream para no escribir en
+  // estado viejo de un componente que ya cambió.
+  signal?: AbortSignal;
 }
 
 export const aiService = {
-  async transform({ text, type, onChunk }: TransformParams): Promise<string> {
+  async transform({ text, type, onChunk, signal }: TransformParams): Promise<string> {
     if (!text?.trim()) throw new Error('Escribe una nota primero.');
     if (!AI_TYPES.some((item) => item.id === type)) throw new Error('Tipo de IA invalido.');
     if (!proxyUrl) throw buildAiConfigError();
@@ -45,6 +49,12 @@ export const aiService = {
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), AI_TIMEOUT_MS);
+    // Enlaza la señal externa con el controller interno (que también cubre el
+    // timeout): si el caller aborta, se cancela igual que un timeout.
+    if (signal) {
+      if (signal.aborted) controller.abort();
+      else signal.addEventListener('abort', () => controller.abort(), { once: true });
+    }
 
     let response: Response;
     try {

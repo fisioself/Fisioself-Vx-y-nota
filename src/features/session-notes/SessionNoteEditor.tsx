@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useToast } from '../../app/ToastProvider';
@@ -149,12 +149,25 @@ export function SessionNoteEditor({
     }
   );
 
+  const aiAbortRef = useRef<AbortController | null>(null);
+
+  // Al desmontar (cerrar el editor), aborta cualquier consulta IA en curso para
+  // que sus onChunk no escriban en estado de un componente que ya no existe.
+  useEffect(() => {
+    return () => aiAbortRef.current?.abort();
+  }, []);
+
   const executeAi = async (type: AiType) => {
     setAiBusy(true);
     setError('');
 
     const startText = rawText;
     const prefix = type.id === 'soap' ? '' : `${startText}\n\n---\n## ${type.label}\n`;
+
+    // Cancela una consulta previa en vuelo y crea un controller para esta.
+    aiAbortRef.current?.abort();
+    const controller = new AbortController();
+    aiAbortRef.current = controller;
 
     if (type.traceable) {
       setPendingConsult({
@@ -163,15 +176,18 @@ export function SessionNoteEditor({
         input: rawText,
         output: ''
       });
-    } else {
-      setRawText(prefix);
-      setIsDirty(true);
     }
+    // Para SOAP el prefix es '' (reemplaza la nota). ANTES se hacía
+    // setRawText(prefix) aquí, borrando el textarea ANTES de la llamada: si la
+    // IA fallaba, la nota quedaba vacía y perdida. Ahora NO tocamos el texto
+    // hasta que llega el primer chunk (onChunk reconstruye prefix+acumulado),
+    // así un fallo previo al primer chunk deja la nota original intacta.
 
     try {
       await aiService.transform({
         text: startText,
         type: type.id,
+        signal: controller.signal,
         onChunk: (accumulatedText: string) => {
           if (type.traceable) {
             setPendingConsult((current) =>
@@ -188,14 +204,23 @@ export function SessionNoteEditor({
         notify({ tone: 'success', message: `${type.label} aplicado.` });
       }
     } catch (err) {
+      // Si esta consulta fue abortada (otra la reemplazó o se desmontó), no
+      // tocamos nada: el dueño actual del texto es la nueva consulta.
+      if (controller.signal.aborted) return;
       const message = getErrorMessage(err, 'No se pudo usar IA.');
       setError(message);
       notify({ tone: 'error', message });
       if (type.traceable) {
         setPendingConsult(null);
+      } else {
+        // Restaura el texto que tenía la nota antes de la consulta fallida.
+        setRawText(startText);
       }
     } finally {
-      setAiBusy(false);
+      if (aiAbortRef.current === controller) {
+        aiAbortRef.current = null;
+        setAiBusy(false);
+      }
     }
   };
 
