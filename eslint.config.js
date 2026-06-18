@@ -88,8 +88,8 @@ export default [
     }
   },
   {
-    // Scripts de build/CI que corren en Node (no en el navegador).
-    files: ['scripts/**/*.{js,mjs}'],
+    // Scripts de build/CI y archivos de configuración que corren en Node.
+    files: ['scripts/**/*.{js,mjs}', '*.config.{js,mjs}'],
     languageOptions: {
       globals: {
         ...globals.node,

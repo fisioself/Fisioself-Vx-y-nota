@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { clinicalApi } from '../../services/clinicalApi';
 import { useToast } from '../../app/ToastProvider';
 import { getErrorMessage } from '../../shared/errors';
+import { useModalA11y } from '../../shared/useModalA11y';
 import { VALORACION_COLOR_ID } from '../../services/sessionColors';
 import type { Patient } from '../../types/clinical';
 import './AppointmentCreateModal.css';
@@ -43,6 +44,7 @@ const normName = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLow
 export function AppointmentCreateModal({ slot, onClose }: AppointmentCreateModalProps) {
   const { notify } = useToast();
   const queryClient = useQueryClient();
+  const dialogRef = useModalA11y<HTMLDivElement>(onClose);
 
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
@@ -172,6 +174,8 @@ export function AppointmentCreateModal({ slot, onClose }: AppointmentCreateModal
     <div
       className="appt-create-backdrop"
       role="presentation"
+      ref={dialogRef}
+      tabIndex={-1}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}

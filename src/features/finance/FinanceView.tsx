@@ -19,7 +19,12 @@ export function FinanceView(_props: FinanceViewProps) {
   const [query, setQuery] = useState('');
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
 
-  const { data: summary, isLoading } = useQuery({
+  const {
+    data: summary,
+    isLoading,
+    isError,
+    refetch
+  } = useQuery({
     queryKey: ['finance-global'],
     queryFn: () => financeApi.getGlobalFinance(12)
   });
@@ -66,6 +71,16 @@ export function FinanceView(_props: FinanceViewProps) {
           </div>
           <Skeleton width="100%" height={180} radius={14} style={{ marginTop: 16 }} />
           <span className="sr-only">Cargando finanzas…</span>
+        </section>
+      ) : isError ? (
+        <section className="card" role="alert">
+          <h2>Error al cargar las finanzas</h2>
+          <p className="muted">
+            No se pudieron obtener los datos financieros. Revisa tu conexión e inténtalo de nuevo.
+          </p>
+          <button type="button" onClick={() => refetch()}>
+            Reintentar
+          </button>
         </section>
       ) : (
         <>
@@ -125,16 +140,16 @@ export function FinanceView(_props: FinanceViewProps) {
             >
               <div className="card">
                 <span>Ingresos</span>
-                <strong style={{ color: '#1f9d57' }}>{money(cm?.income ?? 0)}</strong>
+                <strong style={{ color: 'var(--income)' }}>{money(cm?.income ?? 0)}</strong>
                 <GrowthBadge value={summary?.growth.income ?? null} />
               </div>
               <div className="card">
                 <span>Gastos</span>
-                <strong style={{ color: '#c0392b' }}>{money(cm?.expenses ?? 0)}</strong>
+                <strong style={{ color: 'var(--expense)' }}>{money(cm?.expenses ?? 0)}</strong>
               </div>
               <div className="card">
                 <span>Ganancia neta</span>
-                <strong style={{ color: (cm?.net ?? 0) >= 0 ? '#1f9d57' : '#c0392b' }}>
+                <strong style={{ color: (cm?.net ?? 0) >= 0 ? 'var(--income)' : 'var(--expense)' }}>
                   {money(cm?.net ?? 0)}
                 </strong>
               </div>
@@ -149,7 +164,7 @@ export function FinanceView(_props: FinanceViewProps) {
               </div>
               <div className="card" style={{ background: 'var(--bg-sunken)' }}>
                 <span>Valoraciones</span>
-                <strong style={{ color: '#8e44ad' }}>{cm?.valoraciones ?? 0}</strong>
+                <strong style={{ color: 'var(--valoracion)' }}>{cm?.valoraciones ?? 0}</strong>
               </div>
             </div>
           </section>
@@ -168,15 +183,15 @@ export function FinanceView(_props: FinanceViewProps) {
             >
               <div className="card">
                 <span>Ingresos</span>
-                <strong style={{ color: '#1f9d57' }}>{money(d30?.income ?? 0)}</strong>
+                <strong style={{ color: 'var(--income)' }}>{money(d30?.income ?? 0)}</strong>
               </div>
               <div className="card">
                 <span>Gastos</span>
-                <strong style={{ color: '#c0392b' }}>{money(d30?.expenses ?? 0)}</strong>
+                <strong style={{ color: 'var(--expense)' }}>{money(d30?.expenses ?? 0)}</strong>
               </div>
               <div className="card">
                 <span>Ganancia neta</span>
-                <strong style={{ color: (d30?.net ?? 0) >= 0 ? '#1f9d57' : '#c0392b' }}>
+                <strong style={{ color: (d30?.net ?? 0) >= 0 ? 'var(--income)' : 'var(--expense)' }}>
                   {money(d30?.net ?? 0)}
                 </strong>
               </div>
@@ -190,7 +205,7 @@ export function FinanceView(_props: FinanceViewProps) {
               </div>
               <div className="card" style={{ background: 'var(--bg-sunken)' }}>
                 <span>Valoraciones</span>
-                <strong style={{ color: '#8e44ad' }}>{d30?.valoraciones ?? 0}</strong>
+                <strong style={{ color: 'var(--valoracion)' }}>{d30?.valoraciones ?? 0}</strong>
               </div>
             </div>
           </section>
@@ -223,7 +238,7 @@ export function FinanceView(_props: FinanceViewProps) {
               <GroupedBarChart
                 data={patientsChart}
                 seriesA={{ label: 'Atendidos', color: '#2980b9' }}
-                seriesB={{ label: 'Nuevos', color: '#8e44ad' }}
+                seriesB={{ label: 'Nuevos', color: 'var(--valoracion)' }}
               />
             </div>
           </section>
@@ -262,7 +277,7 @@ export function FinanceView(_props: FinanceViewProps) {
                     <span style={{ opacity: 0.6, marginRight: 6 }}>{i + 1}.</span>
                     {t.fullName}
                   </button>
-                  <strong style={{ color: '#1f9d57' }}>{money(t.paid)}</strong>
+                  <strong style={{ color: 'var(--income)' }}>{money(t.paid)}</strong>
                 </li>
               ))}
               {summary && summary.topPatients.length === 0 && (
@@ -310,7 +325,7 @@ export function FinanceView(_props: FinanceViewProps) {
                       />
                       {c.category}
                     </span>
-                    <strong style={{ color: '#c0392b' }}>-{money(c.amount)}</strong>
+                    <strong style={{ color: 'var(--expense)' }}>-{money(c.amount)}</strong>
                   </li>
                 ))}
               </ul>
