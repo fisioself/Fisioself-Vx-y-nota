@@ -14,6 +14,18 @@
   --hero-gradient: linear-gradient(180deg, #f8f5ee 0%, #efe7d8 100%);
   --logo-gradient: linear-gradient(145deg, #0f3327, #1f5d45);
 
+  /* RGB del color primario para usar en rgba(): lo consumen .monthly-history-table
+     y .mini-table para sus bordes/hover. Sin esta variable el navegador descarta
+     esas reglas y las tablas quedaban sin separadores. */
+  --primary-rgb: 18, 55, 42;
+
+  /* Tokens semánticos de finanzas: antes estaban hardcodeados (#1f9d57, #c0392b…)
+     repetidos en JSX. Centralizarlos permite tema oscuro y consistencia. */
+  --success: #1f9d57;
+  --income: #1f9d57;
+  --expense: #c0392b;
+  --valoracion: #8e44ad;
+
   color-scheme: light;
   font-family:
     Inter,
@@ -41,7 +53,27 @@ html[data-theme='dark'] {
   --pill-bg: #1f3028;
   --hero-gradient: linear-gradient(180deg, #0b0f0e 0%, #0d1512 100%);
   --logo-gradient: linear-gradient(145deg, #1f5d45, var(--primary));
+  --primary-rgb: 31, 93, 69;
+  --success: #34d27f;
+  --income: #34d27f;
+  --expense: #e8675c;
+  --valoracion: #b07ad6;
   color-scheme: dark;
+}
+
+/* Tarjetas/píldoras con color claro fijo: en tema oscuro quedaban claro-sobre-claro.
+   Overrides solo-dark (no alteran el tema claro actual). */
+html[data-theme='dark'] .summary-grid div,
+html[data-theme='dark'] .ai-box {
+  background: var(--bg-sunken);
+  border-color: var(--border);
+}
+html[data-theme='dark'] .summary-grid span {
+  color: var(--muted);
+}
+html[data-theme='dark'] .pill {
+  background: var(--pill-bg);
+  color: var(--secondary-text);
 }
 
 * {
@@ -475,6 +507,34 @@ textarea {
   border-radius: 16px;
   padding: 14px;
   background: var(--bg-sunken);
+}
+/* Disposición "etiqueta a la izquierda · acción a la derecha" usada en muchas
+   filas de listas (caja, gastos, finanzas de paciente, documentos, papelera).
+   Antes se repetía como estilo inline en ~10 sitios. */
+.row-split {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+/* Toggle de cada nota/valoración: parece una fila de lista, no un botón sólido.
+   Sin esta clase heredaba el <button> verde global y rompía la estética. */
+.note-toggle {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  color: var(--primary);
+  padding: 4px 0;
+  font-weight: 800;
+  border-radius: 8px;
+}
+.note-toggle:hover {
+  opacity: 0.7;
+}
+.note-details {
+  margin-top: 10px;
+  display: grid;
+  gap: 8px;
 }
 .note-actions {
   justify-content: flex-end;
