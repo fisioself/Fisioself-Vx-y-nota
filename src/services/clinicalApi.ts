@@ -21,8 +21,15 @@ const unwrap = <T>({ data, error }: { data: unknown; error: unknown }): T => {
   return data as T;
 };
 
+// Normaliza para ordenar: una fecha solo-fecha (YYYY-MM-DD) se parsea como
+// medianoche UTC y quedaría intercalada de forma rara entre los created_at
+// (timestamps reales). La llevamos a mediodía local (igual que el display del
+// timeline) para que los eventos del mismo día queden agrupados de forma estable.
+const toTime = (d: string): number =>
+  new Date(/^\d{4}-\d{2}-\d{2}$/.test(d) ? `${d}T12:00:00` : d).getTime();
+
 const sortByDateDesc = (a: TimelineEntry, b: TimelineEntry): number =>
-  new Date(b.date).getTime() - new Date(a.date).getTime();
+  toTime(b.date) - toTime(a.date);
 
 export const clinicalApi = {
   async listPatients(): Promise<Patient[]> {

@@ -1,8 +1,11 @@
-// Devuelve la fecha local en formato YYYY-MM-DD sin desplazamientos de zona
-// horaria. Evita que un usuario en America vea la fecha del dia siguiente al
-// trabajar de noche.
-export const getLocalISODate = (date: Date = new Date()): string => {
-  const offset = date.getTimezoneOffset();
-  const localDate = new Date(date.getTime() - offset * 60 * 1000);
-  return localDate.toISOString().split('T')[0];
-};
+// Devuelve la fecha en formato YYYY-MM-DD en horario de la clínica (CDMX), no en
+// la zona del dispositivo. Antes usaba getTimezoneOffset() del navegador: en un
+// equipo fuera de UTC-6 (viaje, VPN) "hoy" divergía y una nota/fecha marcada hoy
+// en CDMX podía rechazarse como futura. Mismo criterio que financeUtils.today().
+export const getLocalISODate = (date: Date = new Date()): string =>
+  new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Mexico_City',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).format(date);

@@ -8,6 +8,7 @@ export const useDictation = (
   const [listening, setListening] = useState(false);
   const [processing, setProcessing] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -36,6 +37,7 @@ export const useDictation = (
   const startRecording = async (): Promise<void> => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
       chunksRef.current = [];
@@ -91,6 +93,13 @@ export const useDictation = (
       if (timerRef.current) {
         clearTimeout(timerRef.current);
       }
+      // Libera el micrófono si el editor se cierra mientras graba: antes solo se
+      // limpiaba el timer y el stream quedaba activo (indicador de micro encendido).
+      if (mediaRecorderRef.current?.state === 'recording') {
+        mediaRecorderRef.current.stop();
+      }
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
     };
   }, []);
 

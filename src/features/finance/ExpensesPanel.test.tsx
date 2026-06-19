@@ -97,6 +97,8 @@ describe('ExpensesPanel', () => {
     render(<ExpensesPanel />, { wrapper: makeWrapper() });
     const deleteBtn = await screen.findByTitle('Eliminar');
     await userEvent.click(deleteBtn);
+    // Ahora el borrado pasa por un diálogo de confirmación.
+    await userEvent.click(await screen.findByRole('button', { name: /^Eliminar$/ }));
     await waitFor(() => {
       expect(financeApi.deleteExpense).toHaveBeenCalledWith('exp-2');
     });

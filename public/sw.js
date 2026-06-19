@@ -173,7 +173,22 @@ self.addEventListener('fetch', (event) => {
 // desde un mensaje FLUSH_QUEUE que la app dispara al reconectar — esto último es
 // imprescindible porque iOS/Safari NO soporta Background Sync y, sin este camino,
 // las notas guardadas offline nunca se reenviaban solas.
+// Guarda de concurrencia: en iOS pueden llegar dos eventos 'online'/FLUSH_QUEUE
+// casi simultáneos. Sin esto, dos flushQueue corrían en paralelo, ambos leían
+// getAll() antes de borrar y reenviaban la misma nota dos veces (duplicado).
+let isFlushing = false;
+
 async function flushQueue() {
+  if (isFlushing) return;
+  isFlushing = true;
+  try {
+    await flushQueueInner();
+  } finally {
+    isFlushing = false;
+  }
+}
+
+async function flushQueueInner() {
   const db = await idbOpen();
   const allReqs = await idbGetAll(db);
   let synced = 0;

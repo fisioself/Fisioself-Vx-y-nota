@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getErrorMessage } from '../../shared/errors';
+import { useModalA11y } from '../../shared/useModalA11y';
 import type { AiConsultSavePayload, PendingConsult } from './types';
 import './AiConsultModal.css';
 
@@ -15,6 +16,7 @@ export function AiConsultModal({ consult, onClose, onSave }: AiConsultModalProps
   const [validationNotes, setValidationNotes] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const dialogRef = useModalA11y<HTMLDivElement>(() => onClose?.(), Boolean(consult));
 
   // El modal permanece montado en el editor (solo cambia `consult`). Sin esto,
   // la marca "revisé clínicamente" de una consulta previa persistiría en la
@@ -54,7 +56,7 @@ export function AiConsultModal({ consult, onClose, onSave }: AiConsultModalProps
   };
 
   return (
-    <div className="modal-backdrop" role="presentation">
+    <div className="modal-backdrop" role="presentation" ref={dialogRef} tabIndex={-1}>
       <section
         className="modal-card"
         role="dialog"

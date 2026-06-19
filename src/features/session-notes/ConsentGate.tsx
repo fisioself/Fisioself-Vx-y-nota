@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useModalA11y } from '../../shared/useModalA11y';
 
 interface ConsentGateProps {
   open: boolean;
@@ -19,19 +19,12 @@ export function ConsentGate({
   onAccept,
   onCancel
 }: ConsentGateProps) {
-  useEffect(() => {
-    if (open) {
-      document.body.style.overflow = 'hidden';
-      return () => {
-        document.body.style.overflow = '';
-      };
-    }
-  }, [open]);
+  const dialogRef = useModalA11y<HTMLDivElement>(onCancel, open);
 
   if (!open) return null;
 
   return (
-    <div className="modal-backdrop" role="presentation">
+    <div className="modal-backdrop" role="presentation" ref={dialogRef} tabIndex={-1}>
       <section
         className="modal-card"
         role="dialog"

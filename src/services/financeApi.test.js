@@ -60,9 +60,10 @@ describe('financeApi.getPatientFinance', () => {
         ]
       },
       payments: {
+        // Pagos de paquete: llevan patient_package_id (como en producción).
         rows: [
-          { id: 'p1', amount: 800 },
-          { id: 'p2', amount: 200 }
+          { id: 'p1', amount: 800, patient_package_id: 'pk1' },
+          { id: 'p2', amount: 200, patient_package_id: 'pk2' }
         ]
       }
     });
@@ -76,6 +77,31 @@ describe('financeApi.getPatientFinance', () => {
     expect(summary.sessionsTotal).toBe(15);
     expect(summary.sessionsUsed).toBe(4);
     expect(summary.sessionsRemaining).toBe(11);
+  });
+
+  it('los abonos sueltos (sin paquete) cuentan como facturado y pagado, sin saldo negativo', async () => {
+    const db = makeDb({
+      patient_packages: {
+        rows: [{ id: 'pk1', total_amount: 3000, sessions_total: 10, sessions_used: 0 }]
+      },
+      payments: {
+        rows: [
+          // Liquida el paquete.
+          { id: 'p1', amount: 3000, patient_package_id: 'pk1' },
+          // Abono suelto por un servicio extra fuera de paquete (sin link).
+          { id: 'p2', amount: 500, patient_package_id: null }
+        ]
+      }
+    });
+    const { financeApi } = await loadFinanceApi(db);
+
+    const summary = await financeApi.getPatientFinance('patient-1');
+
+    // Antes: totalBilled=3000, totalPaid=3500 → balance=-500 (mostrado en verde
+    // como "a favor"). Ahora el abono suelto suma a ambos: balance=0.
+    expect(summary.totalBilled).toBe(3500);
+    expect(summary.totalPaid).toBe(3500);
+    expect(summary.balance).toBe(0);
   });
 });
 

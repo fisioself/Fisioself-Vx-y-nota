@@ -23,7 +23,10 @@ export function OnlineStatus() {
               : `Se sincronizaron ${data.synced} cambios guardados sin conexion.`,
           tone: 'success'
         });
-        queryClient.invalidateQueries();
+        // refetchType:'active' refetchea solo las queries montadas; las inactivas
+        // (p. ej. cada término de búsqueda cacheado) se marcan stale sin disparar
+        // una tormenta de peticiones al volver la conexión.
+        queryClient.invalidateQueries({ refetchType: 'active' });
       } else if (data.type === 'SYNC_ERROR') {
         notify({ message: data.message || 'Error al sincronizar.', tone: 'error', duration: 7000 });
       } else if (data.type === 'SYNC_CONFLICT') {
@@ -52,8 +55,9 @@ export function OnlineStatus() {
           /* SW no disponible: nada que reenviar */
         });
       // Refrescamos los datos para que la app deje de mostrar informacion
-      // potencialmente desactualizada del cache offline.
-      queryClient.invalidateQueries();
+      // potencialmente desactualizada del cache offline. Solo las queries activas
+      // (refetchType:'active') para no recargar de golpe todo el histórico.
+      queryClient.invalidateQueries({ refetchType: 'active' });
     };
     window.addEventListener('online', goOnline);
     window.addEventListener('offline', goOffline);

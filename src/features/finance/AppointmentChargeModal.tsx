@@ -6,6 +6,7 @@ import { useToast } from '../../app/ToastProvider';
 import { getErrorMessage } from '../../shared/errors';
 import { isValoracionColorId } from '../../services/sessionColors';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
+import { useModalA11y } from '../../shared/useModalA11y';
 import { money, netAfterCommission, cdmxLabel } from './financeUtils';
 import './AppointmentChargeModal.css';
 
@@ -43,6 +44,12 @@ export function AppointmentChargeModal({
   const [confirmDelete, setConfirmDelete] = useState(false);
   // Paquete pendiente de confirmar su borrado (null = sin diálogo abierto).
   const [confirmPkg, setConfirmPkg] = useState<{ id: string; name: string } | null>(null);
+  // Atrapa foco/Escape del modal de cobro, salvo cuando hay un ConfirmDialog
+  // anidado encima (borrar cita/paquete): ahí su propio Escape debe tener prioridad.
+  const dialogRef = useModalA11y<HTMLDivElement>(
+    onClose,
+    Boolean(appointment) && !confirmDelete && !confirmPkg
+  );
   const [mode, setMode] = useState<'suelta' | 'paquete'>('suelta');
   const [amount, setAmount] = useState('');
   const [method, setMethod] = useState<PaymentMethod>('efectivo');
@@ -250,7 +257,13 @@ export function AppointmentChargeModal({
         queryClient.invalidateQueries({ queryKey: ['active-packages', patientId] }),
         queryClient.invalidateQueries({ queryKey: ['finance-global'] }),
         queryClient.invalidateQueries({ queryKey: ['caja-payments'] }),
-        queryClient.invalidateQueries({ queryKey: ['patient-finance', patientId] })
+        queryClient.invalidateQueries({ queryKey: ['patient-finance', patientId] }),
+        // Un cobro con tarjeta inserta un gasto de comisión y mueve la caja; sin
+        // estas dos, ExpensesPanel y el historial de caja quedaban desfasados.
+        queryClient.invalidateQueries({ queryKey: ['expenses'] }),
+        queryClient.invalidateQueries({ queryKey: ['caja-movements'] }),
+        // El cobro marca la cita como atendida → refresca los KPIs del panel.
+        queryClient.invalidateQueries({ queryKey: ['clinic-stats'] })
       ]);
       notify({ tone: 'success', message: 'Cobro registrado.' });
       onClose();
@@ -280,7 +293,13 @@ export function AppointmentChargeModal({
         queryClient.invalidateQueries({ queryKey: ['active-packages', patientId] }),
         queryClient.invalidateQueries({ queryKey: ['finance-global'] }),
         queryClient.invalidateQueries({ queryKey: ['caja-payments'] }),
-        queryClient.invalidateQueries({ queryKey: ['patient-finance', patientId] })
+        queryClient.invalidateQueries({ queryKey: ['patient-finance', patientId] }),
+        // Un cobro con tarjeta inserta un gasto de comisión y mueve la caja; sin
+        // estas dos, ExpensesPanel y el historial de caja quedaban desfasados.
+        queryClient.invalidateQueries({ queryKey: ['expenses'] }),
+        queryClient.invalidateQueries({ queryKey: ['caja-movements'] }),
+        // El cobro marca la cita como atendida → refresca los KPIs del panel.
+        queryClient.invalidateQueries({ queryKey: ['clinic-stats'] })
       ]);
       notify({ tone: 'success', message: 'Cobro eliminado.' });
     } catch (err) {
@@ -302,7 +321,13 @@ export function AppointmentChargeModal({
         queryClient.invalidateQueries({ queryKey: ['active-packages', patientId] }),
         queryClient.invalidateQueries({ queryKey: ['finance-global'] }),
         queryClient.invalidateQueries({ queryKey: ['caja-payments'] }),
-        queryClient.invalidateQueries({ queryKey: ['patient-finance', patientId] })
+        queryClient.invalidateQueries({ queryKey: ['patient-finance', patientId] }),
+        // Un cobro con tarjeta inserta un gasto de comisión y mueve la caja; sin
+        // estas dos, ExpensesPanel y el historial de caja quedaban desfasados.
+        queryClient.invalidateQueries({ queryKey: ['expenses'] }),
+        queryClient.invalidateQueries({ queryKey: ['caja-movements'] }),
+        // El cobro marca la cita como atendida → refresca los KPIs del panel.
+        queryClient.invalidateQueries({ queryKey: ['clinic-stats'] })
       ]);
       notify({ tone: 'success', message: 'Paquete eliminado.' });
     } catch (err) {
@@ -415,6 +440,8 @@ export function AppointmentChargeModal({
     <div
       className="charge-backdrop"
       role="presentation"
+      ref={dialogRef}
+      tabIndex={-1}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
