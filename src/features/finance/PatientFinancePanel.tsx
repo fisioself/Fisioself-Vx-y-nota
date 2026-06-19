@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { financeApi } from '../../services/financeApi';
 import { useToast } from '../../app/ToastProvider';
@@ -26,6 +26,8 @@ export function PatientFinancePanel({ patient }: PatientFinancePanelProps) {
   // esto, dos clics rápidos disparaban dos writes sobre el mismo estado obsoleto.
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
+  // Estado vacío accionable: enfocar el selector de servicio del formulario.
+  const pkgSelectRef = useRef<HTMLSelectElement>(null);
 
   const { data: catalog = [] } = useQuery({
     queryKey: ['packages-catalog'],
@@ -176,15 +178,9 @@ export function PatientFinancePanel({ patient }: PatientFinancePanelProps) {
       {/* Agregar servicio/paquete */}
       <div style={{ marginTop: 16 }}>
         <p className="eyebrow">Agregar servicio o paquete</p>
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-            gap: 10,
-            marginTop: 8
-          }}
-        >
+        <div className="finance-form" style={{ marginTop: 8 }}>
           <select
+            ref={pkgSelectRef}
             value={selectedPkg}
             onChange={(e) => setSelectedPkg(e.target.value)}
             aria-label="Servicio"
@@ -220,7 +216,12 @@ export function PatientFinancePanel({ patient }: PatientFinancePanelProps) {
             onChange={setInitPayMethod}
             ariaLabel="Método pago inicial"
           />
-          <button type="button" onClick={addPackage} disabled={busy}>
+          <button
+            type="button"
+            className="finance-form-full"
+            onClick={addPackage}
+            disabled={busy}
+          >
             Agregar
           </button>
         </div>
@@ -287,14 +288,21 @@ export function PatientFinancePanel({ patient }: PatientFinancePanelProps) {
           </li>
         ))}
         {finance && finance.packages.length === 0 && (
-          <p className="muted">Sin paquetes ni servicios registrados.</p>
+          <div className="empty-cta">
+            <p className="muted">Aún no hay paquetes ni servicios para este paciente.</p>
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => pkgSelectRef.current?.focus()}
+            >
+              Agregar el primer servicio
+            </button>
+          </div>
         )}
       </ul>
 
       {/* Registrar abono suelto */}
-      <div
-        style={{ marginTop: 12, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}
-      >
+      <div className="finance-form" style={{ marginTop: 12 }}>
         <input
           type="number"
           inputMode="decimal"
@@ -302,19 +310,13 @@ export function PatientFinancePanel({ patient }: PatientFinancePanelProps) {
           aria-label="Monto del abono"
           value={payAmount}
           onChange={(e) => setPayAmount(e.target.value)}
-          style={{ maxWidth: 120 }}
         />
-        <PaymentMethodSelect
-          value={payMethod}
-          onChange={setPayMethod}
-          ariaLabel="Método de abono"
-          style={{ maxWidth: 150 }}
-        />
+        <PaymentMethodSelect value={payMethod} onChange={setPayMethod} ariaLabel="Método de abono" />
         <button type="button" className="secondary" onClick={registerPayment} disabled={busy}>
           Registrar abono
         </button>
         {payMethod === 'tarjeta' && Number(payAmount) > 0 && (
-          <span style={{ fontSize: '0.8rem', color: 'var(--expense)' }}>
+          <span className="finance-form-full" style={{ fontSize: '0.8rem', color: 'var(--expense)' }}>
             Recibes {money(netAfterCommission(Number(payAmount)))} (−4.06 % comisión)
           </span>
         )}

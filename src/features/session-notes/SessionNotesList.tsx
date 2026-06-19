@@ -127,7 +127,13 @@ export function SessionNotesList({ notes = [], onChanged }: SessionNotesListProp
             </article>
           );
         })}
-        {!filtered.length && <p className="muted">No hay notas que coincidan con la busqueda.</p>}
+        {!filtered.length && (
+          <p className="muted">
+            {debouncedQuery.trim()
+              ? `Sin coincidencias para «${debouncedQuery.trim()}».`
+              : 'Aún no hay notas de sesión registradas.'}
+          </p>
+        )}
       </div>
 
       {confirmNote && (

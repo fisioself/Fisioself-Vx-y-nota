@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { financeApi } from '../../services/financeApi';
 import { useToast } from '../../app/ToastProvider';
@@ -15,6 +15,8 @@ export function ExpensesPanel() {
   const [busy, setBusy] = useState(false);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [removing, setRemoving] = useState(false);
+  // Para el estado vacío accionable: enfocar el campo de monto del formulario.
+  const amountRef = useRef<HTMLInputElement>(null);
 
   const { data: expenses = [] } = useQuery({
     queryKey: ['expenses'],
@@ -68,14 +70,7 @@ export function ExpensesPanel() {
         </div>
       </div>
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
-          gap: 10,
-          marginTop: 12
-        }}
-      >
+      <div className="finance-form" style={{ marginTop: 12 }}>
         <select
           value={category}
           onChange={(e) => setCategory(e.target.value)}
@@ -95,6 +90,7 @@ export function ExpensesPanel() {
           onChange={(e) => setDescription(e.target.value)}
         />
         <input
+          ref={amountRef}
           type="number"
           inputMode="decimal"
           min={0}
@@ -110,7 +106,7 @@ export function ExpensesPanel() {
           aria-label="Fecha del gasto"
           onChange={(e) => setSpentAt(e.target.value)}
         />
-        <button type="button" onClick={submit} disabled={busy}>
+        <button type="button" className="finance-form-full" onClick={submit} disabled={busy}>
           {busy ? 'Guardando…' : 'Agregar gasto'}
         </button>
       </div>
@@ -150,7 +146,18 @@ export function ExpensesPanel() {
             </div>
           </li>
         ))}
-        {expenses.length === 0 && <p className="muted">Aún no hay gastos registrados.</p>}
+        {expenses.length === 0 && (
+          <div className="empty-cta">
+            <p className="muted">Aún no hay gastos registrados.</p>
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => amountRef.current?.focus()}
+            >
+              Registrar el primer gasto
+            </button>
+          </div>
+        )}
       </ul>
 
       {confirmId && (

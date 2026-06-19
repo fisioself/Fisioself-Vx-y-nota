@@ -854,3 +854,45 @@ html[data-theme='dark'] .charge-commission-info {
   color: var(--expense);
   font-weight: 700;
 }
+
+/* ---- Formularios de finanzas (gastos, paquetes, abonos) ------------- */
+/* Grid responsivo: en escritorio reparte los campos en columnas flexibles; en
+   móvil baja a 2 columnas y, en pantallas muy chicas (≤380px, p. ej. iPhone SE),
+   a una sola columna para que los inputs no se apilen apretados ni se corten.
+   Antes esto era grid-template-columns inline, que no admite media queries. */
+.finance-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+}
+/* Un campo (o el botón, o una nota informativa) que ocupa toda la fila. */
+.finance-form-full {
+  grid-column: 1 / -1;
+}
+.finance-form > input,
+.finance-form > select {
+  min-width: 0; /* evita que un input fuerce overflow horizontal en móvil */
+}
+@media (max-width: 560px) {
+  .finance-form {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (max-width: 380px) {
+  .finance-form {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Estado vacío con acción: texto centrado + botón que lleva al formulario. */
+.empty-cta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+  padding: 18px 12px;
+}
+.empty-cta p {
+  margin: 0;
+}
