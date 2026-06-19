@@ -116,6 +116,15 @@ function makeDefaultSlot(): NewAppointmentSlot {
 }
 
 export function NativeCalendar({ onEventClick }: NativeCalendarProps) {
+  // En táctil (celular) desactivamos arrastrar para seleccionar/mover citas:
+  // FullCalendar engancha el arrastre a nivel de `document` y secuestra el
+  // gesto vertical, impidiendo desplazar el Panel. Con esto desactivado, el
+  // gesto vertical scrollea la página y las citas se crean/abren con un toque
+  // simple (dateClick/eventClick), que sí funciona bien en celular. En
+  // escritorio (con ratón) se mantiene el arrastre completo.
+  const isTouch =
+    typeof window !== 'undefined' &&
+    (window.matchMedia?.('(pointer: coarse)').matches ?? false);
   const [syncing, setSyncing] = useState(false);
   const [chargeTarget, setChargeTarget] = useState<ChargeAppointmentTarget | null>(null);
   const [newSlot, setNewSlot] = useState<NewAppointmentSlot | null>(null);
@@ -284,9 +293,9 @@ export function NativeCalendar({ onEventClick }: NativeCalendarProps) {
             )
           }
           events={events}
-          editable={true}
-          selectable={true}
-          selectMirror={true}
+          editable={!isTouch}
+          selectable={!isTouch}
+          selectMirror={!isTouch}
           select={(arg: CalendarSelectArg) => setNewSlot({ start: arg.startStr, end: arg.endStr })}
           dateClick={handleDateClick}
           dayMaxEvents={true}
