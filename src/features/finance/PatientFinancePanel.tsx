@@ -4,6 +4,7 @@ import { financeApi } from '../../services/financeApi';
 import { useToast } from '../../app/ToastProvider';
 import { getErrorMessage } from '../../shared/errors';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
+import { PaymentMethodSelect } from './PaymentMethodSelect';
 import type { Patient } from '../../types/clinical';
 import { money, netAfterCommission } from './financeUtils';
 
@@ -214,15 +215,11 @@ export function PatientFinancePanel({ patient }: PatientFinancePanelProps) {
             onChange={(e) => setInitPayAmount(e.target.value)}
             title="Cuánto paga ahora. Dejar vacío = paga el total. 0 = queda pendiente."
           />
-          <select
+          <PaymentMethodSelect
             value={initPayMethod}
-            onChange={(e) => setInitPayMethod(e.target.value)}
-            aria-label="Método pago inicial"
-          >
-            <option value="efectivo">Efectivo</option>
-            <option value="tarjeta">Tarjeta</option>
-            <option value="transferencia">Transferencia</option>
-          </select>
+            onChange={setInitPayMethod}
+            ariaLabel="Método pago inicial"
+          />
           <button type="button" onClick={addPackage} disabled={busy}>
             Agregar
           </button>
@@ -307,16 +304,12 @@ export function PatientFinancePanel({ patient }: PatientFinancePanelProps) {
           onChange={(e) => setPayAmount(e.target.value)}
           style={{ maxWidth: 120 }}
         />
-        <select
+        <PaymentMethodSelect
           value={payMethod}
-          onChange={(e) => setPayMethod(e.target.value)}
-          aria-label="Método de abono"
+          onChange={setPayMethod}
+          ariaLabel="Método de abono"
           style={{ maxWidth: 150 }}
-        >
-          <option value="efectivo">Efectivo</option>
-          <option value="tarjeta">Tarjeta</option>
-          <option value="transferencia">Transferencia</option>
-        </select>
+        />
         <button type="button" className="secondary" onClick={registerPayment} disabled={busy}>
           Registrar abono
         </button>

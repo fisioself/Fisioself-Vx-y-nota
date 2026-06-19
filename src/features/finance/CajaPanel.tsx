@@ -9,6 +9,7 @@ import {
 } from '../../services/financeApi';
 import { useToast } from '../../app/ToastProvider';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
+import { PaymentMethodSelect } from './PaymentMethodSelect';
 import { fmtDate, methodLabel, money, netAfterCommission, today } from './financeUtils';
 
 type CajaEntry = {
@@ -242,16 +243,12 @@ export function CajaPanel({ caja }: CajaPanelProps) {
               onChange={(e) => setAmount(e.target.value)}
               style={{ flex: '1 1 140px', minWidth: 0 }}
             />
-            <select
+            <PaymentMethodSelect
               value={method}
-              onChange={(e) => setMethod(e.target.value)}
-              aria-label="Método"
+              onChange={setMethod}
+              ariaLabel="Método"
               style={{ flex: '1 1 130px', minWidth: 0 }}
-            >
-              <option value="efectivo">Efectivo</option>
-              <option value="tarjeta">Tarjeta</option>
-              <option value="transferencia">Transferencia</option>
-            </select>
+            />
           </div>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <input

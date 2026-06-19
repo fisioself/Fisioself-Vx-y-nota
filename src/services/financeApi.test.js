@@ -31,7 +31,15 @@ function makeDb(config = {}) {
     builder.then = (resolve, reject) => Promise.resolve(result).then(resolve, reject);
     return builder;
   });
-  const rpc = vi.fn(() => Promise.resolve({ data: config.__rpc ?? null, error: null }));
+  // rpc por nombre: __rpcByName mapea cada función a su respuesta; si no, cae a
+  // __rpc (usado por chargeAppointment, que solo invoca un RPC).
+  const rpc = vi.fn((name) => {
+    const byName = config.__rpcByName;
+    if (byName && Object.prototype.hasOwnProperty.call(byName, name)) {
+      return Promise.resolve({ data: byName[name], error: null });
+    }
+    return Promise.resolve({ data: config.__rpc ?? null, error: null });
+  });
   return { from, rpc };
 }
 
@@ -421,62 +429,60 @@ describe('financeApi.deleteAppointmentCharge', () => {
 });
 
 describe('financeApi.getGlobalFinance', () => {
-  it('agrega ingresos, gastos, caja por método y top de pacientes', async () => {
-    const monthA = '2026-05-15T12:00:00Z';
-    const monthB = '2026-06-15T12:00:00Z';
+  it('combina las series de los RPC de citas y de dinero', async () => {
+    // La agregación de dinero ahora la hace el RPC finance_money_stats en SQL
+    // (validada por paridad contra la BD). Aquí verificamos que getGlobalFinance
+    // COMBINE correctamente ambos RPC: citas (pacientes/sesiones) + dinero.
     const db = makeDb({
-      __rpc: {
-        monthly: [
-          { month: '2026-05', patients: 4, sessions: 8, newPatients: 1, valoraciones: 1 },
-          { month: '2026-06', patients: 6, sessions: 12, newPatients: 2, valoraciones: 2 }
-        ],
-        currentMonth: { patients: 6, sessions: 12 },
-        last30d: { patients: 6, sessions: 12 },
-        totalSessions: 20
-      },
-      payments: {
-        rows: [
-          { amount: 350, paid_at: monthA, patient_id: 'pa', method: 'efectivo' },
-          { amount: 700, paid_at: monthB, patient_id: 'pb', method: 'tarjeta' },
-          { amount: 150, paid_at: monthB, patient_id: 'pa', method: 'efectivo' }
-        ]
-      },
-      expenses: {
-        rows: [{ amount: 200, spent_at: monthB, category: 'material' }]
-      },
-      patients: {
-        rows: [
-          { id: 'pa', full_name: 'Ana' },
-          { id: 'pb', full_name: 'Beto' }
-        ]
-      },
-      caja_movements: {
-        rows: [{ amount: 100, method: 'efectivo' }]
+      __rpcByName: {
+        finance_appt_stats: {
+          monthly: [
+            { month: '2026-05', patients: 4, sessions: 8, newPatients: 1, valoraciones: 1 },
+            { month: '2026-06', patients: 6, sessions: 12, newPatients: 2, valoraciones: 2 }
+          ],
+          currentMonth: { patients: 6, sessions: 12, valoraciones: 2 },
+          last30d: { patients: 6, sessions: 12, valoraciones: 2 },
+          totalSessions: 20
+        },
+        finance_money_stats: {
+          monthly: [
+            { month: '2026-05', income: 350, expenses: 0, net: 350 },
+            { month: '2026-06', income: 850, expenses: 200, net: 650 }
+          ],
+          currentMonth: { income: 850, expenses: 200, net: 650 },
+          last30d: { income: 850, expenses: 200, net: 650 },
+          caja: { total: 1300, byMethod: { efectivo: 600, tarjeta: 700 } },
+          growthIncome: null,
+          topPatients: [
+            { patientId: 'pb', fullName: 'Beto', paid: 700 },
+            { patientId: 'pa', fullName: 'Ana', paid: 500 }
+          ],
+          expensesByCategory: [{ category: 'material', amount: 200 }]
+        }
       }
     });
     const { financeApi } = await loadFinanceApi(db);
 
     const result = await financeApi.getGlobalFinance(12);
 
-    // Caja: 350 + 700 + 150 (pagos) + 100 (ajuste) = 1300
+    // Caja, top pacientes y gastos por categoría vienen tal cual del RPC de dinero.
     expect(result.caja.total).toBe(1300);
-    expect(result.caja.byMethod.efectivo).toBe(350 + 150 + 100);
+    expect(result.caja.byMethod.efectivo).toBe(600);
     expect(result.caja.byMethod.tarjeta).toBe(700);
-
-    // Top pacientes por ingreso
-    const ana = result.topPatients.find((t) => t.patientId === 'pa');
-    const beto = result.topPatients.find((t) => t.patientId === 'pb');
-    expect(ana.paid).toBe(500);
-    expect(beto.paid).toBe(700);
-    expect(ana.fullName).toBe('Ana');
-
-    // Gastos por categoría
+    expect(result.topPatients.find((t) => t.patientId === 'pb').paid).toBe(700);
     expect(result.expensesByCategory).toContainEqual({ category: 'material', amount: 200 });
 
-    // Serie mensual presente para ambos meses
-    expect(result.monthly.map((m) => m.month)).toEqual(
-      expect.arrayContaining(['2026-05', '2026-06'])
-    );
+    // Serie mensual COMBINADA: dinero + citas en la misma fila.
+    const may = result.monthly.find((m) => m.month === '2026-05');
+    const jun = result.monthly.find((m) => m.month === '2026-06');
+    expect(may).toMatchObject({ income: 350, patients: 4, sessions: 8 });
+    expect(jun).toMatchObject({ income: 850, expenses: 200, net: 650, patients: 6, valoraciones: 2 });
+
+    // Mes en curso combina ingreso (dinero) + pacientes (citas).
+    expect(result.currentMonth.income).toBe(850);
+    expect(result.currentMonth.patients).toBe(6);
+    expect(result.last30d.income).toBe(850);
+    expect(result.last30d.patients).toBe(6);
   });
 });
 

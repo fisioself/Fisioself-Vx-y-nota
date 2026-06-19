@@ -6,15 +6,22 @@ import { ToastProvider } from '../../app/ToastProvider';
 import { financeApi } from '../../services/financeApi';
 import { CajaPanel } from './CajaPanel';
 
-vi.mock('../../services/financeApi', () => ({
-  financeApi: {
-    listCajaMovements: vi.fn(),
-    listRecentPayments: vi.fn(),
-    addCajaMovement: vi.fn(),
-    deleteCajaMovement: vi.fn(),
-    deleteAppointmentCharge: vi.fn()
-  }
-}));
+vi.mock('../../services/financeApi', async () => {
+  // Conservamos PAYMENT_METHODS real para que PaymentMethodSelect renderice.
+  const actual = await vi.importActual<typeof import('../../services/financeApi')>(
+    '../../services/financeApi'
+  );
+  return {
+    ...actual,
+    financeApi: {
+      listCajaMovements: vi.fn(),
+      listRecentPayments: vi.fn(),
+      addCajaMovement: vi.fn(),
+      deleteCajaMovement: vi.fn(),
+      deleteAppointmentCharge: vi.fn()
+    }
+  };
+});
 
 const makeWrapper = () => {
   const queryClient = new QueryClient({

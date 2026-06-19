@@ -87,6 +87,17 @@ interface ApptStats {
   totalSessions: number;
 }
 
+// Forma del RPC finance_money_stats (agregación de dinero del lado del servidor).
+interface MoneyStats {
+  monthly: Array<{ month: string; income: number; expenses: number; net: number }>;
+  currentMonth: { income: number; expenses: number; net: number };
+  last30d: { income: number; expenses: number; net: number };
+  caja: { total: number; byMethod: Record<string, number> };
+  growthIncome: number | null;
+  topPatients: TopPatientRow[];
+  expensesByCategory: CategoryRow[];
+}
+
 const unwrap = <T>({ data, error }: { data: unknown; error: unknown }): T => {
   if (error) throw error;
   return data as T;
@@ -94,11 +105,6 @@ const unwrap = <T>({ data, error }: { data: unknown; error: unknown }): T => {
 
 const sum = (rows: Array<{ amount?: number | null }>, key: 'amount' = 'amount'): number =>
   rows.reduce((acc, r) => acc + Number(r[key] ?? 0), 0);
-
-// Redondea a 2 decimales para cerrar el error de coma flotante al acumular montos
-// (p. ej. comisiones de $13.53): así la UI y el CSV exportan 1726.92, no
-// 1726.9200000000001.
-const round2 = (n: number): number => Math.round(n * 100) / 100;
 
 // Toda fecha se interpreta en horario de CDMX (la base corre en UTC). Sin esto,
 // los cortes mensuales se desfasan hasta 6 h respecto a la función SQL.
@@ -120,8 +126,6 @@ const cdmxDay = (d: Date | string): string => {
     day: '2-digit'
   }).format(date); // 'YYYY-MM-DD'
 };
-
-const monthKey = (isoDate: string): string => cdmxDay(isoDate).slice(0, 7); // 'YYYY-MM' en CDMX
 
 export const financeApi = {
   // ---------- Catálogo de precios ----------
@@ -557,84 +561,64 @@ export const financeApi = {
   },
 
   // ---------- Dashboard global ----------
+  // Antes esta función bajaba al navegador TODOS los pagos, gastos, movimientos
+  // de caja y los ~500 pacientes para agregarlos en el cliente. Eso ya rozaba el
+  // límite de 1000 filas de Supabase (al superarlo, los totales se truncaban en
+  // silencio) y enviaba datos financieros crudos al dispositivo. Ahora la base
+  // hace TODA la agregación en dos RPC: finance_appt_stats (citas) y
+  // finance_money_stats (dinero). El cliente solo combina las series por mes.
   async getGlobalFinance(monthsBack = 12): Promise<GlobalFinanceSummary> {
     const db = assertSupabase();
 
-    // Estadísticas de citas (pacientes/sesiones por mes) vía función agregadora.
-    // Las citas son miles de filas, así que la base las agrega por nosotros.
+    // Los RPC se crearon por migración después de generar types/supabase.ts, así
+    // que casteamos rpc (mismo patrón que charge_appointment).
     const rpc = db.rpc.bind(db) as unknown as (
       name: string,
       args?: Record<string, unknown>
     ) => Promise<{ data: unknown; error: unknown }>;
-    const apptRes = await rpc('finance_appt_stats', { p_months_back: monthsBack });
+    const [apptRes, moneyRes] = await Promise.all([
+      rpc('finance_appt_stats', { p_months_back: monthsBack }),
+      rpc('finance_money_stats')
+    ]);
     if (apptRes.error) throw apptRes.error;
+    if (moneyRes.error) throw moneyRes.error;
+
     const appt = (apptRes.data as ApptStats | null) ?? {
       monthly: [],
       currentMonth: { patients: 0, sessions: 0, valoraciones: 0 },
       last30d: { patients: 0, sessions: 0, valoraciones: 0 },
       totalSessions: 0
     };
+    const money = (moneyRes.data as MoneyStats | null) ?? {
+      monthly: [],
+      currentMonth: { income: 0, expenses: 0, net: 0 },
+      last30d: { income: 0, expenses: 0, net: 0 },
+      caja: { total: 0, byMethod: {} },
+      growthIncome: null,
+      topPatients: [],
+      expensesByCategory: []
+    };
 
-    // Pagos, gastos y movimientos de caja son tablas pequeñas → todo el histórico.
-    const [payRes, expRes, patRes, cajaRes] = await Promise.all([
-      db.from('payments').select('amount, paid_at, patient_id, method'),
-      db.from('expenses').select('amount, spent_at, category, payment_id'),
-      db.from('patients').select('id, full_name'),
-      db.from('caja_movements').select('amount, method')
-    ]);
-    const payments =
-      unwrap<Array<{ amount: number; paid_at: string; patient_id: string; method: string }>>(
-        payRes
-      );
-    const expenses =
-      unwrap<
-        Array<{ amount: number; spent_at: string; category: string; payment_id: string | null }>
-      >(expRes);
-    const patients = unwrap<Array<{ id: string; full_name: string }>>(patRes);
-    const cajaMovements = unwrap<Array<{ amount: number; method: string }>>(cajaRes);
-    const nameById = new Map(patients.map((p) => [p.id, p.full_name]));
-
-    // Claves de fecha (calculadas en horario de CDMX, igual que la función SQL)
-    const now = new Date();
-    const curMonthKey = cdmxDay(now).slice(0, 7); // 'YYYY-MM' en CDMX
+    // Claves de fecha (en CDMX, igual que las funciones SQL).
+    const curMonthKey = cdmxDay(new Date()).slice(0, 7); // 'YYYY-MM'
     const [cy, cm] = curMonthKey.split('-').map(Number);
     const prevMonthKey = `${cm === 1 ? cy - 1 : cy}-${String(cm === 1 ? 12 : cm - 1).padStart(2, '0')}`;
-    // Últimos 30 días por DÍA de calendario CDMX. Antes se comparaba un instante
-    // (since30) contra paid_at (date-only → medianoche UTC), lo que excluía el día
-    // borde más antiguo y usaba una ventana distinta a la de sesiones/pacientes.
-    const since30Day = cdmxDay(new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000));
 
-    // Ingresos / gastos por mes
-    const incomeByMonth = new Map<string, number>();
-    const expenseByMonth = new Map<string, number>();
-    for (const p of payments) {
-      const k = monthKey(p.paid_at);
-      incomeByMonth.set(k, (incomeByMonth.get(k) ?? 0) + Number(p.amount ?? 0));
-    }
-    for (const e of expenses) {
-      const k = monthKey(e.spent_at);
-      expenseByMonth.set(k, (expenseByMonth.get(k) ?? 0) + Number(e.amount ?? 0));
-    }
-
-    // Serie mensual combinada: la columna vertebral son los meses de la función,
-    // más cualquier mes con pagos/gastos.
+    // Serie mensual combinada: dinero (income/expenses/net) + citas
+    // (patients/sessions/newPatients/valoraciones), unión de ambos conjuntos.
     const apptByMonth = new Map(appt.monthly.map((m) => [m.month, m]));
-    const monthSet = new Set<string>([
-      ...apptByMonth.keys(),
-      ...incomeByMonth.keys(),
-      ...expenseByMonth.keys()
-    ]);
+    const moneyByMonth = new Map(money.monthly.map((m) => [m.month, m]));
+    const monthSet = new Set<string>([...apptByMonth.keys(), ...moneyByMonth.keys()]);
     const monthly: MonthlyPoint[] = Array.from(monthSet)
       .sort()
       .map((m) => {
-        const income = round2(incomeByMonth.get(m) ?? 0);
-        const exp = round2(expenseByMonth.get(m) ?? 0);
         const a = apptByMonth.get(m);
+        const mo = moneyByMonth.get(m);
         return {
           month: m,
-          income,
-          expenses: exp,
-          net: round2(income - exp),
+          income: mo?.income ?? 0,
+          expenses: mo?.expenses ?? 0,
+          net: mo?.net ?? 0,
           patients: a?.patients ?? 0,
           sessions: a?.sessions ?? 0,
           newPatients: a?.newPatients ?? 0,
@@ -642,67 +626,25 @@ export const financeApi = {
         };
       });
 
-    // Periodo: mes en curso
-    const curIncome = payments
-      .filter((p) => monthKey(p.paid_at) === curMonthKey)
-      .reduce((a, p) => a + Number(p.amount ?? 0), 0);
-    const curExpense = expenses
-      .filter((e) => monthKey(e.spent_at) === curMonthKey)
-      .reduce((a, e) => a + Number(e.amount ?? 0), 0);
     const currentMonth: PeriodSummary = {
-      income: curIncome,
-      expenses: curExpense,
-      net: curIncome - curExpense,
+      income: money.currentMonth.income,
+      expenses: money.currentMonth.expenses,
+      net: money.currentMonth.net,
       patients: appt.currentMonth?.patients ?? 0,
       sessions: appt.currentMonth?.sessions ?? 0,
       valoraciones: appt.currentMonth?.valoraciones ?? 0
     };
 
-    // Periodo: últimos 30 días (comparación lexicográfica de fechas CDMX solo-fecha)
-    const d30Income = payments
-      .filter((p) => cdmxDay(p.paid_at) >= since30Day)
-      .reduce((a, p) => a + Number(p.amount ?? 0), 0);
-    const d30Expense = expenses
-      .filter((e) => cdmxDay(e.spent_at) >= since30Day)
-      .reduce((a, e) => a + Number(e.amount ?? 0), 0);
     const last30d: PeriodSummary = {
-      income: d30Income,
-      expenses: d30Expense,
-      net: d30Income - d30Expense,
+      income: money.last30d.income,
+      expenses: money.last30d.expenses,
+      net: money.last30d.net,
       patients: appt.last30d?.patients ?? 0,
       sessions: appt.last30d?.sessions ?? 0,
       valoraciones: appt.last30d?.valoraciones ?? 0
     };
 
-    // Caja (todo el tiempo) por método = cobros a pacientes + ajustes manuales.
-    // Los movimientos manuales pueden ser negativos (salidas de caja).
-    // Transferencia se suma al bucket de Tarjeta (ambos son pagos electrónicos;
-    // la clínica solo necesita ver Efectivo vs. Tarjeta/Transferencia).
-    const cajaByMethod: Record<string, number> = {};
-    let cajaTotal = 0;
-    for (const p of payments) {
-      const amt = Number(p.amount ?? 0);
-      cajaTotal += amt;
-      const m = p.method === 'transferencia' ? 'tarjeta' : (p.method ?? 'otro');
-      cajaByMethod[m] = (cajaByMethod[m] ?? 0) + amt;
-    }
-    for (const mv of cajaMovements) {
-      const amt = Number(mv.amount ?? 0);
-      cajaTotal += amt;
-      const m = mv.method === 'transferencia' ? 'tarjeta' : (mv.method ?? 'efectivo');
-      cajaByMethod[m] = (cajaByMethod[m] ?? 0) + amt;
-    }
-    // La comisión de terminal ya queda registrada como gasto; aquí la descontamos
-    // del bucket de tarjeta para que "¿cuánto hay en caja?" refleje lo real (neto).
-    for (const e of expenses) {
-      if (e.payment_id != null && e.category === 'comision') {
-        const comm = Number(e.amount ?? 0);
-        cajaTotal -= comm;
-        cajaByMethod['tarjeta'] = (cajaByMethod['tarjeta'] ?? 0) - comm;
-      }
-    }
-
-    // Crecimiento del mes en curso vs mes anterior
+    // Crecimiento mes en curso vs mes anterior (sobre la serie ya combinada).
     const curM = monthly.find((m) => m.month === curMonthKey);
     const prevM = monthly.find((m) => m.month === prevMonthKey);
     const pct = (cur: number, prev: number): number | null =>
@@ -712,41 +654,14 @@ export const financeApi = {
       patients: pct(curM?.patients ?? 0, prevM?.patients ?? 0)
     };
 
-    // Top pacientes por ingreso (todo el tiempo)
-    const paidByPatient = new Map<string, number>();
-    for (const p of payments)
-      paidByPatient.set(
-        p.patient_id,
-        (paidByPatient.get(p.patient_id) ?? 0) + Number(p.amount ?? 0)
-      );
-    const topPatients: TopPatientRow[] = Array.from(paidByPatient.entries())
-      .map(([patientId, paid]) => ({
-        patientId,
-        fullName: nameById.get(patientId) ?? 'Paciente',
-        paid
-      }))
-      .sort((a, b) => b.paid - a.paid)
-      .slice(0, 8);
-
-    // Gastos por categoría
-    const byCat = new Map<string, number>();
-    for (const e of expenses)
-      byCat.set(
-        e.category ?? 'otro',
-        (byCat.get(e.category ?? 'otro') ?? 0) + Number(e.amount ?? 0)
-      );
-    const expensesByCategory: CategoryRow[] = Array.from(byCat.entries())
-      .map(([category, amount]) => ({ category, amount }))
-      .sort((a, b) => b.amount - a.amount);
-
     return {
       currentMonth,
       last30d,
       monthly,
-      caja: { total: cajaTotal, byMethod: cajaByMethod },
+      caja: money.caja,
       growth,
-      topPatients,
-      expensesByCategory
+      topPatients: money.topPatients,
+      expensesByCategory: money.expensesByCategory
     };
   }
 };

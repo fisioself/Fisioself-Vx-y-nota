@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { financeApi, PAYMENT_METHODS, type PaymentMethod } from '../../services/financeApi';
+import { financeApi, type PaymentMethod } from '../../services/financeApi';
 import { clinicalApi } from '../../services/clinicalApi';
 import { useToast } from '../../app/ToastProvider';
 import { getErrorMessage } from '../../shared/errors';
 import { isValoracionColorId } from '../../services/sessionColors';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
+import { PaymentMethodSelect } from './PaymentMethodSelect';
 import { useModalA11y } from '../../shared/useModalA11y';
 import { money, netAfterCommission, cdmxLabel } from './financeUtils';
 import './AppointmentChargeModal.css';
@@ -612,18 +613,13 @@ export function AppointmentChargeModal({
                 </label>
                 {assignInitPay && Number(assignInitPay) > 0 && (
                   <>
-                    <label>
+                    <label htmlFor="charge-init-method">
                       Método del pago inicial
-                      <select
+                      <PaymentMethodSelect
+                        id="charge-init-method"
                         value={assignInitMethod}
-                        onChange={(e) => setAssignInitMethod(e.target.value as PaymentMethod)}
-                      >
-                        {PAYMENT_METHODS.map((m) => (
-                          <option key={m} value={m}>
-                            {m.charAt(0).toUpperCase() + m.slice(1)}
-                          </option>
-                        ))}
-                      </select>
+                        onChange={setAssignInitMethod}
+                      />
                     </label>
                     {assignInitMethod === 'tarjeta' && (
                       <div className="charge-commission-info">
@@ -665,18 +661,9 @@ export function AppointmentChargeModal({
                     placeholder="0.00"
                   />
                 </label>
-                <label>
+                <label htmlFor="charge-method">
                   Método
-                  <select
-                    value={method}
-                    onChange={(e) => setMethod(e.target.value as PaymentMethod)}
-                  >
-                    {PAYMENT_METHODS.map((m) => (
-                      <option key={m} value={m}>
-                        {m.charAt(0).toUpperCase() + m.slice(1)}
-                      </option>
-                    ))}
-                  </select>
+                  <PaymentMethodSelect id="charge-method" value={method} onChange={setMethod} />
                 </label>
                 {method === 'tarjeta' && Number(amount) > 0 && (
                   <div className="charge-commission-info">
@@ -714,18 +701,13 @@ export function AppointmentChargeModal({
                 </label>
                 {abonoAmount && Number(abonoAmount) > 0 && (
                   <>
-                    <label>
+                    <label htmlFor="charge-abono-method">
                       Método del abono
-                      <select
+                      <PaymentMethodSelect
+                        id="charge-abono-method"
                         value={abonoMethod}
-                        onChange={(e) => setAbonoMethod(e.target.value as PaymentMethod)}
-                      >
-                        {PAYMENT_METHODS.map((m) => (
-                          <option key={m} value={m}>
-                            {m.charAt(0).toUpperCase() + m.slice(1)}
-                          </option>
-                        ))}
-                      </select>
+                        onChange={setAbonoMethod}
+                      />
                     </label>
                     {abonoMethod === 'tarjeta' && (
                       <div className="charge-commission-info">

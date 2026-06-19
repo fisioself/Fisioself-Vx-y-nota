@@ -7,16 +7,23 @@ import { financeApi } from '../../services/financeApi';
 import type { Patient } from '../../types/clinical';
 import { PatientFinancePanel } from './PatientFinancePanel';
 
-vi.mock('../../services/financeApi', () => ({
-  financeApi: {
-    listPackages: vi.fn(),
-    getPatientFinance: vi.fn(),
-    addPatientPackage: vi.fn(),
-    addPayment: vi.fn(),
-    setSessionsUsed: vi.fn(),
-    deletePatientPackage: vi.fn()
-  }
-}));
+vi.mock('../../services/financeApi', async () => {
+  // Conservamos PAYMENT_METHODS real para que PaymentMethodSelect renderice.
+  const actual = await vi.importActual<typeof import('../../services/financeApi')>(
+    '../../services/financeApi'
+  );
+  return {
+    ...actual,
+    financeApi: {
+      listPackages: vi.fn(),
+      getPatientFinance: vi.fn(),
+      addPatientPackage: vi.fn(),
+      addPayment: vi.fn(),
+      setSessionsUsed: vi.fn(),
+      deletePatientPackage: vi.fn()
+    }
+  };
+});
 
 const PATIENT: Patient = { id: 'patient-1', full_name: 'Ana García' } as Patient;
 
