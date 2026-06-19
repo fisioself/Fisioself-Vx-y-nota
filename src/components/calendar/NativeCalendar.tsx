@@ -116,15 +116,6 @@ function makeDefaultSlot(): NewAppointmentSlot {
 }
 
 export function NativeCalendar({ onEventClick }: NativeCalendarProps) {
-  // En táctil (celular) desactivamos arrastrar para seleccionar/mover citas:
-  // FullCalendar engancha el arrastre a nivel de `document` y secuestra el
-  // gesto vertical, impidiendo desplazar el Panel. Con esto desactivado, el
-  // gesto vertical scrollea la página y las citas se crean/abren con un toque
-  // simple (dateClick/eventClick), que sí funciona bien en celular. En
-  // escritorio (con ratón) se mantiene el arrastre completo.
-  const isTouch =
-    typeof window !== 'undefined' &&
-    (window.matchMedia?.('(pointer: coarse)').matches ?? false);
   const [syncing, setSyncing] = useState(false);
   const [chargeTarget, setChargeTarget] = useState<ChargeAppointmentTarget | null>(null);
   const [newSlot, setNewSlot] = useState<NewAppointmentSlot | null>(null);
@@ -162,7 +153,16 @@ export function NativeCalendar({ onEventClick }: NativeCalendarProps) {
     setSyncing(true);
     try {
       const db = assertSupabase();
-      const { data, error } = await db.functions.invoke('google-calendar-fetch');
+      // Timeout de 20 s: si la Edge Function de Google no responde (red caída,
+      // token vencido, función colgada), no dejamos el botón en "Sincronizando…"
+      // para siempre. El catch lo trata como fallo no-fatal y libera el estado.
+      const timeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('La sincronización tardó demasiado.')), 20_000)
+      );
+      const { data, error } = await Promise.race([
+        db.functions.invoke('google-calendar-fetch'),
+        timeout
+      ]);
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
@@ -293,9 +293,9 @@ export function NativeCalendar({ onEventClick }: NativeCalendarProps) {
             )
           }
           events={events}
-          editable={!isTouch}
-          selectable={!isTouch}
-          selectMirror={!isTouch}
+          editable={true}
+          selectable={true}
+          selectMirror={true}
           select={(arg: CalendarSelectArg) => setNewSlot({ start: arg.startStr, end: arg.endStr })}
           dateClick={handleDateClick}
           dayMaxEvents={true}

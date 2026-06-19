@@ -1,5 +1,29 @@
 import { useEffect, useRef } from 'react';
 
+// Bloqueo del scroll del body con CONTADOR de referencias, a nivel de módulo.
+// Antes cada modal guardaba/restauraba document.body.style.overflow por su
+// cuenta; con modales apilados (o uno que se desmonta fuera de orden) el valor
+// "hidden" podía quedarse pegado y matar el scroll de toda la app. Con un
+// contador, solo el PRIMER lock guarda el valor previo y solo el ÚLTIMO unlock
+// lo restaura, sin importar el orden de apertura/cierre.
+let scrollLockCount = 0;
+let savedBodyOverflow = '';
+
+function lockBodyScroll() {
+  if (scrollLockCount === 0) {
+    savedBodyOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+  }
+  scrollLockCount += 1;
+}
+
+function unlockBodyScroll() {
+  scrollLockCount = Math.max(0, scrollLockCount - 1);
+  if (scrollLockCount === 0) {
+    document.body.style.overflow = savedBodyOverflow;
+  }
+}
+
 // Accesibilidad de modales: foco inicial dentro del diálogo, ciclo de Tab atrapado
 // (no se escapa al fondo), cierre con Escape y bloqueo del scroll de fondo. Al
 // cerrar, devuelve el foco al elemento que lo tenía. Reutiliza el patrón que ya
@@ -16,8 +40,7 @@ export function useModalA11y<T extends HTMLElement>(onClose: () => void, active 
     if (!active) return;
     const node = ref.current;
     const prevFocus = document.activeElement as HTMLElement | null;
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    lockBodyScroll();
 
     const getFocusable = (): HTMLElement[] => {
       if (!node) return [];
@@ -57,7 +80,7 @@ export function useModalA11y<T extends HTMLElement>(onClose: () => void, active 
     document.addEventListener('keydown', onKey, true);
     return () => {
       document.removeEventListener('keydown', onKey, true);
-      document.body.style.overflow = prevOverflow;
+      unlockBodyScroll();
       prevFocus?.focus?.();
     };
   }, [active]);

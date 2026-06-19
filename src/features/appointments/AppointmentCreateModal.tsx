@@ -44,7 +44,11 @@ const normName = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLow
 export function AppointmentCreateModal({ slot, onClose }: AppointmentCreateModalProps) {
   const { notify } = useToast();
   const queryClient = useQueryClient();
-  const dialogRef = useModalA11y<HTMLDivElement>(onClose);
+  // active = Boolean(slot): el modal SIEMPRE está montado en el calendario (con
+  // slot=null no muestra nada). Sin este flag, useModalA11y ponía body
+  // overflow:hidden al montar el calendario y nunca lo restauraba → el Panel no
+  // se podía desplazar en táctil (el scroll-lock quedaba pegado).
+  const dialogRef = useModalA11y<HTMLDivElement>(onClose, Boolean(slot));
 
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
