@@ -15,6 +15,23 @@
   font-family: inherit;
 }
 
+/* Scroll vertical del Panel con el dedo sobre el calendario.
+   FullCalendar (con selectable/editable) captura el ARRASTRE VERTICAL en táctil
+   para seleccionar o mover citas, y eso impedía desplazar el Panel en celular
+   (el dedo casi siempre cae sobre la rejilla). `touch-action: pan-y` le cede al
+   navegador el gesto vertical = scroll de la página; el arrastre con RATÓN en
+   escritorio sigue funcionando (touch-action no afecta al mouse). En móvil las
+   citas se crean/abren con un toque simple (dateClick/eventClick), no
+   arrastrando, así que no se pierde nada. */
+.fc .fc-view-harness,
+.fc .fc-scroller,
+.fc .fc-timegrid-body,
+.fc .fc-timegrid-slots,
+.fc .fc-timegrid-cols,
+.fc .fc-daygrid-body {
+  touch-action: pan-y;
+}
+
 .fc .fc-button-primary {
   background-color: var(--primary);
   border-color: var(--primary);
