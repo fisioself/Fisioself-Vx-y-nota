@@ -126,9 +126,7 @@ export function AppointmentList({ patient, appointments = [], onChanged }: Appoi
                   }}
                 >
                   {isCancelled ? (
-                    <span className="pill" style={{ background: '#f3d9d6', color: '#7a241c' }}>
-                      Cancelada
-                    </span>
+                    <span className="pill cancelled">Cancelada</span>
                   ) : (
                     <>
                       <span className="pill">
@@ -142,10 +140,10 @@ export function AppointmentList({ patient, appointments = [], onChanged }: Appoi
                       </span>
                       {patient?.phone && (
                         <button
-                          className="secondary"
+                          className="secondary btn-whatsapp"
                           onClick={() => sendWhatsAppReminder(appointment)}
-                          style={{ background: '#25D366', color: 'white', border: 'none' }}
                           title="Recordar por WhatsApp"
+                          aria-label="Enviar recordatorio por WhatsApp"
                         >
                           WhatsApp
                         </button>

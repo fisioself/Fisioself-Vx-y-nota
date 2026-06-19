@@ -119,6 +119,7 @@ export function PatientList({ selectedId, onSelect }: PatientListProps) {
                 key={patient.id}
                 type="button"
                 className={patient.id === selectedId ? 'patient-row active' : 'patient-row'}
+                aria-current={patient.id === selectedId ? 'true' : undefined}
                 onClick={() => onSelect?.(patient)}
               >
                 <strong>{patient.full_name}</strong>

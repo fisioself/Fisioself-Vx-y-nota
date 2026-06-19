@@ -97,6 +97,7 @@ export function ExpensesPanel() {
         <input
           type="number"
           inputMode="decimal"
+          min={0}
           placeholder="Monto $"
           aria-label="Monto del gasto"
           value={amount}

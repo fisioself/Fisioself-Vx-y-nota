@@ -1,26 +1,18 @@
-import { useEffect, useRef } from 'react';
+import type { ReactNode } from 'react';
+import { useModalA11y } from '../shared/useModalA11y';
 
 interface ConfirmDialogProps {
-  // Título corto del diálogo (ej. "Eliminar nota").
   title: string;
-  // Mensaje explicativo. Puede ser texto o nodos (para resaltar nombres, etc.).
-  message: React.ReactNode;
-  // Texto del botón que confirma la acción.
+  message: ReactNode;
   confirmLabel?: string;
   cancelLabel?: string;
-  // `danger` pinta el botón de confirmar en rojo (acciones destructivas).
   tone?: 'danger' | 'primary';
-  // Bloquea los botones mientras la acción está en curso.
   busy?: boolean;
   error?: string;
   onConfirm: () => void;
   onCancel: () => void;
 }
 
-// Diálogo de confirmación accesible y reutilizable. Sustituye a window.confirm()
-// (que no respeta el tema, no es navegable bien con lector de pantalla y bloquea
-// el hilo). Maneja foco inicial en el botón de confirmar, cierre con Escape y un
-// backdrop que también es un botón (cerrar al hacer clic fuera).
 export function ConfirmDialog({
   title,
   message,
@@ -32,26 +24,14 @@ export function ConfirmDialog({
   onConfirm,
   onCancel
 }: ConfirmDialogProps) {
-  const confirmRef = useRef<HTMLButtonElement>(null);
-
-  // Foco inicial en el botón de confirmar + cierre con Escape + bloqueo del
-  // scroll de fondo (evita que en móvil se pueda hacer scroll "detrás" del modal).
-  useEffect(() => {
-    confirmRef.current?.focus();
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !busy) onCancel();
-    };
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('keydown', onKey);
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [busy, onCancel]);
+  // useModalA11y: foco inicial en primer elemento interactivo (botón confirmar),
+  // ciclo de Tab atrapado dentro del diálogo, Escape para cerrar, scroll bloqueado.
+  const dialogRef = useModalA11y<HTMLDivElement>(() => { if (!busy) onCancel(); });
 
   return (
     <div
+      ref={dialogRef}
+      tabIndex={-1}
       className="modal-overlay"
       role="dialog"
       aria-modal="true"
@@ -92,7 +72,6 @@ export function ConfirmDialog({
 
         <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
           <button
-            ref={confirmRef}
             type="button"
             className={tone === 'danger' ? 'danger' : ''}
             onClick={onConfirm}

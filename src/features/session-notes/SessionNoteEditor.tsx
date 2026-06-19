@@ -440,6 +440,7 @@ export function SessionNoteEditor({
           value={rawText}
           onChange={(e) => handleTextChange(e.target.value)}
           maxLength={12000}
+          aria-describedby="note-char-count"
           placeholder={`S - Subjetivo: como llega el paciente y que refiere.
 O - Objetivo: que se trabajo, ejercicios, tecnica y respuesta.
 A - Analisis: interpretacion clinica de la sesion.
@@ -447,6 +448,14 @@ P - Plan: indicaciones y siguiente paso.
 Notas adicionales: cualquier detalle relevante.`}
         />
       </label>
+      <p
+        id="note-char-count"
+        className={`char-counter${rawText.length > 10000 ? ' near-limit' : ''}`}
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        {rawText.length.toLocaleString('es-MX')} / 12 000
+      </p>
 
       <div className="ai-box">
         <p>Asistente IA</p>

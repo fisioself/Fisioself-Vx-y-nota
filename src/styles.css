@@ -798,3 +798,59 @@ body {
   opacity: 0.7;
   margin: 0;
 }
+
+/* ---- Píldoras semánticas ------------------------------------------- */
+/* Cita cancelada (rojo suave). El tema oscuro invierte fondo/texto para
+   mantener contraste WCAG AA sin depender de colores hardcodeados en JSX. */
+.pill.cancelled {
+  background: #f3d9d6;
+  color: #7a241c;
+}
+html[data-theme='dark'] .pill.cancelled {
+  background: rgba(180, 35, 24, 0.22);
+  color: #e8a09a;
+}
+
+/* Borrador con cambios sin guardar */
+.pill.alert {
+  background: #ffe0e0;
+  color: #8b2323;
+}
+html[data-theme='dark'] .pill.alert {
+  background: rgba(139, 35, 35, 0.28);
+  color: #e8a09a;
+}
+
+/* ---- Botón de WhatsApp -------------------------------------------- */
+/* Verde WhatsApp fijo (color de marca, no cambia con el tema). Separado
+   del inline style para que el hover y el foco funcionen correctamente. */
+.btn-whatsapp {
+  background: #25d366 !important;
+  color: #fff !important;
+  border: none;
+}
+.btn-whatsapp:hover {
+  opacity: 0.88;
+}
+
+/* ---- Dark mode: componentes con colores hardcodeados en su CSS ------ */
+html[data-theme='dark'] .warning-box {
+  background: rgba(217, 155, 48, 0.1);
+  border-color: rgba(217, 155, 48, 0.28);
+}
+html[data-theme='dark'] .charge-commission-info {
+  background: var(--bg-sunken);
+  border-color: var(--border);
+}
+
+/* Contador de caracteres bajo el textarea de nota de sesión */
+.char-counter {
+  font-size: 0.75rem;
+  color: var(--muted);
+  text-align: right;
+  margin-top: -6px;
+}
+.char-counter.near-limit {
+  color: var(--expense);
+  font-weight: 700;
+}
