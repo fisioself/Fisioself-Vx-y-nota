@@ -21,7 +21,13 @@ export default defineConfig({
           // configured. Forcing it into a named chunk here would make it
           // eager and defeat the lazy load.
           if (id.includes('@sentry')) return undefined;
-          if (id.includes('@fullcalendar')) return 'vendor-calendar';
+          // @fullcalendar: undefined (NO catch-all 'vendor') a propósito. Solo lo
+          // usa NativeCalendar, que se carga diferido (lazy) desde el Panel. Al
+          // devolver undefined, Rollup lo mete en el chunk async de NativeCalendar
+          // y sus ~375 kB se descargan SOLO al abrir la agenda, no en el arranque.
+          // (Forzarlo a un chunk nombrado hacía que rolldown-vite lo precargara
+          // con modulepreload en index.html, anulando el lazy-load.)
+          if (id.includes('@fullcalendar')) return undefined;
           if (id.includes('@supabase')) return 'vendor-supabase';
           if (id.includes('posthog-js')) return 'vendor-posthog';
           if (id.includes('react-markdown') || id.includes('remark-') || id.includes('micromark')) {

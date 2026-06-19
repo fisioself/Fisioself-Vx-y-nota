@@ -49,7 +49,7 @@ export function MonthlyHistory({ monthly }: MonthlyHistoryProps) {
           Aún no hay movimientos registrados.
         </p>
       ) : (
-        <div style={{ overflowX: 'auto', marginTop: 12 }}>
+        <div className="x-scroll" style={{ marginTop: 12 }}>
           <table className="monthly-history-table">
             <thead>
               <tr>
@@ -70,14 +70,19 @@ export function MonthlyHistory({ monthly }: MonthlyHistoryProps) {
                   <th scope="row" style={{ textAlign: 'left', textTransform: 'capitalize' }}>
                     {monthYearLabel(m.month)}
                   </th>
-                  <td style={{ color: '#1f9d57' }}>{money(m.income)}</td>
-                  <td style={{ color: '#c0392b' }}>{money(m.expenses)}</td>
-                  <td style={{ color: m.net >= 0 ? '#1f9d57' : '#c0392b', fontWeight: 600 }}>
+                  <td style={{ color: 'var(--income)' }}>{money(m.income)}</td>
+                  <td style={{ color: 'var(--expense)' }}>{money(m.expenses)}</td>
+                  <td
+                    style={{
+                      color: m.net >= 0 ? 'var(--income)' : 'var(--expense)',
+                      fontWeight: 600
+                    }}
+                  >
                     {money(m.net)}
                   </td>
                   <td>{m.patients}</td>
                   <td>{m.sessions}</td>
-                  <td style={{ color: '#8e44ad' }}>{m.valoraciones}</td>
+                  <td style={{ color: 'var(--valoracion)' }}>{m.valoraciones}</td>
                 </tr>
               ))}
             </tbody>
@@ -86,14 +91,19 @@ export function MonthlyHistory({ monthly }: MonthlyHistoryProps) {
                 <th scope="row" style={{ textAlign: 'left' }}>
                   Total
                 </th>
-                <td style={{ color: '#1f9d57' }}>{money(totals.income)}</td>
-                <td style={{ color: '#c0392b' }}>{money(totals.expenses)}</td>
-                <td style={{ color: totals.net >= 0 ? '#1f9d57' : '#c0392b', fontWeight: 700 }}>
+                <td style={{ color: 'var(--income)' }}>{money(totals.income)}</td>
+                <td style={{ color: 'var(--expense)' }}>{money(totals.expenses)}</td>
+                <td
+                  style={{
+                    color: totals.net >= 0 ? 'var(--income)' : 'var(--expense)',
+                    fontWeight: 700
+                  }}
+                >
                   {money(totals.net)}
                 </td>
                 <td aria-hidden="true">—</td>
                 <td>{totals.sessions}</td>
-                <td style={{ color: '#8e44ad' }}>{totals.valoraciones}</td>
+                <td style={{ color: 'var(--valoracion)' }}>{totals.valoraciones}</td>
               </tr>
             </tfoot>
           </table>

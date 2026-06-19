@@ -22,11 +22,11 @@ export function BarChart({
 
   return (
     <div
+      className="x-scroll"
       style={{
         display: 'flex',
         alignItems: 'stretch',
         gap: 8,
-        overflowX: 'auto',
         paddingBottom: 4
       }}
     >
@@ -130,11 +130,11 @@ export function GroupedBarChart({
         ))}
       </div>
       <div
+        className="x-scroll"
         style={{
           display: 'flex',
           alignItems: 'stretch',
           gap: 8,
-          overflowX: 'auto',
           paddingBottom: 4
         }}
       >

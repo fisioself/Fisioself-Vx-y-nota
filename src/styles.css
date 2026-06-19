@@ -884,6 +884,19 @@ html[data-theme='dark'] .charge-commission-info {
   }
 }
 
+/* Contenedor con scroll horizontal (gráficas anchas, tablas). En móvil, sin
+   `touch-action: pan-x` el navegador interpreta CUALQUIER gesto sobre la zona
+   (incluido el vertical) como intento de scroll horizontal y bloquea el scroll
+   vertical de la página: el panel parecía "trabado" al deslizar el dedo encima.
+   Con pan-x, los gestos verticales pasan a la página y solo los horizontales
+   mueven el contenido ancho. */
+.x-scroll {
+  overflow-x: auto;
+  touch-action: pan-x;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+
 /* Estado vacío con acción: texto centrado + botón que lleva al formulario. */
 .empty-cta {
   display: flex;

@@ -1,8 +1,15 @@
+import { Suspense, lazy } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { clinicalApi } from '../../services/clinicalApi';
 import { calendarService } from '../../services/calendarService';
-import { NativeCalendar } from '../../components/calendar/NativeCalendar';
 import { Skeleton } from '../../components/Skeleton';
+
+// FullCalendar pesa ~375 kB. Al cargarlo de forma diferida, el Panel (vista por
+// defecto) muestra de inmediato las estadísticas y el calendario se descarga
+// aparte — y SOLO si Google Calendar está conectado (si no, nunca se baja).
+const NativeCalendar = lazy(() =>
+  import('../../components/calendar/NativeCalendar').then((m) => ({ default: m.NativeCalendar }))
+);
 
 interface ClinicDashboardProps {
   onPatientSelect?: (patientId: string) => void;
@@ -59,7 +66,15 @@ export function ClinicDashboard({ onPatientSelect }: ClinicDashboardProps) {
               Comprobando conexión con Google...
             </p>
           ) : calStatus?.connected ? (
-            <NativeCalendar onEventClick={onPatientSelect} />
+            <Suspense
+              fallback={
+                <p style={{ padding: '20px', textAlign: 'center', color: '#666', margin: 0 }}>
+                  Cargando agenda…
+                </p>
+              }
+            >
+              <NativeCalendar onEventClick={onPatientSelect} />
+            </Suspense>
           ) : (
             <p style={{ padding: '20px', textAlign: 'center', color: '#666', margin: 0 }}>
               Google Calendar no está conectado. Ve a "Mi Agenda" para conectarlo.
@@ -82,7 +97,7 @@ export function ClinicDashboard({ onPatientSelect }: ClinicDashboardProps) {
         </div>
         <div className="card" style={{ background: 'var(--bg-sunken)' }}>
           <span>Valoraciones (este mes)</span>
-          <strong style={{ color: '#8e44ad' }}>{stats.monthValoraciones}</strong>
+          <strong style={{ color: 'var(--valoracion)' }}>{stats.monthValoraciones}</strong>
         </div>
         <div className="card">
           <span>Citas Pendientes</span>
