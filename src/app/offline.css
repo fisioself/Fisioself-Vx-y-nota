@@ -4,8 +4,13 @@
   z-index: 1100;
   padding: 10px 16px;
   background: #fff7df;
-  color: #12372a;
+  color: var(--text-main);
   border-bottom: 1px solid rgba(217, 155, 48, 0.45);
   font-weight: 800;
   text-align: center;
+}
+
+html[data-theme='dark'] .offline-banner {
+  background: #2a1e00;
+  border-bottom-color: rgba(217, 155, 48, 0.3);
 }

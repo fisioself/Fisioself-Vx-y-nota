@@ -289,8 +289,23 @@ export const PatientRecord = memo(function PatientRecord({
               patientId={current.id}
               sessionNumber={nextSession}
               onCancel={() => setShowSessionNote(false)}
-              onSaved={() => {
+              onSaved={(saved) => {
                 setShowSessionNote(false);
+                // Instantly insert the saved note into the cache so the list
+                // updates without waiting for the full record refetch.
+                queryClient.setQueryData<ClinicalRecord>(
+                  ['patient', patient.id],
+                  (old) => {
+                    if (!old) return old;
+                    const exists = (old.session_notes ?? []).some((n) => n.id === saved.id);
+                    return {
+                      ...old,
+                      session_notes: exists
+                        ? (old.session_notes ?? []).map((n) => (n.id === saved.id ? saved : n))
+                        : [...(old.session_notes ?? []), saved]
+                    };
+                  }
+                );
                 refreshRecord();
               }}
             />

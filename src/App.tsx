@@ -8,6 +8,7 @@ import { clearPersistedQueryCache } from './lib/offlineSync';
 import { setUser as sentrySetUser, clearUser as sentryClearUser } from './lib/sentry';
 import { AppLogo } from './components/AppLogo';
 import { PushNotificationButton } from './features/notifications/PushNotificationButton';
+import { PanelErrorBoundary } from './app/ErrorBoundary';
 import type { Patient } from './types/clinical';
 
 interface LoginScreenProps {
@@ -340,20 +341,23 @@ export function App() {
       </nav>
 
       <aside className="left-pane">
-        <Suspense fallback={<LoadingCard>Cargando pacientes...</LoadingCard>}>
-          <PatientList
-            selectedId={selectedPatient?.id}
-            onSelect={(patient) => {
-              setSelectedPatient(patient);
-              setShowFinance(false);
-              setShowDashboard(false);
-            }}
-          />
-        </Suspense>
+        <PanelErrorBoundary label="lista de pacientes">
+          <Suspense fallback={<LoadingCard>Cargando pacientes...</LoadingCard>}>
+            <PatientList
+              selectedId={selectedPatient?.id}
+              onSelect={(patient) => {
+                setSelectedPatient(patient);
+                setShowFinance(false);
+                setShowDashboard(false);
+              }}
+            />
+          </Suspense>
+        </PanelErrorBoundary>
       </aside>
 
       <section className="right-pane">
-        <Suspense fallback={<LoadingCard>Cargando datos...</LoadingCard>}>
+        <PanelErrorBoundary label="el panel principal">
+          <Suspense fallback={<LoadingCard>Cargando datos...</LoadingCard>}>
           {showNewPatient ? (
             <PatientForm
               onCancel={() => {
@@ -398,7 +402,8 @@ export function App() {
               }}
             />
           )}
-        </Suspense>
+          </Suspense>
+        </PanelErrorBoundary>
       </section>
     </main>
   );

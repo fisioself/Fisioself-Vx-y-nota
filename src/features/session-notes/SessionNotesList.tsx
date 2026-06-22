@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { useToast } from '../../app/ToastProvider';
 import { clinicalApi } from '../../services/clinicalApi';
 import { SessionNoteEditor } from './SessionNoteEditor';
@@ -17,6 +17,9 @@ export function SessionNotesList({ notes = [], onChanged }: SessionNotesListProp
   const [openId, setOpenId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  // IDs que ya se eliminaron optimistamente: desaparecen al instante del DOM
+  // sin esperar el refetch, y reaparecen si la petición falla.
+  const [optimisticDeleted, setOptimisticDeleted] = useState<ReadonlySet<string>>(new Set());
   // Nota pendiente de confirmar su borrado permanente (null = sin diálogo).
   const [confirmNote, setConfirmNote] = useState<SessionNote | null>(null);
   const { notify } = useToast();
@@ -30,28 +33,41 @@ export function SessionNotesList({ notes = [], onChanged }: SessionNotesListProp
 
   const filtered = useMemo(() => {
     const q = debouncedQuery.trim().toLowerCase();
-    const sorted = [...notes].sort((a, b) => Number(b.session_number) - Number(a.session_number));
+    const sorted = [...notes]
+      .filter((n) => !optimisticDeleted.has(n.id))
+      .sort((a, b) => Number(b.session_number) - Number(a.session_number));
     if (!q) return sorted;
     return sorted.filter((note) =>
       [note.raw_text, note.session_date, note.eva, note.session_number]
         .filter((value) => value != null)
         .some((value) => String(value).toLowerCase().includes(q))
     );
-  }, [notes, debouncedQuery]);
+  }, [notes, debouncedQuery, optimisticDeleted]);
 
-  const deleteNote = async (note: SessionNote) => {
-    setConfirmNote(null);
-    setDeletingId(note.id);
-    try {
-      await clinicalApi.deleteSessionNote(note.id);
-      notify({ tone: 'success', message: `Sesion #${note.session_number} eliminada.` });
-      onChanged?.();
-    } catch (err) {
-      notify({ tone: 'error', message: getErrorMessage(err, 'No se pudo eliminar la nota.') });
-    } finally {
-      setDeletingId(null);
-    }
-  };
+  const deleteNote = useCallback(
+    async (note: SessionNote) => {
+      setConfirmNote(null);
+      setDeletingId(note.id);
+      // Optimistic: remove immediately from the visible list.
+      setOptimisticDeleted((prev) => new Set([...prev, note.id]));
+      try {
+        await clinicalApi.deleteSessionNote(note.id);
+        notify({ tone: 'success', message: `Sesion #${note.session_number} eliminada.` });
+        onChanged?.();
+      } catch (err) {
+        // Roll back: re-show the note.
+        setOptimisticDeleted((prev) => {
+          const next = new Set(prev);
+          next.delete(note.id);
+          return next;
+        });
+        notify({ tone: 'error', message: getErrorMessage(err, 'No se pudo eliminar la nota.') });
+      } finally {
+        setDeletingId(null);
+      }
+    },
+    [notify, onChanged]
+  );
 
   return (
     <section className="card">
