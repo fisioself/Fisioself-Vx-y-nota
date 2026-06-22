@@ -215,6 +215,27 @@ export function AppointmentChargeModal({
     // Solo paquetes vigentes: con sesiones pendientes o saldo por cobrar.
     .filter((p) => p.usedSessions < p.totalSessions || p.balance > 0.01);
 
+  // Refresca en segundo plano todos los cachés que toca un cobro/abono/paquete.
+  // Fire-and-forget a propósito: la escritura ya quedó en Supabase (fuente de
+  // verdad), así que NO bloqueamos el cierre del modal esperando los 8 refetches
+  // (que en 3G congelaban el spinner varios segundos). Las pantallas se refrescan
+  // solas cuando llegan los datos.
+  const refreshAfterMoneyChange = () => {
+    void Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['appt-charge', apptId] }),
+      queryClient.invalidateQueries({ queryKey: ['active-packages', patientId] }),
+      queryClient.invalidateQueries({ queryKey: ['finance-global'] }),
+      queryClient.invalidateQueries({ queryKey: ['caja-payments'] }),
+      queryClient.invalidateQueries({ queryKey: ['patient-finance', patientId] }),
+      // Un cobro con tarjeta inserta un gasto de comisión y mueve la caja; sin
+      // estas dos, ExpensesPanel y el historial de caja quedaban desfasados.
+      queryClient.invalidateQueries({ queryKey: ['expenses'] }),
+      queryClient.invalidateQueries({ queryKey: ['caja-movements'] }),
+      // El cobro marca la cita como atendida → refresca los KPIs del panel.
+      queryClient.invalidateQueries({ queryKey: ['clinic-stats'] })
+    ]);
+  };
+
   const save = async () => {
     setError('');
     if (mode === 'suelta') {
@@ -253,21 +274,9 @@ export function AppointmentChargeModal({
         amount: mode === 'suelta' ? grossSuelta : grossAbono,
         method: mode === 'suelta' ? method : abonoAmount ? abonoMethod : undefined
       });
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['appt-charge', apptId] }),
-        queryClient.invalidateQueries({ queryKey: ['active-packages', patientId] }),
-        queryClient.invalidateQueries({ queryKey: ['finance-global'] }),
-        queryClient.invalidateQueries({ queryKey: ['caja-payments'] }),
-        queryClient.invalidateQueries({ queryKey: ['patient-finance', patientId] }),
-        // Un cobro con tarjeta inserta un gasto de comisión y mueve la caja; sin
-        // estas dos, ExpensesPanel y el historial de caja quedaban desfasados.
-        queryClient.invalidateQueries({ queryKey: ['expenses'] }),
-        queryClient.invalidateQueries({ queryKey: ['caja-movements'] }),
-        // El cobro marca la cita como atendida → refresca los KPIs del panel.
-        queryClient.invalidateQueries({ queryKey: ['clinic-stats'] })
-      ]);
       notify({ tone: 'success', message: 'Cobro registrado.' });
       onClose();
+      refreshAfterMoneyChange();
     } catch (err) {
       console.error('[AppointmentChargeModal] chargeAppointment failed:', err);
       const raw = err as Record<string, unknown>;
@@ -289,20 +298,8 @@ export function AppointmentChargeModal({
     setError('');
     try {
       await financeApi.deleteAppointmentCharge(target);
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['appt-charge', apptId] }),
-        queryClient.invalidateQueries({ queryKey: ['active-packages', patientId] }),
-        queryClient.invalidateQueries({ queryKey: ['finance-global'] }),
-        queryClient.invalidateQueries({ queryKey: ['caja-payments'] }),
-        queryClient.invalidateQueries({ queryKey: ['patient-finance', patientId] }),
-        // Un cobro con tarjeta inserta un gasto de comisión y mueve la caja; sin
-        // estas dos, ExpensesPanel y el historial de caja quedaban desfasados.
-        queryClient.invalidateQueries({ queryKey: ['expenses'] }),
-        queryClient.invalidateQueries({ queryKey: ['caja-movements'] }),
-        // El cobro marca la cita como atendida → refresca los KPIs del panel.
-        queryClient.invalidateQueries({ queryKey: ['clinic-stats'] })
-      ]);
       notify({ tone: 'success', message: 'Cobro eliminado.' });
+      refreshAfterMoneyChange();
     } catch (err) {
       setError(getErrorMessage(err, 'No se pudo eliminar el cobro.'));
     } finally {
@@ -317,20 +314,8 @@ export function AppointmentChargeModal({
     setError('');
     try {
       await financeApi.deletePatientPackageFully(patientPackageId);
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['appt-charge', apptId] }),
-        queryClient.invalidateQueries({ queryKey: ['active-packages', patientId] }),
-        queryClient.invalidateQueries({ queryKey: ['finance-global'] }),
-        queryClient.invalidateQueries({ queryKey: ['caja-payments'] }),
-        queryClient.invalidateQueries({ queryKey: ['patient-finance', patientId] }),
-        // Un cobro con tarjeta inserta un gasto de comisión y mueve la caja; sin
-        // estas dos, ExpensesPanel y el historial de caja quedaban desfasados.
-        queryClient.invalidateQueries({ queryKey: ['expenses'] }),
-        queryClient.invalidateQueries({ queryKey: ['caja-movements'] }),
-        // El cobro marca la cita como atendida → refresca los KPIs del panel.
-        queryClient.invalidateQueries({ queryKey: ['clinic-stats'] })
-      ]);
       notify({ tone: 'success', message: 'Paquete eliminado.' });
+      refreshAfterMoneyChange();
     } catch (err) {
       setError(getErrorMessage(err, 'No se pudo eliminar el paquete.'));
     } finally {
