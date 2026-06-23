@@ -253,7 +253,7 @@ export function App() {
   }
 
   return (
-    <main className="shell app-grid">
+    <main className={`shell app-grid${showFinance ? ' finance-mode' : ''}`}>
       {searchOpen && (
         <GlobalSearch
           onSelectPatient={(patient) => {
@@ -348,11 +348,12 @@ export function App() {
       <nav className="main-tabs">
         <button
           type="button"
-          className={showDashboard ? '' : 'secondary'}
+          className={showDashboard || showNewPatient || (!showFinance && selectedPatient) ? '' : 'secondary'}
           onClick={() => {
             setShowDashboard(true);
             setShowFinance(false);
             setSelectedPatient(null);
+            setShowNewPatient(false);
           }}
         >
           Panel
@@ -364,43 +365,47 @@ export function App() {
             setShowFinance(true);
             setShowDashboard(false);
             setSelectedPatient(null);
+            setShowNewPatient(false);
           }}
         >
           Finanzas
         </button>
-        <button
-          type="button"
-          className="secondary"
-          onClick={() => {
-            setShowFinance(false);
-            if (showNewPatient) {
-              // Cerrar el alta y volver al Panel (en vez de dejar un expediente vacío).
-              setShowNewPatient(false);
-              setShowDashboard(true);
-            } else {
-              setShowNewPatient(true);
-              setShowDashboard(false);
-            }
-          }}
-        >
-          {showNewPatient ? 'Cerrar' : '+ Paciente'}
-        </button>
       </nav>
 
-      <aside className="left-pane">
-        <PanelErrorBoundary label="lista de pacientes">
-          <Suspense fallback={<LoadingCard>Cargando pacientes...</LoadingCard>}>
-            <PatientList
-              selectedId={selectedPatient?.id}
-              onSelect={(patient) => {
-                setSelectedPatient(patient);
-                setShowFinance(false);
+      {!showFinance && (
+        <aside className="left-pane">
+          <button
+            type="button"
+            className={showNewPatient ? 'secondary' : ''}
+            style={{ width: '100%' }}
+            onClick={() => {
+              if (showNewPatient) {
+                setShowNewPatient(false);
+                setShowDashboard(true);
+              } else {
+                setShowNewPatient(true);
                 setShowDashboard(false);
-              }}
-            />
-          </Suspense>
-        </PanelErrorBoundary>
-      </aside>
+                setSelectedPatient(null);
+              }
+            }}
+          >
+            {showNewPatient ? 'Cancelar alta' : '+ Nuevo paciente'}
+          </button>
+          <PanelErrorBoundary label="lista de pacientes">
+            <Suspense fallback={<LoadingCard>Cargando pacientes...</LoadingCard>}>
+              <PatientList
+                selectedId={selectedPatient?.id}
+                onSelect={(patient) => {
+                  setSelectedPatient(patient);
+                  setShowFinance(false);
+                  setShowDashboard(false);
+                  setShowNewPatient(false);
+                }}
+              />
+            </Suspense>
+          </PanelErrorBoundary>
+        </aside>
+      )}
 
       <section className="right-pane">
         <PanelErrorBoundary label="el panel principal">

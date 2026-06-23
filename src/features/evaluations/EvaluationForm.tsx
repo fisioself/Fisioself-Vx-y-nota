@@ -492,11 +492,14 @@ export function EvaluationForm({
           </label>
           <label className="span-2">
             Fisioterapeuta a cargo
-            <input
-              maxLength={180}
+            <select
               value={values.therapist_name}
               onChange={(e) => setField('therapist_name', e.target.value)}
-            />
+            >
+              <option value="">— Seleccionar —</option>
+              <option value="Zyanya Camila Sandoval Meza">Zyanya Camila Sandoval Meza</option>
+              <option value="Felipe de Jesús Pacheco Peñafiel">Felipe de Jesús Pacheco Peñafiel</option>
+            </select>
           </label>
         </div>
       </fieldset>

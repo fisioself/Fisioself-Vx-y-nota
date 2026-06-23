@@ -254,17 +254,20 @@ details:focus-visible summary {
 .app-grid > * {
   min-width: 0;
 }
-/* Barra de pestañas principal (Panel / Finanzas / + Paciente) a todo lo ancho,
-   en una cuadrícula de 3 columnas iguales que nunca se desborda. */
+/* Barra de pestañas principal (Panel / Finanzas) a todo lo ancho. */
 .main-tabs {
   grid-column: 1 / -1;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 10px;
 }
 .main-tabs button {
   width: 100%;
   min-height: 46px;
+}
+/* En modo Finanzas la barra lateral se oculta y el panel derecho ocupa todo. */
+.app-grid.finance-mode {
+  grid-template-columns: 1fr;
 }
 .left-pane,
 .right-pane,

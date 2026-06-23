@@ -62,17 +62,18 @@ export function FinanceView(_props: FinanceViewProps) {
           </p>
           <h1 style={{ fontSize: 30, color: 'white', margin: 0 }}>Finanzas y métricas</h1>
         </div>
-        {summary && (
+      </header>
+      {summary && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
           <button
             type="button"
             className="secondary"
-            style={{ alignSelf: 'flex-end', whiteSpace: 'nowrap' }}
             onClick={() => exportFinancePdf(summary)}
           >
             Exportar PDF
           </button>
-        )}
-      </header>
+        </div>
+      )}
 
       {isLoading ? (
         <section className="card" aria-busy="true">
