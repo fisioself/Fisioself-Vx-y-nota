@@ -46,22 +46,32 @@ export function ClinicalTimeline({ items = [] }: ClinicalTimelineProps) {
                 <strong>{item.label}</strong>
                 <span className="timeline-type">{typeLabels[item.type] || item.type}</span>
               </div>
-              <p className="muted">
-                {item.date ? fmtDate(item.date) : 'Sin fecha'}
-              </p>
+              <p className="muted">{item.date ? fmtDate(item.date) : 'Sin fecha'}</p>
               <p>{item.description}</p>
             </div>
           </article>
         ))}
         {!items.length && (
           <div style={{ textAlign: 'center', padding: '28px 0', opacity: 0.5 }}>
-            <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/>
-              <rect x="9" y="3" width="6" height="4" rx="1"/>
-              <line x1="9" y1="12" x2="15" y2="12"/>
-              <line x1="9" y1="16" x2="13" y2="16"/>
+            <svg
+              width="52"
+              height="52"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
+              <rect x="9" y="3" width="6" height="4" rx="1" />
+              <line x1="9" y1="12" x2="15" y2="12" />
+              <line x1="9" y1="16" x2="13" y2="16" />
             </svg>
-            <p className="muted" style={{ margin: '8px 0 0' }}>Aún no hay actividad clínica registrada.</p>
+            <p className="muted" style={{ margin: '8px 0 0' }}>
+              Aún no hay actividad clínica registrada.
+            </p>
           </div>
         )}
       </div>

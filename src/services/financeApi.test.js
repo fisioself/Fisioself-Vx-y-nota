@@ -476,7 +476,13 @@ describe('financeApi.getGlobalFinance', () => {
     const may = result.monthly.find((m) => m.month === '2026-05');
     const jun = result.monthly.find((m) => m.month === '2026-06');
     expect(may).toMatchObject({ income: 350, patients: 4, sessions: 8 });
-    expect(jun).toMatchObject({ income: 850, expenses: 200, net: 650, patients: 6, valoraciones: 2 });
+    expect(jun).toMatchObject({
+      income: 850,
+      expenses: 200,
+      net: 650,
+      patients: 6,
+      valoraciones: 2
+    });
 
     // Mes en curso combina ingreso (dinero) + pacientes (citas).
     expect(result.currentMonth.income).toBe(850);

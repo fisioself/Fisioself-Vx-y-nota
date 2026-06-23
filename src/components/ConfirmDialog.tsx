@@ -26,7 +26,9 @@ export function ConfirmDialog({
 }: ConfirmDialogProps) {
   // useModalA11y: foco inicial en primer elemento interactivo (botón confirmar),
   // ciclo de Tab atrapado dentro del diálogo, Escape para cerrar, scroll bloqueado.
-  const dialogRef = useModalA11y<HTMLDivElement>(() => { if (!busy) onCancel(); });
+  const dialogRef = useModalA11y<HTMLDivElement>(() => {
+    if (!busy) onCancel();
+  });
 
   return (
     <div

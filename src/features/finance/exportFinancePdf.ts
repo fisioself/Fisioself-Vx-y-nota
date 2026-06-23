@@ -18,8 +18,7 @@ const monthLabel = (ym: string) => {
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
-const tableRow = (cells: string[]) =>
-  `<tr>${cells.map((c) => `<td>${c}</td>`).join('')}</tr>`;
+const tableRow = (cells: string[]) => `<tr>${cells.map((c) => `<td>${c}</td>`).join('')}</tr>`;
 
 function buildHtml(s: GlobalFinanceSummary): string {
   const cm = s.currentMonth;
@@ -61,7 +60,9 @@ function buildHtml(s: GlobalFinanceSummary): string {
     .join('');
 
   const expRows = s.expensesByCategory
-    .map((c) => tableRow([cap(c.category), `<strong style="color:#c0392b">-${m(c.amount)}</strong>`]))
+    .map((c) =>
+      tableRow([cap(c.category), `<strong style="color:#c0392b">-${m(c.amount)}</strong>`])
+    )
     .join('');
 
   const cajaRows = Object.entries(caja.byMethod)

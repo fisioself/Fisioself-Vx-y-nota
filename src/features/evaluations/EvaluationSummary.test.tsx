@@ -89,7 +89,11 @@ describe('EvaluationSummary', () => {
     render(
       <EvaluationSummary
         evaluation={makeEvaluation({
-          general_assessment: { blood_pressure: '120/80', heart_rate: '72', posture: 'Antepulsión' },
+          general_assessment: {
+            blood_pressure: '120/80',
+            heart_rate: '72',
+            posture: 'Antepulsión'
+          },
           zones: [
             {
               zone: 'Rodilla',

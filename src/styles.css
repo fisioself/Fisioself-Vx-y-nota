@@ -573,13 +573,16 @@ pre {
 .monthly-history-table td,
 .monthly-history-table th,
 .summary-grid strong {
-  font-feature-settings: "tnum";
+  font-feature-settings: 'tnum';
   font-variant-numeric: tabular-nums;
 }
 
 /* Microinteractions: subtle transitions on interactive list items */
 .patient-row {
-  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    box-shadow 0.15s ease;
 }
 .patient-row:not(.active):hover {
   border-color: rgba(18, 55, 42, 0.2);
@@ -592,7 +595,9 @@ pre {
   box-shadow: 0 4px 16px rgba(18, 55, 42, 0.1);
 }
 button {
-  transition: opacity 0.12s ease, transform 0.12s ease;
+  transition:
+    opacity 0.12s ease,
+    transform 0.12s ease;
 }
 button:not(:disabled):active {
   transform: scale(0.97);

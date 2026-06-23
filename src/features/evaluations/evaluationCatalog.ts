@@ -348,7 +348,12 @@ const COLUMNA_LUMBAR: ZoneCatalog = {
     {
       group: 'Neurológico / Radicular (tensión neural)',
       name: 'Slump Test',
-      options: ['Positivo con diferenciación sensitizante', 'Positivo sin diferenciación', 'Negativo', 'No valorado'],
+      options: [
+        'Positivo con diferenciación sensitizante',
+        'Positivo sin diferenciación',
+        'Negativo',
+        'No valorado'
+      ],
       note: 'Mayor sensibilidad que SLR; útil en síntomas distales no reproducidos con SLR.'
     },
     {
@@ -454,7 +459,12 @@ const COLUMNA_CERVICAL: ZoneCatalog = {
     {
       group: 'Radicular — Cluster Wainner',
       name: 'Upper Limb Tension Test A / ULTT-A (mediano)',
-      options: ['Positivo con diferenciación', 'Positivo sin diferenciación', 'Negativo', 'No valorado']
+      options: [
+        'Positivo con diferenciación',
+        'Positivo sin diferenciación',
+        'Negativo',
+        'No valorado'
+      ]
     },
     {
       group: 'Facetaria cervical',
@@ -569,7 +579,12 @@ const HOMBRO: ZoneCatalog = {
     {
       group: 'Inestabilidad glenohumeral',
       name: 'Aprehensión anterior + Recolocación (Apprehension-Relocation)',
-      options: ['Aprehensión (inestabilidad)', 'Dolor sin aprehensión (pinzamiento)', 'Negativo', 'No valorado']
+      options: [
+        'Aprehensión (inestabilidad)',
+        'Dolor sin aprehensión (pinzamiento)',
+        'Negativo',
+        'No valorado'
+      ]
     },
     {
       group: 'Inestabilidad glenohumeral',
@@ -742,7 +757,7 @@ const MANO_MUNECA: ZoneCatalog = {
     },
     {
       group: 'Tendinosa — Estiloides radial / De Quervain',
-      name: "Finkelstein (De Quervain — APL / EPB)",
+      name: 'Finkelstein (De Quervain — APL / EPB)',
       options: ['Positivo (dolor intenso en estiloides)', 'Leve', 'Negativo', 'No valorado'],
       note: 'Pulgar en puño + desviación cubital pasiva. Alta sensibilidad para De Quervain.'
     },

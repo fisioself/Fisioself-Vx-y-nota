@@ -171,14 +171,22 @@ export const seguimientosApi = {
 
       const nextAppt = futureAppts[0] ?? null;
       const nextAppointment = nextAppt
-        ? { starts_at: nextAppt.starts_at, session_type: nextAppt.session_type, title: nextAppt.title }
+        ? {
+            starts_at: nextAppt.starts_at,
+            session_type: nextAppt.session_type,
+            title: nextAppt.title
+          }
         : null;
 
       // Cita de hoy: la próxima de hoy si la hay, si no la última de hoy.
       const futureTodayAppts = todayAppts.filter((a) => a.starts_at >= now);
       const todayApptRaw = futureTodayAppts[0] ?? todayAppts.at(-1) ?? null;
       const todayAppointment = todayApptRaw
-        ? { starts_at: todayApptRaw.starts_at, session_type: todayApptRaw.session_type, title: todayApptRaw.title }
+        ? {
+            starts_at: todayApptRaw.starts_at,
+            session_type: todayApptRaw.session_type,
+            title: todayApptRaw.title
+          }
         : null;
 
       const lastEva = lastEvaByPatient.get(pid) ?? null;

@@ -48,9 +48,7 @@ describe('ClinicDashboard', () => {
   });
 
   it('shows skeleton while loading', () => {
-    vi.mocked(clinicalApi.getClinicStats).mockImplementation(
-      () => new Promise(() => {})
-    );
+    vi.mocked(clinicalApi.getClinicStats).mockImplementation(() => new Promise(() => {}));
     renderWithProviders(<ClinicDashboard />);
     expect(document.querySelector('[aria-busy="true"]')).toBeInTheDocument();
   });

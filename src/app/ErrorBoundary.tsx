@@ -109,11 +109,7 @@ export class PanelErrorBoundary extends Component<
             <button type="button" onClick={() => this.setState({ error: null })}>
               Reintentar
             </button>
-            <button
-              type="button"
-              className="secondary"
-              onClick={() => window.location.reload()}
-            >
+            <button type="button" className="secondary" onClick={() => window.location.reload()}>
               Recargar app
             </button>
           </div>

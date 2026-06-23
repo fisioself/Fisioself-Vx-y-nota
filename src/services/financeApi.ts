@@ -160,8 +160,7 @@ export const financeApi = {
     const loosePaid = payments
       .filter((p) => p.patient_package_id == null)
       .reduce((a, p) => a + Number(p.amount ?? 0), 0);
-    const totalBilled =
-      packages.reduce((a, p) => a + Number(p.total_amount ?? 0), 0) + loosePaid;
+    const totalBilled = packages.reduce((a, p) => a + Number(p.total_amount ?? 0), 0) + loosePaid;
     const totalPaid = sum(payments);
     const sessionsTotal = packages.reduce((a, p) => a + Number(p.sessions_total ?? 0), 0);
     const sessionsUsed = packages.reduce((a, p) => a + Number(p.sessions_used ?? 0), 0);

@@ -16,12 +16,7 @@ import {
   INJURY_MECHANISM,
   PAIN_TYPE_OPTIONS
 } from './evaluationCatalog';
-import type {
-  Patient,
-  Evaluation,
-  EvaluationSections,
-  EvaluationZone
-} from '../../types/clinical';
+import type { Patient, Evaluation, EvaluationSections, EvaluationZone } from '../../types/clinical';
 import './EvaluationForm.css';
 
 interface RomRow {
@@ -246,9 +241,7 @@ export function EvaluationForm({
       const has = current.red_flags.includes(flag);
       return {
         ...current,
-        red_flags: has
-          ? current.red_flags.filter((f) => f !== flag)
-          : [...current.red_flags, flag]
+        red_flags: has ? current.red_flags.filter((f) => f !== flag) : [...current.red_flags, flag]
       };
     });
     setError('');
@@ -498,7 +491,9 @@ export function EvaluationForm({
             >
               <option value="">— Seleccionar —</option>
               <option value="Zyanya Camila Sandoval Meza">Zyanya Camila Sandoval Meza</option>
-              <option value="Felipe de Jesús Pacheco Peñafiel">Felipe de Jesús Pacheco Peñafiel</option>
+              <option value="Felipe de Jesús Pacheco Peñafiel">
+                Felipe de Jesús Pacheco Peñafiel
+              </option>
             </select>
           </label>
         </div>
@@ -839,9 +834,7 @@ function ZoneEditor({ zone, index, onChange, onRemove }: ZoneEditorProps) {
   const setRom = (i: number, key: keyof RomRow, value: string) =>
     onChange((z) => ({
       ...z,
-      movement_ranges: z.movement_ranges.map((r, ri) =>
-        ri === i ? { ...r, [key]: value } : r
-      )
+      movement_ranges: z.movement_ranges.map((r, ri) => (ri === i ? { ...r, [key]: value } : r))
     }));
   const addRom = () =>
     onChange((z) => ({ ...z, movement_ranges: [...z.movement_ranges, { ...emptyRomRow }] }));
@@ -857,9 +850,7 @@ function ZoneEditor({ zone, index, onChange, onRemove }: ZoneEditorProps) {
   const setStrength = (i: number, key: keyof StrengthRow, value: string) =>
     onChange((z) => ({
       ...z,
-      muscle_strength: z.muscle_strength.map((r, ri) =>
-        ri === i ? { ...r, [key]: value } : r
-      )
+      muscle_strength: z.muscle_strength.map((r, ri) => (ri === i ? { ...r, [key]: value } : r))
     }));
   const addStrength = () =>
     onChange((z) => ({ ...z, muscle_strength: [...z.muscle_strength, { ...emptyStrengthRow }] }));
@@ -904,10 +895,7 @@ function ZoneEditor({ zone, index, onChange, onRemove }: ZoneEditorProps) {
       <div className="zone-card-head">
         <label style={{ flex: 1 }}>
           Zona a evaluar
-          <select
-            value={zone.zone_id}
-            onChange={(e) => setZoneField('zone_id', e.target.value)}
-          >
+          <select value={zone.zone_id} onChange={(e) => setZoneField('zone_id', e.target.value)}>
             <option value="">— Seleccionar zona —</option>
             {ZONE_CATALOGS.map((z) => (
               <option key={z.id} value={z.id}>

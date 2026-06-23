@@ -216,12 +216,7 @@ export function PatientFinancePanel({ patient }: PatientFinancePanelProps) {
             onChange={setInitPayMethod}
             ariaLabel="Método pago inicial"
           />
-          <button
-            type="button"
-            className="finance-form-full"
-            onClick={addPackage}
-            disabled={busy}
-          >
+          <button type="button" className="finance-form-full" onClick={addPackage} disabled={busy}>
             Agregar
           </button>
         </div>
@@ -311,12 +306,19 @@ export function PatientFinancePanel({ patient }: PatientFinancePanelProps) {
           value={payAmount}
           onChange={(e) => setPayAmount(e.target.value)}
         />
-        <PaymentMethodSelect value={payMethod} onChange={setPayMethod} ariaLabel="Método de abono" />
+        <PaymentMethodSelect
+          value={payMethod}
+          onChange={setPayMethod}
+          ariaLabel="Método de abono"
+        />
         <button type="button" className="secondary" onClick={registerPayment} disabled={busy}>
           Registrar abono
         </button>
         {payMethod === 'tarjeta' && Number(payAmount) > 0 && (
-          <span className="finance-form-full" style={{ fontSize: '0.8rem', color: 'var(--expense)' }}>
+          <span
+            className="finance-form-full"
+            style={{ fontSize: '0.8rem', color: 'var(--expense)' }}
+          >
             Recibes {money(netAfterCommission(Number(payAmount)))} (−4.06 % comisión)
           </span>
         )}

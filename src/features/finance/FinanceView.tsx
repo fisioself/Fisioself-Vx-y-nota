@@ -54,7 +54,10 @@ export function FinanceView(_props: FinanceViewProps) {
 
   return (
     <div className="record-stack">
-      <header className="hero" style={{ padding: 24, borderRadius: 22, display: 'flex', alignItems: 'center', gap: 16 }}>
+      <header
+        className="hero"
+        style={{ padding: 24, borderRadius: 22, display: 'flex', alignItems: 'center', gap: 16 }}
+      >
         <div>
           <p className="eyebrow" style={{ color: 'rgba(255,255,255,0.7)' }}>
             Control financiero y métricas
@@ -214,7 +217,9 @@ export function FinanceView(_props: FinanceViewProps) {
               </div>
               <div className="card">
                 <span>Ganancia neta</span>
-                <strong style={{ color: (d30?.net ?? 0) >= 0 ? 'var(--income)' : 'var(--expense)' }}>
+                <strong
+                  style={{ color: (d30?.net ?? 0) >= 0 ? 'var(--income)' : 'var(--expense)' }}
+                >
                   {money(d30?.net ?? 0)}
                 </strong>
               </div>
@@ -354,7 +359,6 @@ export function FinanceView(_props: FinanceViewProps) {
               </ul>
             </section>
           )}
-
         </>
       )}
     </div>

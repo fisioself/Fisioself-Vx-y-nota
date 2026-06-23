@@ -149,11 +149,7 @@ export function ExpensesPanel() {
         {expenses.length === 0 && (
           <div className="empty-cta">
             <p className="muted">Aún no hay gastos registrados.</p>
-            <button
-              type="button"
-              className="secondary"
-              onClick={() => amountRef.current?.focus()}
-            >
+            <button type="button" className="secondary" onClick={() => amountRef.current?.focus()}>
               Registrar el primer gasto
             </button>
           </div>

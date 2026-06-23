@@ -352,7 +352,13 @@ export function App() {
       <nav className="main-tabs">
         <button
           type="button"
-          className={showDashboard || showNewPatient || (!showFinance && !showSeguimientos && selectedPatient) ? '' : 'secondary'}
+          className={
+            showDashboard ||
+            showNewPatient ||
+            (!showFinance && !showSeguimientos && selectedPatient)
+              ? ''
+              : 'secondary'
+          }
           onClick={() => {
             setShowDashboard(true);
             setShowFinance(false);
@@ -430,64 +436,64 @@ export function App() {
       <section className="right-pane">
         <PanelErrorBoundary label="el panel principal">
           <Suspense fallback={<LoadingCard>Cargando datos...</LoadingCard>}>
-          {showNewPatient ? (
-            <PatientForm
-              onCancel={() => {
-                setShowNewPatient(false);
-                setShowDashboard(true);
-              }}
-              onCreated={(patient) => {
-                setSelectedPatient(patient);
-                setShowFinance(false);
-                setShowSeguimientos(false);
-                setShowDashboard(false);
-                setShowNewPatient(false);
-                queryClient.invalidateQueries({ queryKey: ['patients'] });
-              }}
-            />
-          ) : showSeguimientos ? (
-            <SeguimientosView
-              onPatientSelect={(id) => {
-                setFromSeguimientos(true);
-                setSelectedPatient({ id });
-                setShowSeguimientos(false);
-                setShowDashboard(false);
-              }}
-            />
-          ) : showDashboard ? (
-            <ClinicDashboard
-              onPatientSelect={(patientId) => {
-                setSelectedPatient({ id: patientId });
-                setShowFinance(false);
-                setShowDashboard(false);
-              }}
-            />
-          ) : showFinance ? (
-            <FinanceView
-              onPatientSelect={(patientId) => {
-                setSelectedPatient({ id: patientId });
-                setShowFinance(false);
-                setShowDashboard(false);
-              }}
-            />
-          ) : (
-            <PatientRecord
-              patient={selectedPatient}
-              onPatientUpdated={(updatedPatient) => {
-                setSelectedPatient(updatedPatient);
-                queryClient.invalidateQueries({ queryKey: ['patients'] });
-              }}
-              onPatientDeleted={() => {
-                const backToSeg = fromSeguimientos;
-                setFromSeguimientos(false);
-                setSelectedPatient(null);
-                setShowSeguimientos(backToSeg);
-                setShowDashboard(!backToSeg);
-                queryClient.invalidateQueries({ queryKey: ['patients'] });
-                queryClient.invalidateQueries({ queryKey: ['seguimientos'] });
-              }}
-            />
-          )}
+            {showNewPatient ? (
+              <PatientForm
+                onCancel={() => {
+                  setShowNewPatient(false);
+                  setShowDashboard(true);
+                }}
+                onCreated={(patient) => {
+                  setSelectedPatient(patient);
+                  setShowFinance(false);
+                  setShowSeguimientos(false);
+                  setShowDashboard(false);
+                  setShowNewPatient(false);
+                  queryClient.invalidateQueries({ queryKey: ['patients'] });
+                }}
+              />
+            ) : showSeguimientos ? (
+              <SeguimientosView
+                onPatientSelect={(id) => {
+                  setFromSeguimientos(true);
+                  setSelectedPatient({ id });
+                  setShowSeguimientos(false);
+                  setShowDashboard(false);
+                }}
+              />
+            ) : showDashboard ? (
+              <ClinicDashboard
+                onPatientSelect={(patientId) => {
+                  setSelectedPatient({ id: patientId });
+                  setShowFinance(false);
+                  setShowDashboard(false);
+                }}
+              />
+            ) : showFinance ? (
+              <FinanceView
+                onPatientSelect={(patientId) => {
+                  setSelectedPatient({ id: patientId });
+                  setShowFinance(false);
+                  setShowDashboard(false);
+                }}
+              />
+            ) : (
+              <PatientRecord
+                patient={selectedPatient}
+                onPatientUpdated={(updatedPatient) => {
+                  setSelectedPatient(updatedPatient);
+                  queryClient.invalidateQueries({ queryKey: ['patients'] });
+                }}
+                onPatientDeleted={() => {
+                  const backToSeg = fromSeguimientos;
+                  setFromSeguimientos(false);
+                  setSelectedPatient(null);
+                  setShowSeguimientos(backToSeg);
+                  setShowDashboard(!backToSeg);
+                  queryClient.invalidateQueries({ queryKey: ['patients'] });
+                  queryClient.invalidateQueries({ queryKey: ['seguimientos'] });
+                }}
+              />
+            )}
           </Suspense>
         </PanelErrorBoundary>
       </section>

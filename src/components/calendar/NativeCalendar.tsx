@@ -140,44 +140,50 @@ export function NativeCalendar({ onEventClick }: NativeCalendarProps) {
     enabled: debouncedPatientQuery.trim().length >= 2
   });
 
-  const goToPatientAppointment = useCallback(async (patientId: string, patientName: string | null) => {
-    setShowPatientDropdown(false);
-    setPatientQuery(patientName ?? '');
-    try {
-      const db = assertSupabase();
-      const now = new Date().toISOString();
-      // Busca primero la próxima cita futura; si no hay, la más reciente pasada.
-      const { data: future } = await db
-        .from('appointments')
-        .select('starts_at')
-        .eq('patient_id', patientId)
-        .neq('status', 'cancelled')
-        .gte('starts_at', now)
-        .order('starts_at', { ascending: true })
-        .limit(1);
-      const appt = future?.[0] ?? null;
-      if (!appt) {
-        const { data: past } = await db
+  const goToPatientAppointment = useCallback(
+    async (patientId: string, patientName: string | null) => {
+      setShowPatientDropdown(false);
+      setPatientQuery(patientName ?? '');
+      try {
+        const db = assertSupabase();
+        const now = new Date().toISOString();
+        // Busca primero la próxima cita futura; si no hay, la más reciente pasada.
+        const { data: future } = await db
           .from('appointments')
           .select('starts_at')
           .eq('patient_id', patientId)
           .neq('status', 'cancelled')
-          .lt('starts_at', now)
-          .order('starts_at', { ascending: false })
+          .gte('starts_at', now)
+          .order('starts_at', { ascending: true })
           .limit(1);
-        if (!past?.[0]) {
-          notify({ tone: 'error', message: `${patientName ?? 'Paciente'} no tiene citas en la agenda.` });
-          return;
+        const appt = future?.[0] ?? null;
+        if (!appt) {
+          const { data: past } = await db
+            .from('appointments')
+            .select('starts_at')
+            .eq('patient_id', patientId)
+            .neq('status', 'cancelled')
+            .lt('starts_at', now)
+            .order('starts_at', { ascending: false })
+            .limit(1);
+          if (!past?.[0]) {
+            notify({
+              tone: 'error',
+              message: `${patientName ?? 'Paciente'} no tiene citas en la agenda.`
+            });
+            return;
+          }
+          calendarRef.current?.getApi().gotoDate(new Date(past[0].starts_at));
+        } else {
+          calendarRef.current?.getApi().gotoDate(new Date(appt.starts_at));
         }
-        calendarRef.current?.getApi().gotoDate(new Date(past[0].starts_at));
-      } else {
-        calendarRef.current?.getApi().gotoDate(new Date(appt.starts_at));
+        calendarRef.current?.getApi().changeView('timeGridWeek');
+      } catch {
+        notify({ tone: 'error', message: 'No se pudo buscar las citas del paciente.' });
       }
-      calendarRef.current?.getApi().changeView('timeGridWeek');
-    } catch {
-      notify({ tone: 'error', message: 'No se pudo buscar las citas del paciente.' });
-    }
-  }, [notify]);
+    },
+    [notify]
+  );
 
   const {
     data: appointments = [],
