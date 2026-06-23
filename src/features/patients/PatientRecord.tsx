@@ -15,6 +15,14 @@ import { useRole } from '../../shared/useRole';
 import { EvaluationSummary } from '../evaluations/EvaluationSummary';
 import { SkeletonList } from '../../components/Skeleton';
 
+const buildPatientWhatsAppUrl = (patient: Patient | Partial<Patient>): string => {
+  const phone = (patient.phone ?? '').replace(/\D/g, '');
+  const number = phone.length === 10 ? `52${phone}` : phone;
+  const name = patient.full_name?.split(' ')[0] ?? 'paciente';
+  const msg = `Hola ${name} 😊 Te contactamos desde Fisioself. ¿Cómo te has sentido? Estamos disponibles para cualquier duda o para agendar tu próxima cita.`;
+  return `https://wa.me/${number}?text=${encodeURIComponent(msg)}`;
+};
+
 export const getNextSessionNumber = (notes: Pick<SessionNote, 'session_number'>[] = []) => {
   const maxSession = notes.reduce((max, note) => {
     const value = Number(note.session_number);
@@ -187,6 +195,17 @@ export const PatientRecord = memo(function PatientRecord({
           >
             Exportar PDF
           </button>
+          {current.phone && (
+            <a
+              href={buildPatientWhatsAppUrl(current)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="secondary"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, textDecoration: 'none', minHeight: 44 }}
+            >
+              WhatsApp
+            </a>
+          )}
           <button
             type="button"
             className="secondary"

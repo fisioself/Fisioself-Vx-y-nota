@@ -10,6 +10,7 @@ import { AppLogo } from './components/AppLogo';
 import { PushNotificationButton } from './features/notifications/PushNotificationButton';
 import { PanelErrorBoundary } from './app/ErrorBoundary';
 import { GlobalSearch } from './features/search/GlobalSearch';
+import { SeguimientosView } from './features/seguimientos/SeguimientosView';
 import type { Patient } from './types/clinical';
 
 interface LoginScreenProps {
@@ -87,6 +88,7 @@ export function App() {
   const [selectedPatient, setSelectedPatient] = useState<Partial<Patient> | null>(null);
   const [showNewPatient, setShowNewPatient] = useState(false);
   const [showFinance, setShowFinance] = useState(false);
+  const [showSeguimientos, setShowSeguimientos] = useState(false);
   const [showDashboard, setShowDashboard] = useState(true);
   const [showMfaSettings, setShowMfaSettings] = useState(false);
   // Si el usuario tiene 2FA activo, aquí guardamos el id del factor que debe
@@ -190,6 +192,7 @@ export function App() {
     sentryClearUser();
     setSelectedPatient(null);
     setShowFinance(false);
+    setShowSeguimientos(false);
     setShowMfaSettings(false);
     setMfaFactorId(null);
     setSession(null);
@@ -253,7 +256,7 @@ export function App() {
   }
 
   return (
-    <main className={`shell app-grid${showFinance ? ' finance-mode' : ''}`}>
+    <main className={`shell app-grid${showFinance || showSeguimientos ? ' finance-mode' : ''}`}>
       {searchOpen && (
         <GlobalSearch
           onSelectPatient={(patient) => {
@@ -348,10 +351,11 @@ export function App() {
       <nav className="main-tabs">
         <button
           type="button"
-          className={showDashboard || showNewPatient || (!showFinance && selectedPatient) ? '' : 'secondary'}
+          className={showDashboard || showNewPatient || (!showFinance && !showSeguimientos && selectedPatient) ? '' : 'secondary'}
           onClick={() => {
             setShowDashboard(true);
             setShowFinance(false);
+            setShowSeguimientos(false);
             setSelectedPatient(null);
             setShowNewPatient(false);
           }}
@@ -364,15 +368,29 @@ export function App() {
           onClick={() => {
             setShowFinance(true);
             setShowDashboard(false);
+            setShowSeguimientos(false);
             setSelectedPatient(null);
             setShowNewPatient(false);
           }}
         >
           Finanzas
         </button>
+        <button
+          type="button"
+          className={showSeguimientos ? '' : 'secondary'}
+          onClick={() => {
+            setShowSeguimientos(true);
+            setShowFinance(false);
+            setShowDashboard(false);
+            setSelectedPatient(null);
+            setShowNewPatient(false);
+          }}
+        >
+          Seguimientos
+        </button>
       </nav>
 
-      {!showFinance && (
+      {!showFinance && !showSeguimientos && (
         <aside className="left-pane">
           <button
             type="button"
@@ -419,9 +437,18 @@ export function App() {
               onCreated={(patient) => {
                 setSelectedPatient(patient);
                 setShowFinance(false);
+                setShowSeguimientos(false);
                 setShowDashboard(false);
                 setShowNewPatient(false);
                 queryClient.invalidateQueries({ queryKey: ['patients'] });
+              }}
+            />
+          ) : showSeguimientos ? (
+            <SeguimientosView
+              onPatientSelect={(id) => {
+                setSelectedPatient({ id });
+                setShowSeguimientos(false);
+                setShowDashboard(false);
               }}
             />
           ) : showDashboard ? (
