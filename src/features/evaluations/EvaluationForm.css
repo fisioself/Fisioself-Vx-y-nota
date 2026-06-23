@@ -117,6 +117,10 @@
 }
 
 @media (max-width: 640px) {
+  .zone-card {
+    padding: 10px;
+    overflow: hidden;
+  }
   .zone-card-head {
     flex-direction: column;
     align-items: stretch;
@@ -125,6 +129,10 @@
   .clinical-table-row.strength-row {
     grid-template-columns: 1fr 1fr;
   }
+  .clinical-table-row.rom-row > *,
+  .clinical-table-row.strength-row > * {
+    min-width: 0;
+  }
   .clinical-table-row.rom-row > button,
   .clinical-table-row.strength-row > button {
     grid-column: 1 / -1;
@@ -132,5 +140,8 @@
   .test-row {
     grid-template-columns: 1fr;
     gap: 6px;
+  }
+  .test-inputs {
+    grid-template-columns: 1fr;
   }
 }

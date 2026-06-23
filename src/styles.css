@@ -665,21 +665,27 @@ button:not(:disabled):active {
     right: 10px;
     bottom: 10px;
     z-index: 20;
-    display: grid;
-    grid-auto-flow: column;
-    grid-auto-columns: minmax(132px, max-content);
-    justify-content: flex-start;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 8px;
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
     padding: 10px;
     border: 1px solid rgba(18, 55, 42, 0.14);
     border-radius: 18px;
     background: rgba(255, 250, 240, 0.96);
     box-shadow: 0 16px 40px rgba(18, 55, 42, 0.2);
   }
+  .record-header .hero-actions::-webkit-scrollbar {
+    display: none;
+  }
   .record-header .hero-actions button,
   .record-header .hero-actions .pill {
     min-height: 44px;
     white-space: nowrap;
+    flex-shrink: 0;
   }
   .actions,
   .row {

@@ -484,7 +484,7 @@ export function EvaluationForm({
             />
           </label>
           <label>
-            Médico tratante / Referido por
+            Referido por
             <input
               value={values.referred_by}
               onChange={(e) => setField('referred_by', e.target.value)}
@@ -581,7 +581,7 @@ export function EvaluationForm({
             />
           </label>
           <label>
-            Médico tratante / Diagnóstico médico
+            Diagnóstico médico
             <input
               value={values.medical_diagnosis}
               onChange={(e) => setField('medical_diagnosis', e.target.value)}
