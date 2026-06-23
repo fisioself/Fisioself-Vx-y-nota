@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback, useEffect } from 'react';
+import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
@@ -7,6 +7,7 @@ import esLocale from '@fullcalendar/core/locales/es';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { assertSupabase } from '../../lib/supabaseClient';
 import { useToast } from '../../app/ToastProvider';
+import { clinicalApi } from '../../services/clinicalApi';
 import {
   AppointmentChargeModal,
   type ChargeAppointmentTarget
@@ -119,11 +120,64 @@ export function NativeCalendar({ onEventClick }: NativeCalendarProps) {
   const [syncing, setSyncing] = useState(false);
   const [chargeTarget, setChargeTarget] = useState<ChargeAppointmentTarget | null>(null);
   const [newSlot, setNewSlot] = useState<NewAppointmentSlot | null>(null);
-  // Rango de fechas visible en el calendario. Solo cargamos las citas de ese
-  // rango (no las 2000+ históricas), así abrir la agenda es rápido y ligero.
   const [range, setRange] = useState<{ start: string; end: string } | null>(null);
+  // Buscador de paciente en agenda
+  const [patientQuery, setPatientQuery] = useState('');
+  const [debouncedPatientQuery, setDebouncedPatientQuery] = useState('');
+  const [showPatientDropdown, setShowPatientDropdown] = useState(false);
+  const calendarRef = useRef<FullCalendar>(null);
   const { notify } = useToast();
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedPatientQuery(patientQuery), 250);
+    return () => clearTimeout(t);
+  }, [patientQuery]);
+
+  const { data: patientResults = [] } = useQuery({
+    queryKey: ['calendar-patient-search', debouncedPatientQuery],
+    queryFn: () => clinicalApi.searchPatients(debouncedPatientQuery),
+    enabled: debouncedPatientQuery.trim().length >= 2
+  });
+
+  const goToPatientAppointment = useCallback(async (patientId: string, patientName: string | null) => {
+    setShowPatientDropdown(false);
+    setPatientQuery(patientName ?? '');
+    try {
+      const db = assertSupabase();
+      const now = new Date().toISOString();
+      // Busca primero la próxima cita futura; si no hay, la más reciente pasada.
+      const { data: future } = await db
+        .from('appointments')
+        .select('starts_at')
+        .eq('patient_id', patientId)
+        .neq('status', 'cancelled')
+        .gte('starts_at', now)
+        .order('starts_at', { ascending: true })
+        .limit(1);
+      const appt = future?.[0] ?? null;
+      if (!appt) {
+        const { data: past } = await db
+          .from('appointments')
+          .select('starts_at')
+          .eq('patient_id', patientId)
+          .neq('status', 'cancelled')
+          .lt('starts_at', now)
+          .order('starts_at', { ascending: false })
+          .limit(1);
+        if (!past?.[0]) {
+          notify({ tone: 'error', message: `${patientName ?? 'Paciente'} no tiene citas en la agenda.` });
+          return;
+        }
+        calendarRef.current?.getApi().gotoDate(new Date(past[0].starts_at));
+      } else {
+        calendarRef.current?.getApi().gotoDate(new Date(appt.starts_at));
+      }
+      calendarRef.current?.getApi().changeView('timeGridWeek');
+    } catch {
+      notify({ tone: 'error', message: 'No se pudo buscar las citas del paciente.' });
+    }
+  }, [notify]);
 
   const {
     data: appointments = [],
@@ -264,6 +318,43 @@ export function NativeCalendar({ onEventClick }: NativeCalendarProps) {
 
   return (
     <div className="native-calendar-wrapper">
+      {/* Buscador de paciente → navega a su próxima cita */}
+      <div className="cal-patient-search">
+        <input
+          type="search"
+          placeholder="Buscar paciente en agenda…"
+          value={patientQuery}
+          onChange={(e) => {
+            setPatientQuery(e.target.value);
+            setShowPatientDropdown(true);
+          }}
+          onFocus={() => setShowPatientDropdown(true)}
+          aria-label="Buscar paciente en agenda"
+        />
+        {showPatientDropdown && debouncedPatientQuery.trim().length >= 2 && (
+          <ul className="cal-patient-dropdown" role="listbox">
+            {patientResults.length === 0 ? (
+              <li className="cal-patient-empty">Sin coincidencias</li>
+            ) : (
+              patientResults.map((p) => (
+                <li key={p.id} role="option" aria-selected={false}>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault(); // evita que el blur cierre antes del click
+                      goToPatientAppointment(p.id, p.full_name ?? null);
+                    }}
+                  >
+                    {p.full_name}
+                    {p.phone ? <span className="cal-patient-sub">{p.phone}</span> : null}
+                  </button>
+                </li>
+              ))
+            )}
+          </ul>
+        )}
+      </div>
+
       <div className="calendar-header-actions">
         {isFetching && (
           <span className="muted" style={{ marginRight: 'auto', fontSize: '0.85rem' }}>
@@ -278,6 +369,7 @@ export function NativeCalendar({ onEventClick }: NativeCalendarProps) {
 
       <div className="fc-container">
         <FullCalendar
+          ref={calendarRef}
           plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
           initialView="timeGridWeek"
           headerToolbar={{

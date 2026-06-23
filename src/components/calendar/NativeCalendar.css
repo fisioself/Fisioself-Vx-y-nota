@@ -15,6 +15,68 @@
   font-family: inherit;
 }
 
+/* Título de fecha del calendario (ej. "22 – 27 jun 2026") — color explícito
+   para que no quede lavado sobre el fondo blanco. */
+.fc .fc-toolbar-title {
+  color: var(--primary);
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+/* Buscador de paciente en agenda */
+.cal-patient-search {
+  position: relative;
+  margin-bottom: 14px;
+}
+.cal-patient-search input {
+  margin-top: 0;
+}
+.cal-patient-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  list-style: none;
+  padding: 4px 0;
+  margin: 0;
+  box-shadow: 0 8px 28px rgba(18, 55, 42, 0.14);
+  max-height: 240px;
+  overflow-y: auto;
+}
+.cal-patient-dropdown li button {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: 0;
+  padding: 10px 14px;
+  cursor: pointer;
+  color: var(--text-main);
+  font-size: 0.92rem;
+  font-weight: 600;
+  margin: 0;
+}
+.cal-patient-dropdown li button:hover {
+  background: var(--secondary);
+}
+.cal-patient-sub {
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-weight: 400;
+}
+.cal-patient-empty {
+  padding: 12px 14px;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
 .fc .fc-button-primary {
   background-color: var(--primary);
   border-color: var(--primary);
