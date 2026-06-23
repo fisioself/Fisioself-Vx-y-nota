@@ -1,4 +1,4 @@
-import type { Evaluation } from '../../types/clinical';
+import type { Evaluation, EvaluationZone } from '../../types/clinical';
 
 interface JointRow {
   joint?: string;
@@ -21,6 +21,8 @@ interface EvaluationSummaryProps {
   evaluation: Evaluation;
 }
 
+const val = (value: unknown) => (value ? String(value) : 'No registrado');
+
 export function EvaluationSummary({ evaluation }: EvaluationSummaryProps) {
   const sections = (evaluation.sections || {}) as Evaluation['sections'] & {
     physical_exam?: ExamSection;
@@ -28,86 +30,204 @@ export function EvaluationSummary({ evaluation }: EvaluationSummaryProps) {
   const identity = (sections?.patient_identity || {}) as Record<string, string | undefined>;
   const history = (sections?.history || {}) as Record<string, string | undefined>;
   const consultation = sections?.consultation || {};
+  const general = sections?.general_assessment || {};
   const pain = sections?.pain || {};
+  const redFlags = sections?.red_flags || {};
+  const conclusion = sections?.conclusion || {};
+  const zones = sections?.zones || [];
   const exam = sections?.physical_exam || {};
 
-  const renderValue = (value: unknown) => (value ? String(value) : 'No registrado');
+  // ¿Tiene la estructura nueva (zonas/conclusión) o es una valoración antigua?
+  const hasLegacyExam =
+    !!exam.examination ||
+    !!exam.general_inspection ||
+    !!exam.movement_ranges?.length ||
+    !!exam.muscle_strength?.length ||
+    !!exam.special_tests?.length;
+
+  const redFlagList = [...(redFlags.items ?? []), redFlags.other].filter(Boolean) as string[];
 
   return (
     <div className="evaluation-summary">
       <div className="record-grid">
         <div>
           <p className="eyebrow">Datos</p>
-          <p>Edad: {renderValue(identity.age)}</p>
-          <p>Sexo: {renderValue(identity.sex)}</p>
-          <p>Ocupacion: {renderValue(identity.occupation)}</p>
-          <p>Fisioterapeuta: {renderValue(identity.therapist_name)}</p>
+          <p>Edad: {val(identity.age)}</p>
+          <p>Sexo: {val(identity.sex)}</p>
+          <p>Ocupacion: {val(identity.occupation)}</p>
+          <p>Fisioterapeuta: {val(identity.therapist_name)}</p>
+          {identity.referred_by && <p>Referido por: {identity.referred_by}</p>}
         </div>
         <div>
-          <p className="eyebrow">Dolor</p>
-          <p>Localizacion: {renderValue(pain.location)}</p>
-          <p>Tipo: {renderValue(pain.type)}</p>
-          <p>Intensidad: {pain.intensity ?? 'No registrada'}/10</p>
-          <p>Agravantes: {renderValue(pain.aggravating_factors)}</p>
+          <p className="eyebrow">Consulta</p>
+          <p>Motivo: {val(consultation.reason)}</p>
+          {consultation.symptom_classification && (
+            <p>Clasificación: {consultation.symptom_classification}</p>
+          )}
+          {consultation.injury_mechanism && <p>Mecanismo: {consultation.injury_mechanism}</p>}
+          {consultation.medical_diagnosis && (
+            <p>Dx médico: {consultation.medical_diagnosis}</p>
+          )}
         </div>
       </div>
 
       <p>
-        <strong>Motivo:</strong> {renderValue(consultation.reason)}
+        <strong>Historia clinica:</strong> {val(consultation.clinical_history)}
       </p>
       <p>
-        <strong>Historia clinica:</strong> {renderValue(consultation.clinical_history)}
-      </p>
-      <p>
-        <strong>Antecedentes:</strong> {renderValue(history.personal_history)}
-      </p>
-      <p>
-        <strong>Exploracion:</strong> {renderValue(exam.examination)}
-      </p>
-      <p>
-        <strong>Inspeccion general:</strong> {renderValue(exam.general_inspection)}
+        <strong>Antecedentes:</strong> {val(history.personal_history)}
       </p>
 
-      {!!exam.movement_ranges?.length && (
+      {redFlagList.length > 0 && (
+        <p className="error" style={{ margin: '4px 0' }}>
+          <strong>Banderas rojas:</strong> {redFlagList.join('; ')}
+        </p>
+      )}
+
+      {/* Dolor global LEGADO (valoraciones antiguas: el dolor era único, no por zona) */}
+      {(pain.location || pain.intensity != null || pain.type || pain.aggravating_factors) && (
         <div>
-          <p className="eyebrow">Rangos de movimiento</p>
-          <div className="mini-table">
-            {exam.movement_ranges.map((row, index) => (
-              <p key={`${row.joint || ''}-${index}`}>
-                {renderValue(row.joint)}: {renderValue(row.range)}
-                {row.notes ? ` - ${row.notes}` : ''}
-              </p>
-            ))}
-          </div>
+          <p className="eyebrow">Dolor</p>
+          <p>Localizacion: {val(pain.location)}</p>
+          <p>Tipo: {val(pain.type)}</p>
+          <p>Intensidad: {pain.intensity ?? 'No registrada'}/10</p>
+          <p>Agravantes: {val(pain.aggravating_factors)}</p>
         </div>
       )}
 
-      {!!exam.muscle_strength?.length && (
+      {/* Valoración general (estructura nueva) */}
+      {(general.blood_pressure ||
+        general.heart_rate ||
+        general.inspection ||
+        general.posture ||
+        general.gait) && (
         <div>
-          <p className="eyebrow">Fuerza muscular</p>
-          <div className="mini-table">
-            {exam.muscle_strength.map((row, index) => (
-              <p key={`${row.joint || ''}-${index}`}>
-                {renderValue(row.joint)}: {renderValue(row.strength)}
-                {row.notes ? ` - ${row.notes}` : ''}
-              </p>
-            ))}
-          </div>
+          <p className="eyebrow">Valoración general</p>
+          {(general.blood_pressure ||
+            general.heart_rate ||
+            general.respiratory_rate ||
+            general.oxygen_saturation) && (
+            <p>
+              Signos vitales: TA {val(general.blood_pressure)} · FC {val(general.heart_rate)} · FR{' '}
+              {val(general.respiratory_rate)} · SatO₂ {val(general.oxygen_saturation)}
+            </p>
+          )}
+          {general.inspection && <p>Inspección: {general.inspection}</p>}
+          {general.posture && <p>Postura: {general.posture}</p>}
+          {general.gait && <p>Marcha: {general.gait}</p>}
         </div>
       )}
 
-      {!!exam.special_tests?.length && (
-        <div>
-          <p className="eyebrow">Pruebas especiales</p>
-          <div className="mini-table">
-            {exam.special_tests.map((row, index) => (
-              <p key={`${row.name || ''}-${index}`}>
-                {renderValue(row.name)}: {renderValue(row.result)}
-                {row.notes ? ` - ${row.notes}` : ''}
-              </p>
-            ))}
-          </div>
+      {/* Zonas evaluadas (estructura nueva) */}
+      {zones.map((zone: EvaluationZone, zi: number) => (
+        <div className="summary-zone" key={`zone-${zi}`}>
+          <p className="eyebrow">Zona: {val(zone.zone)}</p>
+          {zone.pain && (zone.pain.location || zone.pain.intensity != null || zone.pain.type) && (
+            <p>
+              Dolor: {val(zone.pain.location)}
+              {zone.pain.intensity != null ? ` · ${zone.pain.intensity}/10` : ''}
+              {zone.pain.type ? ` · ${zone.pain.type}` : ''}
+            </p>
+          )}
+          {!!zone.movement_ranges?.length && (
+            <div className="mini-table">
+              {zone.movement_ranges.map((r, i) => (
+                <p key={`zr-${i}`}>
+                  {val(r.movement)}: {val(r.range)}
+                  {r.degrees ? ` (${r.degrees}°)` : ''}
+                  {r.notes ? ` - ${r.notes}` : ''}
+                </p>
+              ))}
+            </div>
+          )}
+          {!!zone.muscle_strength?.length && (
+            <div className="mini-table">
+              {zone.muscle_strength.map((r, i) => (
+                <p key={`zs-${i}`}>
+                  {val(r.muscle)}: {val(r.daniels)}
+                  {r.pain ? ` · dolor: ${r.pain}` : ''}
+                  {r.notes ? ` - ${r.notes}` : ''}
+                </p>
+              ))}
+            </div>
+          )}
+          {!!zone.special_tests?.length && (
+            <div className="mini-table">
+              {zone.special_tests.map((r, i) => (
+                <p key={`zt-${i}`}>
+                  {val(r.name)}: {val(r.result)}
+                  {r.notes ? ` - ${r.notes}` : ''}
+                </p>
+              ))}
+            </div>
+          )}
+          {zone.palpation && <p>Palpación: {zone.palpation}</p>}
         </div>
+      ))}
+
+      {/* Conclusión (estructura nueva) */}
+      {(conclusion.objectives_short ||
+        conclusion.objectives_mid ||
+        conclusion.objectives_long ||
+        conclusion.treatment_plan) && (
+        <div>
+          <p className="eyebrow">Conclusión</p>
+          {conclusion.objectives_short && <p>Objetivos corto plazo: {conclusion.objectives_short}</p>}
+          {conclusion.objectives_mid && <p>Objetivos mediano plazo: {conclusion.objectives_mid}</p>}
+          {conclusion.objectives_long && <p>Objetivos largo plazo: {conclusion.objectives_long}</p>}
+          {conclusion.treatment_plan && <p>Plan: {conclusion.treatment_plan}</p>}
+        </div>
+      )}
+
+      {/* Exploración física LEGADA (valoraciones antiguas, tablas planas globales) */}
+      {hasLegacyExam && (
+        <>
+          <p>
+            <strong>Exploracion:</strong> {val(exam.examination)}
+          </p>
+          <p>
+            <strong>Inspeccion general:</strong> {val(exam.general_inspection)}
+          </p>
+          {!!exam.movement_ranges?.length && (
+            <div>
+              <p className="eyebrow">Rangos de movimiento</p>
+              <div className="mini-table">
+                {exam.movement_ranges.map((row, index) => (
+                  <p key={`${row.joint || ''}-${index}`}>
+                    {val(row.joint)}: {val(row.range)}
+                    {row.notes ? ` - ${row.notes}` : ''}
+                  </p>
+                ))}
+              </div>
+            </div>
+          )}
+          {!!exam.muscle_strength?.length && (
+            <div>
+              <p className="eyebrow">Fuerza muscular</p>
+              <div className="mini-table">
+                {exam.muscle_strength.map((row, index) => (
+                  <p key={`${row.joint || ''}-${index}`}>
+                    {val(row.joint)}: {val(row.strength)}
+                    {row.notes ? ` - ${row.notes}` : ''}
+                  </p>
+                ))}
+              </div>
+            </div>
+          )}
+          {!!exam.special_tests?.length && (
+            <div>
+              <p className="eyebrow">Pruebas especiales</p>
+              <div className="mini-table">
+                {exam.special_tests.map((row, index) => (
+                  <p key={`${row.name || ''}-${index}`}>
+                    {val(row.name)}: {val(row.result)}
+                    {row.notes ? ` - ${row.notes}` : ''}
+                  </p>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

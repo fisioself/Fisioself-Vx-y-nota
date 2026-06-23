@@ -1,56 +1,106 @@
-import { useState, type FormEvent } from 'react';
+import { useMemo, useState, type FormEvent } from 'react';
 import { clinicalApi } from '../../services/clinicalApi';
 import { getLocalISODate } from '../../shared/dateUtils';
 import { draftStorage, getEvaluationDraftKey } from '../../shared/draftStorage';
 import { useDraftAutosave } from '../../shared/useDraftAutosave';
 import { getErrorMessage } from '../../shared/errors';
 import { PatientDocuments } from '../patients/PatientDocuments';
-import type { Patient, Evaluation, EvaluationSections } from '../../types/clinical';
+import {
+  ZONE_CATALOGS,
+  getZoneCatalog,
+  DEFAULT_TEST_OPTIONS,
+  DANIELS_OPTIONS,
+  ROM_RANGE_OPTIONS,
+  RED_FLAG_OPTIONS,
+  SYMPTOM_CLASSIFICATION,
+  INJURY_MECHANISM,
+  PAIN_TYPE_OPTIONS
+} from './evaluationCatalog';
+import type {
+  Patient,
+  Evaluation,
+  EvaluationSections,
+  EvaluationZone
+} from '../../types/clinical';
+import './EvaluationForm.css';
 
-interface JointRow {
-  joint: string;
+interface RomRow {
+  movement: string;
   range: string;
+  degrees: string;
   notes: string;
 }
-
 interface StrengthRow {
-  joint: string;
-  strength: string;
+  muscle: string;
+  daniels: string;
+  pain: string;
   notes: string;
 }
-
-interface SpecialTestRow {
-  name: string;
+// Resultado de una prueba especial, indexado por nombre de prueba del catálogo.
+interface TestResult {
   result: string;
   notes: string;
 }
 
+interface ZoneFormData {
+  zone_id: string;
+  zone_label: string; // para zona "otra" (texto libre)
+  pain_location: string;
+  pain_intensity: string;
+  pain_type: string;
+  aggravating_factors: string;
+  easing_factors: string;
+  movement_ranges: RomRow[];
+  muscle_strength: StrengthRow[];
+  special_results: Record<string, TestResult>;
+  palpation: string;
+}
+
 interface EvaluationFormValues {
+  // Datos generales
   full_name: string;
-  age: string;
+  birth_date: string;
   sex: string;
   admission_date: string;
   occupation: string;
   phone: string;
+  emergency_contact: string;
+  referred_by: string;
   therapist_name: string;
+  // Antecedentes
+  family_history: string;
   personal_history: string;
   surgical_history: string;
   current_medications: string;
   known_allergies: string;
   physical_activity: string;
+  previous_imaging: string;
+  // Motivo
   medical_diagnosis: string;
   consultation_reason: string;
+  symptom_onset_date: string;
+  symptom_classification: string;
+  injury_mechanism: string;
   clinical_history: string;
-  pain_location: string;
-  pain_intensity: string;
-  aggravating_factors: string;
-  easing_factors: string;
-  physical_examination: string;
+  // Banderas rojas
+  red_flags: string[];
+  red_flags_other: string;
+  // Valoración general
+  blood_pressure: string;
+  heart_rate: string;
+  respiratory_rate: string;
+  oxygen_saturation: string;
   general_inspection: string;
+  posture: string;
+  gait: string;
+  // Zonas
+  zones: ZoneFormData[];
+  // Conclusión
   prognosis: string;
-  movement_ranges: JointRow[];
-  muscle_strength: StrengthRow[];
-  special_tests: SpecialTestRow[];
+  objectives_short: string;
+  objectives_mid: string;
+  objectives_long: string;
+  treatment_plan: string;
 }
 
 interface EvaluationFormProps {
@@ -63,46 +113,80 @@ interface EvaluationFormProps {
 
 const today = (): string => getLocalISODate();
 
-const emptyJointRow: JointRow = { joint: '', range: '', notes: '' };
-const emptyStrengthRow: StrengthRow = { joint: '', strength: '', notes: '' };
-const emptySpecialTestRow: SpecialTestRow = { name: '', result: '', notes: '' };
+const emptyRomRow: RomRow = { movement: '', range: '', degrees: '', notes: '' };
+const emptyStrengthRow: StrengthRow = { muscle: '', daniels: '', pain: '', notes: '' };
+
+const newZone = (): ZoneFormData => ({
+  zone_id: '',
+  zone_label: '',
+  pain_location: '',
+  pain_intensity: '',
+  pain_type: '',
+  aggravating_factors: '',
+  easing_factors: '',
+  movement_ranges: [{ ...emptyRomRow }],
+  muscle_strength: [{ ...emptyStrengthRow }],
+  special_results: {},
+  palpation: ''
+});
 
 const emptyEvaluation: EvaluationFormValues = {
   full_name: '',
-  age: '',
+  birth_date: '',
   sex: '',
   admission_date: today(),
   occupation: '',
   phone: '',
+  emergency_contact: '',
+  referred_by: '',
   therapist_name: '',
+  family_history: '',
   personal_history: '',
   surgical_history: '',
   current_medications: '',
   known_allergies: '',
   physical_activity: '',
+  previous_imaging: '',
   medical_diagnosis: '',
   consultation_reason: '',
+  symptom_onset_date: '',
+  symptom_classification: '',
+  injury_mechanism: '',
   clinical_history: '',
-  pain_location: '',
-  pain_intensity: '',
-  aggravating_factors: '',
-  easing_factors: '',
-  physical_examination: '',
+  red_flags: [],
+  red_flags_other: '',
+  blood_pressure: '',
+  heart_rate: '',
+  respiratory_rate: '',
+  oxygen_saturation: '',
   general_inspection: '',
+  posture: '',
+  gait: '',
+  zones: [],
   prognosis: '',
-  movement_ranges: [{ ...emptyJointRow }],
-  muscle_strength: [{ ...emptyStrengthRow }],
-  special_tests: [{ ...emptySpecialTestRow }]
+  objectives_short: '',
+  objectives_mid: '',
+  objectives_long: '',
+  treatment_plan: ''
 };
 
 const sexOptions = ['', 'F', 'M', 'Otro'];
-const movementRangeOptions = ['', 'Limitado', 'Funcional', 'Completo'];
-const strengthOptions = ['', 'Debil', 'Funcional', 'Fuerte'];
-const testResultOptions = ['', 'Positivo', 'Negativo', 'No valorado'];
 
 const toNullable = (value: string | null | undefined): string | null => {
   const trimmed = (value ?? '').trim();
   return trimmed === '' ? null : trimmed;
+};
+
+// Calcula la edad (años) a partir de la fecha de nacimiento. '' si no aplica.
+const computeAge = (birth: string): string => {
+  if (!birth) return '';
+  const b = new Date(birth);
+  if (Number.isNaN(b.getTime())) return '';
+  const now = new Date();
+  let age = now.getFullYear() - b.getFullYear();
+  const m = now.getMonth() - b.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < b.getDate())) age -= 1;
+  return age >= 0 && age < 130 ? String(age) : '';
 };
 
 const cleanRows = <T extends object>(rows: ReadonlyArray<T>): Record<string, unknown>[] =>
@@ -111,8 +195,6 @@ const cleanRows = <T extends object>(rows: ReadonlyArray<T>): Record<string, unk
       Object.fromEntries(Object.entries(row).map(([key, value]) => [key, toNullable(value)]))
     )
     .filter((row) => Object.values(row).some(Boolean));
-
-type RowField = 'movement_ranges' | 'muscle_strength' | 'special_tests';
 
 export function EvaluationForm({
   patient,
@@ -128,7 +210,9 @@ export function EvaluationForm({
     const draft = draftStorage.get(draftKey);
     if (draft) {
       try {
-        return JSON.parse(draft) as EvaluationFormValues;
+        // Mezclamos con emptyEvaluation por si el borrador es de una versión vieja
+        // del formulario (campos nuevos quedan con su default).
+        return { ...emptyEvaluation, ...(JSON.parse(draft) as EvaluationFormValues) };
       } catch {
         // ignore
       }
@@ -138,11 +222,16 @@ export function EvaluationForm({
       full_name: patient?.full_name || '',
       phone: patient?.phone || '',
       sex: patient?.sex || '',
+      birth_date: patient?.birth_date || '',
       occupation: patient?.occupation || ''
     };
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+
+  useDraftAutosave(draftKey, values);
+
+  const age = useMemo(() => computeAge(values.birth_date), [values.birth_date]);
 
   const setField = <K extends keyof EvaluationFormValues>(
     field: K,
@@ -152,26 +241,34 @@ export function EvaluationForm({
     setError('');
   };
 
-  useDraftAutosave(draftKey, values);
-
-  const updateRows = (field: RowField, updater: (rows: object[]) => object[]) => {
-    setValues((current) => ({ ...current, [field]: updater(current[field] as object[]) }));
+  const toggleRedFlag = (flag: string) => {
+    setValues((current) => {
+      const has = current.red_flags.includes(flag);
+      return {
+        ...current,
+        red_flags: has
+          ? current.red_flags.filter((f) => f !== flag)
+          : [...current.red_flags, flag]
+      };
+    });
     setError('');
   };
 
-  const setRow = (field: RowField, index: number, key: string, value: string) => {
-    updateRows(field, (rows) =>
-      rows.map((row, rowIndex) => (rowIndex === index ? { ...row, [key]: value } : row))
+  // --- Zonas ---
+  const updateZone = (index: number, updater: (z: ZoneFormData) => ZoneFormData) => {
+    setValues((current) => ({
+      ...current,
+      zones: current.zones.map((z, i) => (i === index ? updater(z) : z))
+    }));
+    setError('');
+  };
+
+  const addZone = () => setField('zones', [...values.zones, newZone()]);
+  const removeZone = (index: number) =>
+    setField(
+      'zones',
+      values.zones.filter((_, i) => i !== index)
     );
-  };
-
-  const addRow = <R extends object>(field: RowField, emptyRow: R) => {
-    updateRows(field, (rows) => [...rows, { ...emptyRow }]);
-  };
-
-  const removeRow = (field: RowField, index: number) => {
-    updateRows(field, (rows) => (rows.length === 1 ? rows : rows.filter((_, i) => i !== index)));
-  };
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -180,61 +277,124 @@ export function EvaluationForm({
       return;
     }
 
-    const painIntensity = values.pain_intensity === '' ? null : Number(values.pain_intensity);
-    if (
-      painIntensity !== null &&
-      (!Number.isFinite(painIntensity) || painIntensity < 0 || painIntensity > 10)
-    ) {
-      setError('La intensidad del dolor debe estar entre 0 y 10.');
-      return;
+    // Valida intensidades de dolor por zona (0-10).
+    for (const z of values.zones) {
+      if (z.pain_intensity !== '') {
+        const n = Number(z.pain_intensity);
+        if (!Number.isFinite(n) || n < 0 || n > 10) {
+          setError('La intensidad del dolor de cada zona debe estar entre 0 y 10.');
+          return;
+        }
+      }
     }
 
     setSaving(true);
     setError('');
     try {
+      const zones: EvaluationZone[] = values.zones.map((z) => {
+        const catalog = getZoneCatalog(z.zone_id);
+        const label = catalog?.label || z.zone_label || z.zone_id || 'Zona';
+        const special_tests = catalog
+          ? catalog.specialTests
+              .map((t) => {
+                const r = z.special_results[t.name];
+                if (!r || (!r.result && !r.notes)) return null;
+                return {
+                  name: t.name,
+                  group: t.group,
+                  result: toNullable(r.result),
+                  notes: toNullable(r.notes)
+                };
+              })
+              .filter((t): t is NonNullable<typeof t> => t !== null)
+          : [];
+        return {
+          zone: label,
+          zone_id: z.zone_id || null,
+          pain: {
+            location: toNullable(z.pain_location),
+            intensity: z.pain_intensity === '' ? null : Number(z.pain_intensity),
+            type: toNullable(z.pain_type),
+            aggravating_factors: toNullable(z.aggravating_factors),
+            easing_factors: toNullable(z.easing_factors)
+          },
+          movement_ranges: cleanRows(z.movement_ranges),
+          muscle_strength: cleanRows(z.muscle_strength),
+          special_tests,
+          palpation: toNullable(z.palpation)
+        };
+      });
+
       const sections: EvaluationSections = {
         patient_identity: {
           full_name: toNullable(values.full_name),
-          age: toNullable(values.age),
+          birth_date: toNullable(values.birth_date),
+          age: toNullable(age),
           sex: toNullable(values.sex),
           admission_date: toNullable(values.admission_date),
           occupation: toNullable(values.occupation),
           phone: toNullable(values.phone),
+          emergency_contact: toNullable(values.emergency_contact),
+          referred_by: toNullable(values.referred_by),
           therapist_name: toNullable(values.therapist_name)
         },
         history: {
+          family_history: toNullable(values.family_history),
           personal_history: toNullable(values.personal_history),
           surgical_history: toNullable(values.surgical_history),
           current_medications: toNullable(values.current_medications),
           known_allergies: toNullable(values.known_allergies),
-          physical_activity: toNullable(values.physical_activity)
+          physical_activity: toNullable(values.physical_activity),
+          previous_imaging: toNullable(values.previous_imaging)
         },
         consultation: {
           medical_diagnosis: toNullable(values.medical_diagnosis),
           reason: toNullable(values.consultation_reason),
+          symptom_onset_date: toNullable(values.symptom_onset_date),
+          symptom_classification: toNullable(values.symptom_classification),
+          injury_mechanism: toNullable(values.injury_mechanism),
           clinical_history: toNullable(values.clinical_history)
         },
-        pain: {
-          location: toNullable(values.pain_location),
-          intensity: painIntensity,
-          aggravating_factors: toNullable(values.aggravating_factors),
-          easing_factors: toNullable(values.easing_factors)
+        general_assessment: {
+          blood_pressure: toNullable(values.blood_pressure),
+          heart_rate: toNullable(values.heart_rate),
+          respiratory_rate: toNullable(values.respiratory_rate),
+          oxygen_saturation: toNullable(values.oxygen_saturation),
+          inspection: toNullable(values.general_inspection),
+          posture: toNullable(values.posture),
+          gait: toNullable(values.gait)
         },
-        physical_exam: {
-          examination: toNullable(values.physical_examination),
-          general_inspection: toNullable(values.general_inspection),
-          movement_ranges: cleanRows(values.movement_ranges),
-          muscle_strength: cleanRows(values.muscle_strength),
-          special_tests: cleanRows(values.special_tests)
+        red_flags: {
+          items: values.red_flags,
+          other: toNullable(values.red_flags_other)
+        },
+        zones,
+        conclusion: {
+          diagnosis: toNullable(values.prognosis),
+          objectives_short: toNullable(values.objectives_short),
+          objectives_mid: toNullable(values.objectives_mid),
+          objectives_long: toNullable(values.objectives_long),
+          treatment_plan: toNullable(values.treatment_plan)
         }
       };
+
+      // Resumen de banderas rojas para la columna `red_flags` (compat. timeline).
+      const redFlagsSummary =
+        [...values.red_flags, values.red_flags_other.trim()].filter(Boolean).join('; ') || null;
+      // EVA inicial = la mayor intensidad reportada entre las zonas (para gráfica).
+      const maxIntensity = values.zones.reduce<number | null>((max, z) => {
+        if (z.pain_intensity === '') return max;
+        const n = Number(z.pain_intensity);
+        if (!Number.isFinite(n)) return max;
+        return max === null ? n : Math.max(max, n);
+      }, null);
 
       const evaluation = await clinicalApi.addEvaluation({
         patient_id: resolvedPatientId,
         therapist_id: therapistId || null,
         evaluation_date: values.admission_date || today(),
-        eva_initial: painIntensity,
-        red_flags: null,
+        eva_initial: maxIntensity,
+        red_flags: redFlagsSummary,
         prognosis: values.prognosis.trim() || null,
         sections
       });
@@ -253,7 +413,7 @@ export function EvaluationForm({
       <div className="form-header span-2">
         <div>
           <p className="eyebrow">Valoracion inicial</p>
-          <h2>Nueva valoracion clinica</h2>
+          <h2>Nueva valoración clínica</h2>
         </div>
         {onCancel && (
           <button type="button" className="secondary" onClick={onCancel}>
@@ -262,8 +422,9 @@ export function EvaluationForm({
         )}
       </div>
 
+      {/* 1. Datos generales */}
       <fieldset className="form-section span-2">
-        <legend>Datos generales</legend>
+        <legend>1. Datos generales</legend>
         <div className="form-grid">
           <label>
             Nombre completo
@@ -273,11 +434,11 @@ export function EvaluationForm({
             />
           </label>
           <label>
-            Edad
+            Fecha de nacimiento{age ? ` (${age} años)` : ''}
             <input
-              inputMode="numeric"
-              value={values.age}
-              onChange={(e) => setField('age', e.target.value)}
+              type="date"
+              value={values.birth_date}
+              onChange={(e) => setField('birth_date', e.target.value)}
             />
           </label>
           <label>
@@ -299,14 +460,14 @@ export function EvaluationForm({
             />
           </label>
           <label>
-            Ocupacion
+            Ocupación
             <input
               value={values.occupation}
               onChange={(e) => setField('occupation', e.target.value)}
             />
           </label>
           <label>
-            Numero telefonico
+            Número telefónico
             <input
               inputMode="tel"
               maxLength={25}
@@ -314,8 +475,23 @@ export function EvaluationForm({
               onChange={(e) => setField('phone', e.target.value)}
             />
           </label>
+          <label>
+            Contacto de emergencia
+            <input
+              placeholder="Nombre y teléfono"
+              value={values.emergency_contact}
+              onChange={(e) => setField('emergency_contact', e.target.value)}
+            />
+          </label>
+          <label>
+            Médico tratante / Referido por
+            <input
+              value={values.referred_by}
+              onChange={(e) => setField('referred_by', e.target.value)}
+            />
+          </label>
           <label className="span-2">
-            Fisioterapeuta
+            Fisioterapeuta a cargo
             <input
               maxLength={180}
               value={values.therapist_name}
@@ -325,21 +501,32 @@ export function EvaluationForm({
         </div>
       </fieldset>
 
+      {/* 2. Antecedentes */}
       <fieldset className="form-section span-2">
-        <legend>Antecedentes</legend>
+        <legend>2. Antecedentes</legend>
         <div className="form-grid">
           <label className="span-2">
-            Antecedentes personales
+            Antecedentes heredofamiliares
+            <textarea
+              rows={2}
+              placeholder="Ej. Artritis, diabetes, hipertensión."
+              value={values.family_history}
+              onChange={(e) => setField('family_history', e.target.value)}
+            />
+          </label>
+          <label className="span-2">
+            Antecedentes personales patológicos
             <textarea
               rows={3}
+              placeholder="Enfermedades crónicas o sistémicas."
               value={values.personal_history}
               onChange={(e) => setField('personal_history', e.target.value)}
             />
           </label>
           <label className="span-2">
-            Antecedentes quirurgicos
+            Antecedentes quirúrgicos
             <textarea
-              rows={3}
+              rows={2}
               value={values.surgical_history}
               onChange={(e) => setField('surgical_history', e.target.value)}
             />
@@ -347,7 +534,7 @@ export function EvaluationForm({
           <label>
             Medicamentos actuales
             <textarea
-              rows={3}
+              rows={2}
               value={values.current_medications}
               onChange={(e) => setField('current_medications', e.target.value)}
             />
@@ -355,36 +542,89 @@ export function EvaluationForm({
           <label>
             Alergias conocidas
             <textarea
-              rows={3}
+              rows={2}
               value={values.known_allergies}
               onChange={(e) => setField('known_allergies', e.target.value)}
             />
           </label>
           <label className="span-2">
-            Actividad fisica y estilo de vida
+            Actividad física y estilo de vida
             <textarea
-              rows={3}
+              rows={2}
               placeholder="Nivel, tipo de actividad, frecuencia y limitaciones."
               value={values.physical_activity}
               onChange={(e) => setField('physical_activity', e.target.value)}
             />
           </label>
+          <label className="span-2">
+            Estudios de imagen o gabinete previos
+            <textarea
+              rows={2}
+              placeholder="Sí/No y especificaciones."
+              value={values.previous_imaging}
+              onChange={(e) => setField('previous_imaging', e.target.value)}
+            />
+          </label>
         </div>
       </fieldset>
 
+      {/* 3. Motivo de consulta e historia */}
       <fieldset className="form-section span-2">
-        <legend>Motivo de consulta e historia</legend>
+        <legend>3. Motivo de consulta e historia del padecimiento</legend>
         <div className="form-grid">
           <label className="span-2">
-            Motivo de consulta
+            Motivo de consulta principal
             <textarea
-              rows={3}
+              rows={2}
               value={values.consultation_reason}
               onChange={(e) => setField('consultation_reason', e.target.value)}
             />
           </label>
+          <label>
+            Médico tratante / Diagnóstico médico
+            <input
+              value={values.medical_diagnosis}
+              onChange={(e) => setField('medical_diagnosis', e.target.value)}
+            />
+          </label>
+          <label>
+            Fecha de inicio de los síntomas
+            <input
+              type="date"
+              value={values.symptom_onset_date}
+              onChange={(e) => setField('symptom_onset_date', e.target.value)}
+            />
+          </label>
+          <label>
+            Clasificación
+            <select
+              value={values.symptom_classification}
+              onChange={(e) => setField('symptom_classification', e.target.value)}
+            >
+              <option value="">—</option>
+              {SYMPTOM_CLASSIFICATION.map((o) => (
+                <option key={o} value={o}>
+                  {o}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Mecanismo de lesión
+            <select
+              value={values.injury_mechanism}
+              onChange={(e) => setField('injury_mechanism', e.target.value)}
+            >
+              <option value="">—</option>
+              {INJURY_MECHANISM.map((o) => (
+                <option key={o} value={o}>
+                  {o}
+                </option>
+              ))}
+            </select>
+          </label>
           <label className="span-2">
-            Historia clinica
+            Historia clínica / Evolución del padecimiento
             <textarea
               rows={4}
               value={values.clinical_history}
@@ -392,221 +632,173 @@ export function EvaluationForm({
             />
           </label>
         </div>
+        <fieldset className="red-flags-box">
+          <legend>Banderas rojas (Red Flags)</legend>
+          <div className="red-flags-grid">
+            {RED_FLAG_OPTIONS.map((flag) => (
+              <label key={flag} className="checkbox-row">
+                <input
+                  type="checkbox"
+                  checked={values.red_flags.includes(flag)}
+                  onChange={() => toggleRedFlag(flag)}
+                />
+                <span>{flag}</span>
+              </label>
+            ))}
+          </div>
+          <label className="span-2">
+            Otras banderas rojas
+            <input
+              value={values.red_flags_other}
+              onChange={(e) => setField('red_flags_other', e.target.value)}
+            />
+          </label>
+        </fieldset>
       </fieldset>
 
+      {/* 4. Valoración general */}
       <fieldset className="form-section span-2">
-        <legend>Valoracion del dolor</legend>
+        <legend>4. Valoración general (exploración física global)</legend>
         <div className="form-grid">
           <label>
-            Localizacion
+            Presión arterial
             <input
-              value={values.pain_location}
-              onChange={(e) => setField('pain_location', e.target.value)}
+              placeholder="120/80"
+              value={values.blood_pressure}
+              onChange={(e) => setField('blood_pressure', e.target.value)}
             />
           </label>
           <label>
-            Intensidad 0-10
+            Frecuencia cardíaca
             <input
-              type="number"
-              min={0}
-              max={10}
-              value={values.pain_intensity}
-              onChange={(e) => setField('pain_intensity', e.target.value)}
+              inputMode="numeric"
+              placeholder="lpm"
+              value={values.heart_rate}
+              onChange={(e) => setField('heart_rate', e.target.value)}
             />
           </label>
           <label>
-            Factores agravantes
+            Frecuencia respiratoria
             <input
-              value={values.aggravating_factors}
-              onChange={(e) => setField('aggravating_factors', e.target.value)}
+              inputMode="numeric"
+              placeholder="rpm"
+              value={values.respiratory_rate}
+              onChange={(e) => setField('respiratory_rate', e.target.value)}
             />
           </label>
-          <label className="span-2">
-            Factores que alivian
+          <label>
+            Saturación O₂
             <input
-              value={values.easing_factors}
-              onChange={(e) => setField('easing_factors', e.target.value)}
-            />
-          </label>
-        </div>
-      </fieldset>
-
-      <fieldset className="form-section span-2">
-        <legend>Exploracion fisica</legend>
-        <div className="form-grid">
-          <label className="span-2">
-            Exploracion fisica
-            <textarea
-              rows={4}
-              value={values.physical_examination}
-              onChange={(e) => setField('physical_examination', e.target.value)}
+              inputMode="numeric"
+              placeholder="%"
+              value={values.oxygen_saturation}
+              onChange={(e) => setField('oxygen_saturation', e.target.value)}
             />
           </label>
           <label className="span-2">
-            Inspeccion general
+            Inspección general
             <textarea
-              rows={3}
-              placeholder="Estado general, nivel de cooperacion, uso de aditamentos."
+              rows={2}
+              placeholder="Estado de la piel, asimetrías evidentes, uso de aditamentos."
               value={values.general_inspection}
               onChange={(e) => setField('general_inspection', e.target.value)}
             />
           </label>
+          <label className="span-2">
+            Postura global
+            <textarea
+              rows={2}
+              placeholder="Bipedestación: vista anterior, posterior y lateral."
+              value={values.posture}
+              onChange={(e) => setField('posture', e.target.value)}
+            />
+          </label>
+          <label className="span-2">
+            Patrón de marcha
+            <textarea
+              rows={2}
+              placeholder="Fases de la marcha, claudicación, compensaciones."
+              value={values.gait}
+              onChange={(e) => setField('gait', e.target.value)}
+            />
+          </label>
         </div>
       </fieldset>
 
+      {/* 5. Valoración por zonas */}
       <fieldset className="form-section span-2">
-        <legend>Rangos de movimiento</legend>
-        <div className="clinical-table">
-          {values.movement_ranges.map((row, index) => (
-            <div className="clinical-table-row" key={`movement-${index}`}>
-              <input
-                aria-label="Articulación"
-                placeholder="Articulacion"
-                value={row.joint}
-                onChange={(e) => setRow('movement_ranges', index, 'joint', e.target.value)}
-              />
-              <select
-                aria-label="Rango de movimiento"
-                value={row.range}
-                onChange={(e) => setRow('movement_ranges', index, 'range', e.target.value)}
-              >
-                {movementRangeOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option || 'Rango'}
-                  </option>
-                ))}
-              </select>
-              <input
-                aria-label="Notas del rango"
-                placeholder="Notas"
-                value={row.notes}
-                onChange={(e) => setRow('movement_ranges', index, 'notes', e.target.value)}
-              />
-              <button
-                type="button"
-                className="secondary"
-                onClick={() => removeRow('movement_ranges', index)}
-              >
-                Quitar
-              </button>
-            </div>
-          ))}
-        </div>
-        <button
-          type="button"
-          className="secondary"
-          onClick={() => addRow('movement_ranges', emptyJointRow)}
-        >
-          Agregar articulacion
+        <legend>5. Valoración por zonas específicas</legend>
+        {values.zones.length === 0 && (
+          <p className="muted" style={{ margin: '4px 0 12px' }}>
+            Agrega una o más zonas a evaluar. Cada zona despliega su dolor, rangos, fuerza y batería
+            de pruebas ortopédicas.
+          </p>
+        )}
+        {values.zones.map((zone, index) => (
+          <ZoneEditor
+            key={index}
+            zone={zone}
+            index={index}
+            onChange={(updater) => updateZone(index, updater)}
+            onRemove={() => removeZone(index)}
+          />
+        ))}
+        <button type="button" onClick={addZone} style={{ marginTop: 8 }}>
+          + Agregar zona a evaluar
         </button>
       </fieldset>
 
+      {/* 6. Conclusión y diagnóstico */}
       <fieldset className="form-section span-2">
-        <legend>Fuerza muscular</legend>
-        <div className="clinical-table">
-          {values.muscle_strength.map((row, index) => (
-            <div className="clinical-table-row" key={`strength-${index}`}>
-              <input
-                aria-label="Articulación o grupo muscular"
-                placeholder="Articulacion / grupo muscular"
-                value={row.joint}
-                onChange={(e) => setRow('muscle_strength', index, 'joint', e.target.value)}
-              />
-              <select
-                aria-label="Fuerza muscular"
-                value={row.strength}
-                onChange={(e) => setRow('muscle_strength', index, 'strength', e.target.value)}
-              >
-                {strengthOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option || 'Fuerza'}
-                  </option>
-                ))}
-              </select>
-              <input
-                aria-label="Notas de fuerza"
-                placeholder="Notas"
-                value={row.notes}
-                onChange={(e) => setRow('muscle_strength', index, 'notes', e.target.value)}
-              />
-              <button
-                type="button"
-                className="secondary"
-                onClick={() => removeRow('muscle_strength', index)}
-              >
-                Quitar
-              </button>
-            </div>
-          ))}
+        <legend>6. Conclusión y diagnóstico</legend>
+        <div className="form-grid">
+          <label className="span-2">
+            Diagnóstico fisioterapéutico
+            <textarea
+              rows={3}
+              value={values.prognosis}
+              onChange={(e) => setField('prognosis', e.target.value)}
+            />
+          </label>
+          <label>
+            Objetivos a corto plazo
+            <textarea
+              rows={2}
+              value={values.objectives_short}
+              onChange={(e) => setField('objectives_short', e.target.value)}
+            />
+          </label>
+          <label>
+            Objetivos a mediano plazo
+            <textarea
+              rows={2}
+              value={values.objectives_mid}
+              onChange={(e) => setField('objectives_mid', e.target.value)}
+            />
+          </label>
+          <label>
+            Objetivos a largo plazo
+            <textarea
+              rows={2}
+              value={values.objectives_long}
+              onChange={(e) => setField('objectives_long', e.target.value)}
+            />
+          </label>
+          <label className="span-2">
+            Plan de tratamiento sugerido
+            <textarea
+              rows={3}
+              value={values.treatment_plan}
+              onChange={(e) => setField('treatment_plan', e.target.value)}
+            />
+          </label>
         </div>
-        <button
-          type="button"
-          className="secondary"
-          onClick={() => addRow('muscle_strength', emptyStrengthRow)}
-        >
-          Agregar fuerza
-        </button>
       </fieldset>
 
-      <fieldset className="form-section span-2">
-        <legend>Pruebas especiales</legend>
-        <div className="clinical-table">
-          {values.special_tests.map((row, index) => (
-            <div className="clinical-table-row" key={`test-${index}`}>
-              <input
-                aria-label="Nombre de la prueba especial"
-                placeholder="Prueba"
-                value={row.name}
-                onChange={(e) => setRow('special_tests', index, 'name', e.target.value)}
-              />
-              <select
-                aria-label="Resultado de la prueba"
-                value={row.result}
-                onChange={(e) => setRow('special_tests', index, 'result', e.target.value)}
-              >
-                {testResultOptions.map((option) => (
-                  <option key={option} value={option}>
-                    {option || 'Resultado'}
-                  </option>
-                ))}
-              </select>
-              <input
-                aria-label="Notas de la prueba"
-                placeholder="Notas"
-                value={row.notes}
-                onChange={(e) => setRow('special_tests', index, 'notes', e.target.value)}
-              />
-              <button
-                type="button"
-                className="secondary"
-                onClick={() => removeRow('special_tests', index)}
-              >
-                Quitar
-              </button>
-            </div>
-          ))}
-        </div>
-        <button
-          type="button"
-          className="secondary"
-          onClick={() => addRow('special_tests', emptySpecialTestRow)}
-        >
-          Agregar prueba
-        </button>
-      </fieldset>
-
-      <label className="span-2">
-        Diagnostico fisioterapeutico
-        <textarea
-          rows={3}
-          value={values.prognosis}
-          onChange={(e) => setField('prognosis', e.target.value)}
-        />
-      </label>
-
+      {/* 7. Archivos clínicos */}
       {resolvedPatientId && (
         <fieldset className="form-section span-2">
-          <legend>Archivos clínicos y estudios</legend>
+          <legend>7. Archivos clínicos y estudios</legend>
           <PatientDocuments patientId={resolvedPatientId} />
         </fieldset>
       )}
@@ -619,9 +811,350 @@ export function EvaluationForm({
 
       <div className="actions span-2">
         <button type="submit" disabled={saving}>
-          {saving ? 'Guardando...' : 'Guardar valoracion'}
+          {saving ? 'Guardando...' : 'Guardar valoración'}
         </button>
       </div>
     </form>
+  );
+}
+
+// ---- Editor de una zona específica ----
+
+interface ZoneEditorProps {
+  zone: ZoneFormData;
+  index: number;
+  onChange: (updater: (z: ZoneFormData) => ZoneFormData) => void;
+  onRemove: () => void;
+}
+
+function ZoneEditor({ zone, index, onChange, onRemove }: ZoneEditorProps) {
+  const catalog = getZoneCatalog(zone.zone_id);
+
+  const setZoneField = <K extends keyof ZoneFormData>(field: K, value: ZoneFormData[K]) =>
+    onChange((z) => ({ ...z, [field]: value }));
+
+  const setRom = (i: number, key: keyof RomRow, value: string) =>
+    onChange((z) => ({
+      ...z,
+      movement_ranges: z.movement_ranges.map((r, ri) =>
+        ri === i ? { ...r, [key]: value } : r
+      )
+    }));
+  const addRom = () =>
+    onChange((z) => ({ ...z, movement_ranges: [...z.movement_ranges, { ...emptyRomRow }] }));
+  const removeRom = (i: number) =>
+    onChange((z) => ({
+      ...z,
+      movement_ranges:
+        z.movement_ranges.length === 1
+          ? z.movement_ranges
+          : z.movement_ranges.filter((_, ri) => ri !== i)
+    }));
+
+  const setStrength = (i: number, key: keyof StrengthRow, value: string) =>
+    onChange((z) => ({
+      ...z,
+      muscle_strength: z.muscle_strength.map((r, ri) =>
+        ri === i ? { ...r, [key]: value } : r
+      )
+    }));
+  const addStrength = () =>
+    onChange((z) => ({ ...z, muscle_strength: [...z.muscle_strength, { ...emptyStrengthRow }] }));
+  const removeStrength = (i: number) =>
+    onChange((z) => ({
+      ...z,
+      muscle_strength:
+        z.muscle_strength.length === 1
+          ? z.muscle_strength
+          : z.muscle_strength.filter((_, ri) => ri !== i)
+    }));
+
+  const setTestResult = (name: string, key: keyof TestResult, value: string) =>
+    onChange((z) => {
+      const prev = z.special_results[name] ?? { result: '', notes: '' };
+      return {
+        ...z,
+        special_results: {
+          ...z.special_results,
+          [name]: { ...prev, [key]: value }
+        }
+      };
+    });
+
+  // Agrupa las pruebas del catálogo por su subtítulo, preservando el orden.
+  const groupedTests = useMemo(() => {
+    if (!catalog) return [];
+    const groups: { group: string; tests: typeof catalog.specialTests }[] = [];
+    for (const t of catalog.specialTests) {
+      let g = groups.find((x) => x.group === t.group);
+      if (!g) {
+        g = { group: t.group, tests: [] };
+        groups.push(g);
+      }
+      g.tests.push(t);
+    }
+    return groups;
+  }, [catalog]);
+
+  return (
+    <div className="zone-card">
+      <div className="zone-card-head">
+        <label style={{ flex: 1 }}>
+          Zona a evaluar
+          <select
+            value={zone.zone_id}
+            onChange={(e) => setZoneField('zone_id', e.target.value)}
+          >
+            <option value="">— Seleccionar zona —</option>
+            {ZONE_CATALOGS.map((z) => (
+              <option key={z.id} value={z.id}>
+                {z.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button
+          type="button"
+          className="secondary"
+          onClick={onRemove}
+          aria-label={`Quitar zona ${index + 1}`}
+        >
+          Quitar zona
+        </button>
+      </div>
+
+      {!zone.zone_id ? (
+        <p className="muted" style={{ margin: '4px 2px 0' }}>
+          Selecciona una zona para desplegar su batería de evaluación.
+        </p>
+      ) : (
+        <>
+          {/* A. Dolor */}
+          <p className="zone-subtitle">A. Valoración del dolor</p>
+          <div className="form-grid">
+            <label>
+              Localización exacta
+              <input
+                value={zone.pain_location}
+                onChange={(e) => setZoneField('pain_location', e.target.value)}
+              />
+            </label>
+            <label>
+              Intensidad (0-10)
+              <input
+                type="number"
+                min={0}
+                max={10}
+                value={zone.pain_intensity}
+                onChange={(e) => setZoneField('pain_intensity', e.target.value)}
+              />
+            </label>
+            <label>
+              Tipo de dolor
+              <select
+                value={zone.pain_type}
+                onChange={(e) => setZoneField('pain_type', e.target.value)}
+              >
+                <option value="">—</option>
+                {PAIN_TYPE_OPTIONS.map((o) => (
+                  <option key={o} value={o}>
+                    {o}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Factores agravantes
+              <input
+                value={zone.aggravating_factors}
+                onChange={(e) => setZoneField('aggravating_factors', e.target.value)}
+              />
+            </label>
+            <label className="span-2">
+              Factores que alivian
+              <input
+                value={zone.easing_factors}
+                onChange={(e) => setZoneField('easing_factors', e.target.value)}
+              />
+            </label>
+          </div>
+
+          {/* B. ROM */}
+          <p className="zone-subtitle">B. Rangos de movimiento (ROM)</p>
+          <div className="clinical-table">
+            {zone.movement_ranges.map((row, i) => (
+              <div className="clinical-table-row rom-row" key={`rom-${i}`}>
+                <select
+                  aria-label="Movimiento"
+                  value={row.movement}
+                  onChange={(e) => setRom(i, 'movement', e.target.value)}
+                >
+                  <option value="">Movimiento…</option>
+                  {catalog?.movements.map((mv) => (
+                    <option key={mv} value={mv}>
+                      {mv}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  aria-label="Rango"
+                  value={row.range}
+                  onChange={(e) => setRom(i, 'range', e.target.value)}
+                >
+                  <option value="">Rango…</option>
+                  {ROM_RANGE_OPTIONS.map((o) => (
+                    <option key={o} value={o}>
+                      {o}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  aria-label="Grados"
+                  placeholder="Grados °"
+                  inputMode="numeric"
+                  value={row.degrees}
+                  onChange={(e) => setRom(i, 'degrees', e.target.value)}
+                />
+                <input
+                  aria-label="Notas del movimiento"
+                  placeholder="Notas"
+                  value={row.notes}
+                  onChange={(e) => setRom(i, 'notes', e.target.value)}
+                />
+                <button type="button" className="secondary" onClick={() => removeRom(i)}>
+                  −
+                </button>
+              </div>
+            ))}
+          </div>
+          <button type="button" className="secondary" onClick={addRom}>
+            + Agregar movimiento
+          </button>
+
+          {/* C. Fuerza */}
+          <p className="zone-subtitle">C. Fuerza muscular (Daniels)</p>
+          <div className="clinical-table">
+            {zone.muscle_strength.map((row, i) => (
+              <div className="clinical-table-row strength-row" key={`str-${i}`}>
+                <select
+                  aria-label="Músculo o grupo"
+                  value={row.muscle}
+                  onChange={(e) => setStrength(i, 'muscle', e.target.value)}
+                >
+                  <option value="">Músculo…</option>
+                  {catalog?.muscles.map((mu) => (
+                    <option key={mu} value={mu}>
+                      {mu}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  aria-label="Escala de Daniels"
+                  value={row.daniels}
+                  onChange={(e) => setStrength(i, 'daniels', e.target.value)}
+                >
+                  <option value="">Daniels…</option>
+                  {DANIELS_OPTIONS.map((o) => (
+                    <option key={o} value={o}>
+                      {o}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  aria-label="¿Genera dolor?"
+                  value={row.pain}
+                  onChange={(e) => setStrength(i, 'pain', e.target.value)}
+                >
+                  <option value="">¿Dolor?</option>
+                  <option value="Sí">Sí</option>
+                  <option value="No">No</option>
+                </select>
+                <input
+                  aria-label="Notas de fuerza"
+                  placeholder="Notas"
+                  value={row.notes}
+                  onChange={(e) => setStrength(i, 'notes', e.target.value)}
+                />
+                <button type="button" className="secondary" onClick={() => removeStrength(i)}>
+                  −
+                </button>
+              </div>
+            ))}
+          </div>
+          <button type="button" className="secondary" onClick={addStrength}>
+            + Agregar músculo
+          </button>
+
+          {/* D. Pruebas especiales (catálogo de la zona) */}
+          <p className="zone-subtitle">D. Pruebas especiales / ortopédicas</p>
+          {groupedTests.map((g) => (
+            <div className="test-group" key={g.group}>
+              <p className="test-group-title">{g.group}</p>
+              {g.tests.map((t) => {
+                const r = zone.special_results[t.name] ?? { result: '', notes: '' };
+                const options = t.options ?? [...DEFAULT_TEST_OPTIONS];
+                return (
+                  <div className="test-row" key={t.name}>
+                    <div className="test-info">
+                      <span className="test-name">{t.name}</span>
+                      {t.note && <span className="test-note">{t.note}</span>}
+                    </div>
+                    <div className="test-inputs">
+                      {t.input === 'seconds' ? (
+                        <input
+                          aria-label={`Segundos ${t.name}`}
+                          inputMode="numeric"
+                          placeholder="seg"
+                          value={r.result}
+                          onChange={(e) => setTestResult(t.name, 'result', e.target.value)}
+                        />
+                      ) : t.input === 'text' ? (
+                        <input
+                          aria-label={`Resultado ${t.name}`}
+                          placeholder="Resultado"
+                          value={r.result}
+                          onChange={(e) => setTestResult(t.name, 'result', e.target.value)}
+                        />
+                      ) : (
+                        <select
+                          aria-label={`Resultado ${t.name}`}
+                          value={r.result}
+                          onChange={(e) => setTestResult(t.name, 'result', e.target.value)}
+                        >
+                          <option value="">No valorado</option>
+                          {options.map((o) => (
+                            <option key={o} value={o}>
+                              {o}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                      <input
+                        aria-label={`Notas ${t.name}`}
+                        placeholder="Notas"
+                        value={r.notes}
+                        onChange={(e) => setTestResult(t.name, 'notes', e.target.value)}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+
+          {/* E. Palpación */}
+          <p className="zone-subtitle">E. Palpación</p>
+          <label className="span-2">
+            Hallazgos
+            <textarea
+              rows={2}
+              placeholder="Tono muscular, puntos gatillo, temperatura, edema articular."
+              value={zone.palpation}
+              onChange={(e) => setZoneField('palpation', e.target.value)}
+            />
+          </label>
+        </>
+      )}
+    </div>
   );
 }

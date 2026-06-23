@@ -29,6 +29,43 @@ export interface SessionNote {
   created_at?: string;
 }
 
+export interface EvaluationZoneRom {
+  movement?: string | null;
+  range?: string | null;
+  degrees?: string | null;
+  notes?: string | null;
+}
+
+export interface EvaluationZoneStrength {
+  muscle?: string | null;
+  daniels?: string | null;
+  pain?: string | null; // 'Sí' | 'No'
+  notes?: string | null;
+}
+
+export interface EvaluationZoneTest {
+  name?: string | null;
+  group?: string | null;
+  result?: string | null;
+  notes?: string | null;
+}
+
+export interface EvaluationZone {
+  zone?: string | null; // etiqueta legible de la zona (o id del catálogo)
+  zone_id?: string | null;
+  pain?: {
+    location?: string | null;
+    intensity?: number | string | null;
+    type?: string | null;
+    aggravating_factors?: string | null;
+    easing_factors?: string | null;
+  } | null;
+  movement_ranges?: EvaluationZoneRom[];
+  muscle_strength?: EvaluationZoneStrength[];
+  special_tests?: EvaluationZoneTest[];
+  palpation?: string | null;
+}
+
 export interface EvaluationSections {
   patient_identity?: Record<string, unknown> | null;
   history?: Record<string, unknown> | null;
@@ -36,6 +73,9 @@ export interface EvaluationSections {
     medical_diagnosis?: string | null;
     reason?: string | null;
     clinical_history?: string | null;
+    symptom_onset_date?: string | null;
+    symptom_classification?: string | null;
+    injury_mechanism?: string | null;
   } | null;
   pain?: {
     location?: string | null;
@@ -44,7 +84,32 @@ export interface EvaluationSections {
     aggravating_factors?: string | null;
     easing_factors?: string | null;
   } | null;
-  physical_exam?: Record<string, unknown> | null;
+  // Valoración general (exploración física global): signos vitales, postura, marcha.
+  general_assessment?: {
+    blood_pressure?: string | null;
+    heart_rate?: string | null;
+    respiratory_rate?: string | null;
+    oxygen_saturation?: string | null;
+    inspection?: string | null;
+    posture?: string | null;
+    gait?: string | null;
+  } | null;
+  // Banderas rojas estructuradas: lista marcada + texto libre.
+  red_flags?: {
+    items?: string[];
+    other?: string | null;
+  } | null;
+  physical_exam?: Record<string, unknown> | null; // legado (tablas planas globales)
+  // Valoración por zonas específicas (estructura nueva).
+  zones?: EvaluationZone[];
+  // Conclusión y diagnóstico.
+  conclusion?: {
+    diagnosis?: string | null;
+    objectives_short?: string | null;
+    objectives_mid?: string | null;
+    objectives_long?: string | null;
+    treatment_plan?: string | null;
+  } | null;
 }
 
 export interface Evaluation {

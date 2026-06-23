@@ -37,12 +37,11 @@ describe('EvaluationSummary', () => {
     expect(screen.getByText(/Hace 3 semanas/)).toBeInTheDocument();
   });
 
-  it('usa "No registrado" para los campos faltantes y "No registrada" para el dolor', () => {
+  it('usa "No registrado" para los campos faltantes', () => {
     render(<EvaluationSummary evaluation={makeEvaluation({})} />);
 
-    // Varios campos comparten el texto de respaldo.
+    // Varios campos (edad, sexo, motivo, historia…) comparten el texto de respaldo.
     expect(screen.getAllByText(/No registrado/).length).toBeGreaterThan(0);
-    expect(screen.getByText('Intensidad: No registrada/10')).toBeInTheDocument();
   });
 
   it('renderiza la tabla de rangos de movimiento solo cuando hay datos', () => {
@@ -84,5 +83,33 @@ describe('EvaluationSummary', () => {
     expect(screen.queryByText('Rangos de movimiento')).not.toBeInTheDocument();
     expect(screen.queryByText('Fuerza muscular')).not.toBeInTheDocument();
     expect(screen.queryByText('Pruebas especiales')).not.toBeInTheDocument();
+  });
+
+  it('renderiza zonas, signos vitales y conclusión de la estructura nueva', () => {
+    render(
+      <EvaluationSummary
+        evaluation={makeEvaluation({
+          general_assessment: { blood_pressure: '120/80', heart_rate: '72', posture: 'Antepulsión' },
+          zones: [
+            {
+              zone: 'Rodilla',
+              pain: { location: 'Cara medial', intensity: 6, type: 'Punzante' },
+              movement_ranges: [{ movement: 'Flexión', range: 'Limitado', degrees: '90' }],
+              muscle_strength: [{ muscle: 'Cuádriceps', daniels: '4 - ...', pain: 'Sí' }],
+              special_tests: [{ name: 'Lachman (LCA)', result: 'Negativo' }],
+              palpation: 'Dolor en interlínea medial'
+            }
+          ],
+          conclusion: { objectives_short: 'Reducir dolor', treatment_plan: 'Fortalecimiento' }
+        })}
+      />
+    );
+
+    expect(screen.getByText('Zona: Rodilla')).toBeInTheDocument();
+    expect(screen.getByText(/Cara medial/)).toBeInTheDocument();
+    expect(screen.getByText(/Flexión: Limitado \(90°\)/)).toBeInTheDocument();
+    expect(screen.getByText(/Lachman \(LCA\): Negativo/)).toBeInTheDocument();
+    expect(screen.getByText(/TA 120\/80/)).toBeInTheDocument();
+    expect(screen.getByText(/Objetivos corto plazo: Reducir dolor/)).toBeInTheDocument();
   });
 });
