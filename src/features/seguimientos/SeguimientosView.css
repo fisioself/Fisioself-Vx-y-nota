@@ -8,6 +8,30 @@
 .sg-filters { display: flex; gap: 8px; flex-wrap: wrap; }
 .sg-filters button { min-height: 38px; padding: 6px 14px; font-size: 0.85rem; }
 
+/* section header (Cita hoy / Crítico / En riesgo / Al día) */
+.sg-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 2px;
+  margin-top: 4px;
+}
+.sg-section-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--muted);
+}
+.sg-section-count {
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: var(--border);
+  color: var(--muted);
+  border-radius: 20px;
+  padding: 1px 7px;
+}
+
 /* patient row card */
 .sg-row {
   display: grid;
@@ -19,6 +43,21 @@
   border: 1px solid var(--border);
   border-radius: 16px;
 }
+
+/* "Cita hoy" rows use time instead of dot — wider first column */
+.sg-row--today {
+  grid-template-columns: 44px 1fr auto;
+  border-left: 3px solid #38bdf8;
+}
+.sg-today-time {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #38bdf8;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  text-align: center;
+}
+
 .sg-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
 .sg-dot.ok { background: #22c55e; }
 .sg-dot.warning { background: #f59e0b; }
@@ -31,11 +70,10 @@
 
 .sg-actions { display: flex; gap: 8px; flex-shrink: 0; }
 .sg-actions button { min-height: 36px; padding: 6px 12px; font-size: 0.82rem; }
-.sg-wa-btn { background: #25d366 !important; border-color: #25d366 !important; color: white !important; }
-.sg-wa-btn:hover { background: #1db954 !important; border-color: #1db954 !important; }
 
 @media (max-width: 700px) {
   .sg-row { grid-template-columns: 10px 1fr; }
+  .sg-row--today { grid-template-columns: 44px 1fr; }
   .sg-actions { grid-column: 2; flex-wrap: wrap; }
   .sg-hero-stats { display: none; }
 }
