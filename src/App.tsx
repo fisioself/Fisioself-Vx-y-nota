@@ -90,6 +90,7 @@ export function App() {
   const [showFinance, setShowFinance] = useState(false);
   const [showSeguimientos, setShowSeguimientos] = useState(false);
   const [showDashboard, setShowDashboard] = useState(true);
+  const [fromSeguimientos, setFromSeguimientos] = useState(false);
   const [showMfaSettings, setShowMfaSettings] = useState(false);
   // Si el usuario tiene 2FA activo, aquí guardamos el id del factor que debe
   // resolver el reto tras iniciar sesión. mfaChecking evita mostrar la app
@@ -356,6 +357,7 @@ export function App() {
             setShowDashboard(true);
             setShowFinance(false);
             setShowSeguimientos(false);
+            setFromSeguimientos(false);
             setSelectedPatient(null);
             setShowNewPatient(false);
           }}
@@ -446,6 +448,7 @@ export function App() {
           ) : showSeguimientos ? (
             <SeguimientosView
               onPatientSelect={(id) => {
+                setFromSeguimientos(true);
                 setSelectedPatient({ id });
                 setShowSeguimientos(false);
                 setShowDashboard(false);
@@ -475,9 +478,13 @@ export function App() {
                 queryClient.invalidateQueries({ queryKey: ['patients'] });
               }}
               onPatientDeleted={() => {
+                const backToSeg = fromSeguimientos;
+                setFromSeguimientos(false);
                 setSelectedPatient(null);
-                setShowDashboard(true);
+                setShowSeguimientos(backToSeg);
+                setShowDashboard(!backToSeg);
                 queryClient.invalidateQueries({ queryKey: ['patients'] });
+                queryClient.invalidateQueries({ queryKey: ['seguimientos'] });
               }}
             />
           )}
