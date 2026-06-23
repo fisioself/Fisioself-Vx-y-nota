@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { clinicalApi } from '../../services/clinicalApi';
 import { validatePatient, hasErrors, emptyStringsToNull } from '../../shared/clinicalValidation';
 import type { Patient, PatientStatus, ValidationErrors } from '../../types/clinical';
-import { getErrorMessage } from '../../shared/errors';
+import { getErrorMessage, isOfflineError, OFFLINE_MESSAGE } from '../../shared/errors';
 
 interface PatientFormProps {
   onCreated?: (patient: Patient) => void;
@@ -48,7 +48,11 @@ export function PatientForm({ onCreated, onCancel }: PatientFormProps) {
       setValues(emptyPatient);
       onCreated?.(patient);
     } catch (err) {
-      setSubmitError(getErrorMessage(err, 'No se pudo crear el paciente.'));
+      setSubmitError(
+        isOfflineError(err)
+          ? OFFLINE_MESSAGE
+          : getErrorMessage(err, 'No se pudo crear el paciente.')
+      );
     } finally {
       setSaving(false);
     }

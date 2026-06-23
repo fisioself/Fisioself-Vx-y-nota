@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { clinicalApi } from '../../services/clinicalApi';
@@ -38,7 +38,8 @@ describe('EvaluationForm', () => {
     // Agrega una zona y selecciona Rodilla → despliega su batería de evaluación.
     await userEvent.click(screen.getByRole('button', { name: /agregar zona/i }));
     await userEvent.selectOptions(screen.getByLabelText(/zona a evaluar/i), 'rodilla');
-    await userEvent.type(screen.getByLabelText(/intensidad/i), '7');
+    // La intensidad (EVA) es un deslizador: se ajusta con un evento change.
+    fireEvent.change(screen.getByLabelText(/intensidad/i), { target: { value: '7' } });
     // Marca el resultado de una prueba especial del catálogo de la rodilla.
     await userEvent.selectOptions(screen.getByLabelText('Resultado Lachman (LCA)'), 'Negativo');
     await userEvent.click(screen.getByRole('button', { name: /guardar valoraci/i }));

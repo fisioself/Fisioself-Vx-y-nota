@@ -3,7 +3,8 @@ import { clinicalApi } from '../../services/clinicalApi';
 import { getLocalISODate } from '../../shared/dateUtils';
 import { draftStorage, getEvaluationDraftKey } from '../../shared/draftStorage';
 import { useDraftAutosave } from '../../shared/useDraftAutosave';
-import { getErrorMessage } from '../../shared/errors';
+import { getErrorMessage, isOfflineError, OFFLINE_MESSAGE } from '../../shared/errors';
+import { useToast } from '../../app/ToastProvider';
 import { PatientDocuments } from '../patients/PatientDocuments';
 import {
   ZONE_CATALOGS,
@@ -248,6 +249,7 @@ export function EvaluationForm({
   const [error, setError] = useState('');
   // Id del campo al que debe desplazarse la vista cuando hay un error de validación.
   const [errorAnchorId, setErrorAnchorId] = useState<string | null>(null);
+  const { notify } = useToast();
 
   useDraftAutosave(draftKey, values);
 
@@ -455,7 +457,12 @@ export function EvaluationForm({
       setValues(emptyEvaluation);
       onCreated?.(evaluation);
     } catch (err) {
-      setError(getErrorMessage(err, 'No se pudo guardar la valoracion.'));
+      if (isOfflineError(err)) {
+        setError(OFFLINE_MESSAGE);
+        notify({ tone: 'warning', message: 'Sin conexión. Los cambios se preservan localmente.' });
+      } else {
+        setError(getErrorMessage(err, 'No se pudo guardar la valoracion.'));
+      }
     } finally {
       setSaving(false);
     }
@@ -1053,17 +1060,36 @@ function ZoneEditor({ zone, index, onChange, onRemove }: ZoneEditorProps) {
                 onChange={(e) => setZoneField('pain_location', e.target.value)}
               />
             </label>
-            <label>
-              Intensidad (0-10)
+            <div className="eva-field span-2">
+              <div className="eva-head">
+                <span>
+                  Intensidad del dolor (EVA 0-10):{' '}
+                  <strong>
+                    {zone.pain_intensity === '' ? 'Sin registrar' : `${zone.pain_intensity}/10`}
+                  </strong>
+                </span>
+                {zone.pain_intensity !== '' && (
+                  <button
+                    type="button"
+                    className="eva-clear"
+                    onClick={() => setZoneField('pain_intensity', '')}
+                  >
+                    Limpiar
+                  </button>
+                )}
+              </div>
               <input
                 id={`zone-${index}-pain-intensity`}
-                type="number"
+                className="eva-range"
+                type="range"
                 min={0}
                 max={10}
-                value={zone.pain_intensity}
+                step={1}
+                value={zone.pain_intensity === '' ? 0 : Number(zone.pain_intensity)}
                 onChange={(e) => setZoneField('pain_intensity', e.target.value)}
+                aria-label="Intensidad del dolor de 0 a 10"
               />
-            </label>
+            </div>
             <label>
               Tipo de dolor
               <select

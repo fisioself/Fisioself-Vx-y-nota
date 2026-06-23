@@ -15,7 +15,7 @@ import { ConsentGate } from './ConsentGate';
 import { useDictation } from './useDictation';
 import type { AiConsultSavePayload, AiType, PendingConsult } from './types';
 import type { SessionNote } from '../../types/clinical';
-import { getErrorMessage } from '../../shared/errors';
+import { getErrorMessage, isOfflineError, OFFLINE_MESSAGE } from '../../shared/errors';
 
 interface SessionNoteEditorProps {
   patientId: string;
@@ -344,9 +344,14 @@ export function SessionNoteEditor({
       notify({ tone: 'success', message: successMessage });
       onSaved?.(saved);
     } catch (err) {
-      const message = getErrorMessage(err, failureFallback);
-      setError(message);
-      notify({ tone: 'error', message });
+      if (isOfflineError(err)) {
+        setError(OFFLINE_MESSAGE);
+        notify({ tone: 'warning', message: 'Sin conexión. La nota se preserva localmente.' });
+      } else {
+        const message = getErrorMessage(err, failureFallback);
+        setError(message);
+        notify({ tone: 'error', message });
+      }
     } finally {
       setSaving(false);
     }
