@@ -31,8 +31,10 @@ export interface SessionNote {
 
 export interface EvaluationZoneRom {
   movement?: string | null;
+  type?: string | null; // 'Activo' | 'Pasivo'
   range?: string | null;
   degrees?: string | null;
+  pain?: string | null; // 'Sí' | 'No'
   notes?: string | null;
 }
 
@@ -98,6 +100,17 @@ export interface EvaluationSections {
   red_flags?: {
     items?: string[];
     other?: string | null;
+  } | null;
+  // Banderas amarillas (factores psicosociales): lista marcada + texto libre.
+  yellow_flags?: {
+    items?: string[];
+    other?: string | null;
+  } | null;
+  // Cuestionarios funcionales (PROMs): escala aplicada y puntuación inicial.
+  functional_scales?: {
+    name?: string | null;
+    score?: string | null;
+    notes?: string | null;
   } | null;
   physical_exam?: Record<string, unknown> | null; // legado (tablas planas globales)
   // Valoración por zonas específicas (estructura nueva).

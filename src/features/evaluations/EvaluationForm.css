@@ -35,6 +35,52 @@
   flex-shrink: 0;
 }
 
+/* Banderas amarillas: factores psicosociales (mismo patrón, tono ámbar). */
+.yellow-flags-box {
+  border: 1px solid rgba(180, 120, 10, 0.35);
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin-top: 12px;
+  background: rgba(217, 161, 32, 0.07);
+}
+.yellow-flags-box legend {
+  padding: 0 6px;
+  font-weight: 800;
+  color: #b45309;
+  font-size: 0.9rem;
+}
+
+/* Acordeón de secciones (details/summary) — limpio y sin librerías. */
+details.form-section > summary {
+  cursor: pointer;
+  list-style: none;
+  font-weight: 900;
+  font-size: 1.02rem;
+  color: var(--primary);
+  padding: 4px 2px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+details.form-section > summary::-webkit-details-marker {
+  display: none;
+}
+/* Chevron indicador, rota al abrir. */
+details.form-section > summary::before {
+  content: '▸';
+  font-size: 0.85em;
+  transition: transform 0.15s ease;
+  color: var(--muted);
+}
+details.form-section[open] > summary::before {
+  transform: rotate(90deg);
+}
+details.form-section[open] > summary {
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 10px;
+}
+
 /* Tarjeta de una zona evaluada. */
 .zone-card {
   border: 1px solid var(--border);
@@ -59,11 +105,12 @@
   padding-bottom: 4px;
 }
 
-/* Filas de ROM (5 columnas) y fuerza (5 columnas) sobreescriben el grid base. */
+/* Filas de ROM (7 columnas: movimiento, tipo, rango, grados, dolor, notas, quitar)
+   y fuerza (5 columnas) sobreescriben el grid base. */
 .clinical-table-row.rom-row {
   grid-template-columns:
-    minmax(130px, 1.2fr) minmax(110px, 0.8fr) minmax(80px, 0.5fr)
-    minmax(120px, 1fr) auto;
+    minmax(115px, 1.1fr) minmax(85px, 0.55fr) minmax(95px, 0.65fr)
+    minmax(70px, 0.45fr) minmax(80px, 0.5fr) minmax(105px, 0.85fr) auto;
 }
 .clinical-table-row.strength-row {
   grid-template-columns:
@@ -143,5 +190,24 @@
   }
   .test-inputs {
     grid-template-columns: 1fr;
+  }
+}
+
+/* Al imprimir / guardar en PDF, todo el contenido debe verse aunque el
+   acordeón esté cerrado en pantalla. */
+@media print {
+  details.form-section {
+    display: block !important;
+  }
+  details.form-section > summary {
+    list-style: none;
+    border-bottom: 1px solid #999;
+  }
+  details.form-section > summary::before {
+    content: '';
+  }
+  /* Fuerza la visibilidad del contenido de cualquier <details> cerrado. */
+  details.form-section > *:not(summary) {
+    display: block !important;
   }
 }

@@ -841,6 +841,35 @@ export const RED_FLAG_OPTIONS = [
   'Adormecimiento en silla de montar (zona perineal)'
 ] as const;
 
+// Banderas amarillas: factores psicosociales que retrasan la recuperación.
+export const YELLOW_FLAG_OPTIONS = [
+  'Miedo al movimiento / kinesiofobia',
+  'Catastrofización del dolor',
+  'Expectativas irreales del tratamiento',
+  'Creencias erróneas sobre el dolor o la lesión',
+  'Bajo estado de ánimo / ansiedad',
+  'Conductas de evitación / sobreprotección',
+  'Baja autoeficacia para el autocuidado',
+  'Conflicto laboral o ganancia secundaria',
+  'Aislamiento o falta de apoyo social'
+] as const;
+
+// Escalas funcionales (PROMs) frecuentes en fisioterapia.
+export const FUNCTIONAL_SCALE_OPTIONS = [
+  'DASH (miembro superior)',
+  'QuickDASH (miembro superior)',
+  'LEFS (miembro inferior)',
+  'Oswestry / ODI (columna lumbar)',
+  'NDI (columna cervical)',
+  'WOMAC (cadera/rodilla)',
+  'SPADI (hombro)',
+  'KOOS (rodilla)',
+  'FAAM (tobillo/pie)',
+  'SPPB (función física global)',
+  'Tampa / TSK (kinesiofobia)',
+  'PSFS (escala funcional específica del paciente)'
+] as const;
+
 export const SYMPTOM_CLASSIFICATION = ['Agudo', 'Subagudo', 'Crónico'] as const;
 export const INJURY_MECHANISM = [
   'Insidioso',

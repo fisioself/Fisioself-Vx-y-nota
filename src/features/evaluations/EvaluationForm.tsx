@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { clinicalApi } from '../../services/clinicalApi';
 import { getLocalISODate } from '../../shared/dateUtils';
 import { draftStorage, getEvaluationDraftKey } from '../../shared/draftStorage';
@@ -12,6 +12,8 @@ import {
   DANIELS_OPTIONS,
   ROM_RANGE_OPTIONS,
   RED_FLAG_OPTIONS,
+  YELLOW_FLAG_OPTIONS,
+  FUNCTIONAL_SCALE_OPTIONS,
   SYMPTOM_CLASSIFICATION,
   INJURY_MECHANISM,
   PAIN_TYPE_OPTIONS
@@ -21,8 +23,10 @@ import './EvaluationForm.css';
 
 interface RomRow {
   movement: string;
+  type: string; // 'Activo' | 'Pasivo'
   range: string;
   degrees: string;
+  pain: string; // 'Sí' | 'No'
   notes: string;
 }
 interface StrengthRow {
@@ -80,6 +84,9 @@ interface EvaluationFormValues {
   // Banderas rojas
   red_flags: string[];
   red_flags_other: string;
+  // Banderas amarillas (factores psicosociales)
+  yellow_flags: string[];
+  yellow_flags_other: string;
   // Valoración general
   blood_pressure: string;
   heart_rate: string;
@@ -90,6 +97,10 @@ interface EvaluationFormValues {
   gait: string;
   // Zonas
   zones: ZoneFormData[];
+  // Cuestionarios funcionales (PROMs)
+  functional_scale_name: string;
+  functional_scale_score: string;
+  functional_scale_notes: string;
   // Conclusión
   prognosis: string;
   objectives_short: string;
@@ -108,7 +119,14 @@ interface EvaluationFormProps {
 
 const today = (): string => getLocalISODate();
 
-const emptyRomRow: RomRow = { movement: '', range: '', degrees: '', notes: '' };
+const emptyRomRow: RomRow = {
+  movement: '',
+  type: '',
+  range: '',
+  degrees: '',
+  pain: '',
+  notes: ''
+};
 const emptyStrengthRow: StrengthRow = { muscle: '', daniels: '', pain: '', notes: '' };
 
 const newZone = (): ZoneFormData => ({
@@ -150,6 +168,8 @@ const emptyEvaluation: EvaluationFormValues = {
   clinical_history: '',
   red_flags: [],
   red_flags_other: '',
+  yellow_flags: [],
+  yellow_flags_other: '',
   blood_pressure: '',
   heart_rate: '',
   respiratory_rate: '',
@@ -158,6 +178,9 @@ const emptyEvaluation: EvaluationFormValues = {
   posture: '',
   gait: '',
   zones: [],
+  functional_scale_name: '',
+  functional_scale_score: '',
+  functional_scale_notes: '',
   prognosis: '',
   objectives_short: '',
   objectives_mid: '',
@@ -223,8 +246,20 @@ export function EvaluationForm({
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  // Id del campo al que debe desplazarse la vista cuando hay un error de validación.
+  const [errorAnchorId, setErrorAnchorId] = useState<string | null>(null);
 
   useDraftAutosave(draftKey, values);
+
+  // Lleva la vista (y el foco) al campo que provocó el error de validación.
+  useEffect(() => {
+    if (!error || !errorAnchorId) return;
+    const el = document.getElementById(errorAnchorId);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      (el as HTMLElement).focus?.();
+    }
+  }, [error, errorAnchorId]);
 
   const age = useMemo(() => computeAge(values.birth_date), [values.birth_date]);
 
@@ -242,6 +277,19 @@ export function EvaluationForm({
       return {
         ...current,
         red_flags: has ? current.red_flags.filter((f) => f !== flag) : [...current.red_flags, flag]
+      };
+    });
+    setError('');
+  };
+
+  const toggleYellowFlag = (flag: string) => {
+    setValues((current) => {
+      const has = current.yellow_flags.includes(flag);
+      return {
+        ...current,
+        yellow_flags: has
+          ? current.yellow_flags.filter((f) => f !== flag)
+          : [...current.yellow_flags, flag]
       };
     });
     setError('');
@@ -266,15 +314,18 @@ export function EvaluationForm({
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!resolvedPatientId) {
+      setErrorAnchorId(null);
       setError('Selecciona un paciente antes de crear una valoracion.');
       return;
     }
 
     // Valida intensidades de dolor por zona (0-10).
-    for (const z of values.zones) {
+    for (let i = 0; i < values.zones.length; i += 1) {
+      const z = values.zones[i];
       if (z.pain_intensity !== '') {
         const n = Number(z.pain_intensity);
         if (!Number.isFinite(n) || n < 0 || n > 10) {
+          setErrorAnchorId(`zone-${i}-pain-intensity`);
           setError('La intensidad del dolor de cada zona debe estar entre 0 y 10.');
           return;
         }
@@ -361,7 +412,16 @@ export function EvaluationForm({
           items: values.red_flags,
           other: toNullable(values.red_flags_other)
         },
+        yellow_flags: {
+          items: values.yellow_flags,
+          other: toNullable(values.yellow_flags_other)
+        },
         zones,
+        functional_scales: {
+          name: toNullable(values.functional_scale_name),
+          score: toNullable(values.functional_scale_score),
+          notes: toNullable(values.functional_scale_notes)
+        },
         conclusion: {
           diagnosis: toNullable(values.prognosis),
           objectives_short: toNullable(values.objectives_short),
@@ -416,8 +476,8 @@ export function EvaluationForm({
       </div>
 
       {/* 1. Datos generales */}
-      <fieldset className="form-section span-2">
-        <legend>1. Datos generales</legend>
+      <details className="form-section span-2" open>
+        <summary>1. Datos generales</summary>
         <div className="form-grid">
           <label>
             Nombre completo
@@ -497,11 +557,11 @@ export function EvaluationForm({
             </select>
           </label>
         </div>
-      </fieldset>
+      </details>
 
       {/* 2. Antecedentes */}
-      <fieldset className="form-section span-2">
-        <legend>2. Antecedentes</legend>
+      <details className="form-section span-2">
+        <summary>2. Antecedentes</summary>
         <div className="form-grid">
           <label className="span-2">
             Antecedentes heredofamiliares
@@ -564,11 +624,11 @@ export function EvaluationForm({
             />
           </label>
         </div>
-      </fieldset>
+      </details>
 
       {/* 3. Motivo de consulta e historia */}
-      <fieldset className="form-section span-2">
-        <legend>3. Motivo de consulta e historia del padecimiento</legend>
+      <details className="form-section span-2">
+        <summary>3. Motivo de consulta e historia del padecimiento</summary>
         <div className="form-grid">
           <label className="span-2">
             Motivo de consulta principal
@@ -652,11 +712,33 @@ export function EvaluationForm({
             />
           </label>
         </fieldset>
-      </fieldset>
+        <fieldset className="yellow-flags-box">
+          <legend>Banderas amarillas (factores psicosociales)</legend>
+          <div className="red-flags-grid">
+            {YELLOW_FLAG_OPTIONS.map((flag) => (
+              <label key={flag} className="checkbox-row">
+                <input
+                  type="checkbox"
+                  checked={values.yellow_flags.includes(flag)}
+                  onChange={() => toggleYellowFlag(flag)}
+                />
+                <span>{flag}</span>
+              </label>
+            ))}
+          </div>
+          <label className="span-2">
+            Otras banderas amarillas
+            <input
+              value={values.yellow_flags_other}
+              onChange={(e) => setField('yellow_flags_other', e.target.value)}
+            />
+          </label>
+        </fieldset>
+      </details>
 
       {/* 4. Valoración general */}
-      <fieldset className="form-section span-2">
-        <legend>4. Valoración general (exploración física global)</legend>
+      <details className="form-section span-2">
+        <summary>4. Valoración general (exploración física global)</summary>
         <div className="form-grid">
           <label>
             Presión arterial
@@ -721,11 +803,11 @@ export function EvaluationForm({
             />
           </label>
         </div>
-      </fieldset>
+      </details>
 
       {/* 5. Valoración por zonas */}
-      <fieldset className="form-section span-2">
-        <legend>5. Valoración por zonas específicas</legend>
+      <details className="form-section span-2">
+        <summary>5. Valoración por zonas específicas</summary>
         {values.zones.length === 0 && (
           <p className="muted" style={{ margin: '4px 0 12px' }}>
             Agrega una o más zonas a evaluar. Cada zona despliega su dolor, rangos, fuerza y batería
@@ -744,11 +826,52 @@ export function EvaluationForm({
         <button type="button" onClick={addZone} style={{ marginTop: 8 }}>
           + Agregar zona a evaluar
         </button>
-      </fieldset>
+      </details>
 
-      {/* 6. Conclusión y diagnóstico */}
-      <fieldset className="form-section span-2">
-        <legend>6. Conclusión y diagnóstico</legend>
+      {/* 6. Cuestionarios funcionales (PROMs) */}
+      <details className="form-section span-2">
+        <summary>6. Cuestionarios funcionales (PROMs)</summary>
+        <p className="muted" style={{ margin: '4px 0 12px' }}>
+          Escala estandarizada para medir la función de forma objetiva y dar seguimiento al progreso
+          en sesiones posteriores.
+        </p>
+        <div className="form-grid">
+          <label>
+            Escala aplicada
+            <input
+              list="functional-scale-list"
+              placeholder="Ej. Oswestry, DASH, LEFS…"
+              value={values.functional_scale_name}
+              onChange={(e) => setField('functional_scale_name', e.target.value)}
+            />
+            <datalist id="functional-scale-list">
+              {FUNCTIONAL_SCALE_OPTIONS.map((o) => (
+                <option key={o} value={o} />
+              ))}
+            </datalist>
+          </label>
+          <label>
+            Puntuación inicial
+            <input
+              placeholder="Ej. 42% · 28/80"
+              value={values.functional_scale_score}
+              onChange={(e) => setField('functional_scale_score', e.target.value)}
+            />
+          </label>
+          <label className="span-2">
+            Notas de la escala
+            <input
+              placeholder="Interpretación o detalles relevantes."
+              value={values.functional_scale_notes}
+              onChange={(e) => setField('functional_scale_notes', e.target.value)}
+            />
+          </label>
+        </div>
+      </details>
+
+      {/* 7. Conclusión y diagnóstico */}
+      <details className="form-section span-2">
+        <summary>7. Conclusión y diagnóstico</summary>
         <div className="form-grid">
           <label className="span-2">
             Diagnóstico fisioterapéutico
@@ -791,14 +914,14 @@ export function EvaluationForm({
             />
           </label>
         </div>
-      </fieldset>
+      </details>
 
-      {/* 7. Archivos clínicos */}
+      {/* 8. Archivos clínicos */}
       {resolvedPatientId && (
-        <fieldset className="form-section span-2">
-          <legend>7. Archivos clínicos y estudios</legend>
+        <details className="form-section span-2">
+          <summary>8. Archivos clínicos y estudios</summary>
           <PatientDocuments patientId={resolvedPatientId} />
-        </fieldset>
+        </details>
       )}
 
       {error && (
@@ -933,6 +1056,7 @@ function ZoneEditor({ zone, index, onChange, onRemove }: ZoneEditorProps) {
             <label>
               Intensidad (0-10)
               <input
+                id={`zone-${index}-pain-intensity`}
                 type="number"
                 min={0}
                 max={10}
@@ -988,6 +1112,15 @@ function ZoneEditor({ zone, index, onChange, onRemove }: ZoneEditorProps) {
                   ))}
                 </select>
                 <select
+                  aria-label="Tipo de movimiento"
+                  value={row.type}
+                  onChange={(e) => setRom(i, 'type', e.target.value)}
+                >
+                  <option value="">Tipo…</option>
+                  <option value="Activo">Activo</option>
+                  <option value="Pasivo">Pasivo</option>
+                </select>
+                <select
                   aria-label="Rango"
                   value={row.range}
                   onChange={(e) => setRom(i, 'range', e.target.value)}
@@ -1006,6 +1139,15 @@ function ZoneEditor({ zone, index, onChange, onRemove }: ZoneEditorProps) {
                   value={row.degrees}
                   onChange={(e) => setRom(i, 'degrees', e.target.value)}
                 />
+                <select
+                  aria-label="¿Genera dolor?"
+                  value={row.pain}
+                  onChange={(e) => setRom(i, 'pain', e.target.value)}
+                >
+                  <option value="">¿Dolor?</option>
+                  <option value="Sí">Sí</option>
+                  <option value="No">No</option>
+                </select>
                 <input
                   aria-label="Notas del movimiento"
                   placeholder="Notas"

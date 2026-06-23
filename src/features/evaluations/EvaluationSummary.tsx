@@ -33,6 +33,8 @@ export function EvaluationSummary({ evaluation }: EvaluationSummaryProps) {
   const general = sections?.general_assessment || {};
   const pain = sections?.pain || {};
   const redFlags = sections?.red_flags || {};
+  const yellowFlags = sections?.yellow_flags || {};
+  const functional = sections?.functional_scales || {};
   const conclusion = sections?.conclusion || {};
   const zones = sections?.zones || [];
   const exam = sections?.physical_exam || {};
@@ -46,6 +48,9 @@ export function EvaluationSummary({ evaluation }: EvaluationSummaryProps) {
     !!exam.special_tests?.length;
 
   const redFlagList = [...(redFlags.items ?? []), redFlags.other].filter(Boolean) as string[];
+  const yellowFlagList = [...(yellowFlags.items ?? []), yellowFlags.other].filter(
+    Boolean
+  ) as string[];
 
   return (
     <div className="evaluation-summary">
@@ -79,6 +84,12 @@ export function EvaluationSummary({ evaluation }: EvaluationSummaryProps) {
       {redFlagList.length > 0 && (
         <p className="error" style={{ margin: '4px 0' }}>
           <strong>Banderas rojas:</strong> {redFlagList.join('; ')}
+        </p>
+      )}
+
+      {yellowFlagList.length > 0 && (
+        <p style={{ margin: '4px 0', color: '#b45309' }}>
+          <strong>Banderas amarillas:</strong> {yellowFlagList.join('; ')}
         </p>
       )}
 
@@ -131,8 +142,10 @@ export function EvaluationSummary({ evaluation }: EvaluationSummaryProps) {
             <div className="mini-table">
               {zone.movement_ranges.map((r, i) => (
                 <p key={`zr-${i}`}>
-                  {val(r.movement)}: {val(r.range)}
+                  {val(r.movement)}
+                  {r.type ? ` (${r.type})` : ''}: {val(r.range)}
                   {r.degrees ? ` (${r.degrees}°)` : ''}
+                  {r.pain ? ` · dolor: ${r.pain}` : ''}
                   {r.notes ? ` - ${r.notes}` : ''}
                 </p>
               ))}
@@ -162,6 +175,18 @@ export function EvaluationSummary({ evaluation }: EvaluationSummaryProps) {
           {zone.palpation && <p>Palpación: {zone.palpation}</p>}
         </div>
       ))}
+
+      {/* Cuestionario funcional (PROMs) */}
+      {(functional.name || functional.score) && (
+        <div>
+          <p className="eyebrow">Cuestionario funcional</p>
+          <p>
+            {val(functional.name)}
+            {functional.score ? ` · ${functional.score}` : ''}
+            {functional.notes ? ` — ${functional.notes}` : ''}
+          </p>
+        </div>
+      )}
 
       {/* Conclusión (estructura nueva) */}
       {(conclusion.objectives_short ||
