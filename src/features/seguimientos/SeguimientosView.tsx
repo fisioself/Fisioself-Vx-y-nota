@@ -89,14 +89,7 @@ function PatientRow({
       <span className={`sg-dot ${row.alertLevel}`} aria-hidden="true" />
 
       <div className="sg-info">
-        <div className="sg-name">
-          {row.full_name ?? '—'}
-          {row.status && (
-            <span className="pill" style={{ marginLeft: 8, fontSize: '0.75rem' }}>
-              {row.status}
-            </span>
-          )}
-        </div>
+        <div className="sg-name">{row.full_name ?? '—'}</div>
         {row.medical_diagnosis && (
           <div className="sg-diag">{row.medical_diagnosis}</div>
         )}
@@ -265,7 +258,7 @@ export function SeguimientosView({ onPatientSelect }: SeguimientosViewProps) {
           {search.trim()
             ? 'No se encontraron pacientes con ese criterio.'
             : filter === 'all'
-              ? 'No hay pacientes en tratamiento o seguimiento.'
+              ? 'No hay pacientes con citas recientes ni próximas.'
               : filter === 'ok'
                 ? 'Ningún paciente al día en este momento.'
                 : filter === 'warning'
@@ -288,14 +281,7 @@ export function SeguimientosView({ onPatientSelect }: SeguimientosViewProps) {
                   </span>
 
                   <div className="sg-info">
-                    <div className="sg-name">
-                      {row.full_name ?? '—'}
-                      {row.status && (
-                        <span className="pill" style={{ marginLeft: 8, fontSize: '0.75rem' }}>
-                          {row.status}
-                        </span>
-                      )}
-                    </div>
+                    <div className="sg-name">{row.full_name ?? '—'}</div>
                     {row.medical_diagnosis && (
                       <div className="sg-diag">{row.medical_diagnosis}</div>
                     )}

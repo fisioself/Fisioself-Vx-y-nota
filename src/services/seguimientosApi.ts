@@ -34,7 +34,7 @@ interface PatientRow {
 
 interface AppointmentRow {
   id: string;
-  patient_id: string;
+  patient_id: string | null;
   starts_at: string;
   session_type: string | null;
   title: string | null;
@@ -46,6 +46,10 @@ interface SessionNoteRow {
   patient_id: string;
   eva: number | null;
 }
+
+// Cuántos días hacia atrás se considera a un paciente "activo" para seguimiento.
+const ACTIVE_WINDOW_DAYS = 60;
+const FUTURE_WINDOW_DAYS = 60;
 
 function calcDaysSince(dateStr: string | null): number | null {
   if (!dateStr) return null;
@@ -67,21 +71,16 @@ function isToday(dateStr: string): boolean {
 
 function getAlertLevel(
   daysSince: number | null,
-  nextAppt: FollowUpRow['nextAppointment']
+  hasFutureAppt: boolean
 ): 'ok' | 'warning' | 'critical' {
-  // ok if there is an upcoming appointment within the next 14 days
-  if (nextAppt) {
-    const now = new Date();
-    const apptDate = new Date(nextAppt.starts_at);
-    const daysUntil = Math.floor((apptDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-    if (daysUntil <= 14) return 'ok';
-  }
-  if (daysSince !== null && daysSince < 14) return 'ok';
-  if (daysSince !== null && daysSince <= 30) return 'warning';
-  return 'critical'; // > 30 days or no contact ever, and no upcoming appt in 14 days
+  if (hasFutureAppt) return 'ok'; // tiene próxima cita agendada
+  if (daysSince === null) return 'ok'; // sin citas pasadas (solo hoy/futuro) → al día
+  if (daysSince < 14) return 'ok';
+  if (daysSince <= 30) return 'warning';
+  return 'critical'; // 31–60 días sin cita y sin cita futura
 }
 
-// Sort priority: today group first (by appointment time), then critical → warning → ok (alphabetical within each).
+// Orden: hoy primero (por hora), luego crítico → en riesgo → al día (alfabético dentro de cada grupo).
 const ALERT_ORDER: Record<'critical' | 'warning' | 'ok', number> = {
   critical: 0,
   warning: 1,
@@ -92,58 +91,66 @@ export const seguimientosApi = {
   async getFollowUps(): Promise<FollowUpRow[]> {
     const db = assertSupabase();
 
-    // 1. Patients in active follow-up statuses
-    const { data: patients, error: pErr } = await db
-      .from('patients')
-      .select('id, full_name, phone, status, medical_diagnosis')
-      .in('status', ['En tratamiento', 'Seguimiento'])
-      .is('deleted_at', null);
-
-    if (pErr) throw pErr;
-    if (!patients || patients.length === 0) return [];
-
-    const patientIds = (patients as PatientRow[]).map((p) => p.id);
-
-    // 2. Appointments: past 90 days + next 60 days (contact = any past non-cancelled appt)
-    const past90 = new Date();
-    past90.setDate(past90.getDate() - 90);
-    const future60 = new Date();
-    future60.setDate(future60.getDate() + 60);
+    // 1. Citas en la ventana [-60d, +60d], no canceladas. La lista de seguimiento
+    //    se construye a partir de la actividad real de citas, no del estado del
+    //    paciente (en esta clínica casi todos quedan en "En valoración").
+    const past = new Date();
+    past.setDate(past.getDate() - ACTIVE_WINDOW_DAYS);
+    const future = new Date();
+    future.setDate(future.getDate() + FUTURE_WINDOW_DAYS);
 
     const { data: appointments, error: aErr } = await db
       .from('appointments')
       .select('id, patient_id, starts_at, session_type, title, status')
-      .in('patient_id', patientIds)
-      .gte('starts_at', past90.toISOString())
-      .lte('starts_at', future60.toISOString())
+      .gte('starts_at', past.toISOString())
+      .lte('starts_at', future.toISOString())
       .neq('status', 'cancelled')
+      .not('patient_id', 'is', null)
       .order('starts_at', { ascending: true });
 
     if (aErr) throw aErr;
 
-    // 3. Session notes — only needed for last EVA score, not for contact date
+    const apptRows = (appointments ?? []) as AppointmentRow[];
+    const patientIds = Array.from(
+      new Set(apptRows.map((a) => a.patient_id).filter((id): id is string => id != null))
+    );
+    if (patientIds.length === 0) return [];
+
+    // 2. Datos de esos pacientes (excluye los borrados).
+    const { data: patients, error: pErr } = await db
+      .from('patients')
+      .select('id, full_name, phone, status, medical_diagnosis')
+      .in('id', patientIds)
+      .is('deleted_at', null);
+
+    if (pErr) throw pErr;
+    const patientRows = (patients ?? []) as PatientRow[];
+    const patientById = new Map(patientRows.map((p) => [p.id, p]));
+    if (patientById.size === 0) return [];
+
+    // 3. Notas de sesión — solo para el último EVA registrado.
     const { data: notes, error: nErr } = await db
       .from('session_notes')
       .select('id, patient_id, eva')
-      .in('patient_id', patientIds)
+      .in('patient_id', Array.from(patientById.keys()))
       .not('eva', 'is', null)
       .order('created_at', { ascending: false });
 
     if (nErr) throw nErr;
-
-    const apptRows = (appointments ?? []) as AppointmentRow[];
     const noteRows = (notes ?? []) as SessionNoteRow[];
+
     const now = new Date().toISOString();
 
-    // Build maps
+    // Agrupar citas por paciente (solo pacientes vivos).
     const apptByPatient = new Map<string, AppointmentRow[]>();
     for (const a of apptRows) {
+      if (!a.patient_id || !patientById.has(a.patient_id)) continue;
       const list = apptByPatient.get(a.patient_id) ?? [];
       list.push(a);
       apptByPatient.set(a.patient_id, list);
     }
 
-    // First EVA per patient (notes ordered desc by created_at)
+    // Primer EVA por paciente (notas ya ordenadas desc por created_at).
     const lastEvaByPatient = new Map<string, number>();
     for (const n of noteRows) {
       if (!lastEvaByPatient.has(n.patient_id) && n.eva != null) {
@@ -151,15 +158,14 @@ export const seguimientosApi = {
       }
     }
 
-    // Join
-    const result: FollowUpRow[] = (patients as PatientRow[]).map((p) => {
-      const appts = apptByPatient.get(p.id) ?? [];
+    const result: FollowUpRow[] = [];
+    for (const [pid, appts] of apptByPatient) {
+      const p = patientById.get(pid)!;
       const pastAppts = appts.filter((a) => a.starts_at < now);
       const futureAppts = appts.filter((a) => a.starts_at >= now);
       const todayAppts = appts.filter((a) => isToday(a.starts_at));
 
-      // Contact = most recent past appointment (user decision: no session-note dates)
-      const lastPastAppt = pastAppts.at(-1) ?? null; // ascending order → last = most recent
+      const lastPastAppt = pastAppts.at(-1) ?? null; // orden asc → último = más reciente
       const lastContactDate = lastPastAppt?.starts_at ?? null;
       const daysSinceContact = calcDaysSince(lastContactDate);
 
@@ -168,17 +174,17 @@ export const seguimientosApi = {
         ? { starts_at: nextAppt.starts_at, session_type: nextAppt.session_type, title: nextAppt.title }
         : null;
 
-      // Today's appointment: prefer the next future one today, else the latest past one today
+      // Cita de hoy: la próxima de hoy si la hay, si no la última de hoy.
       const futureTodayAppts = todayAppts.filter((a) => a.starts_at >= now);
       const todayApptRaw = futureTodayAppts[0] ?? todayAppts.at(-1) ?? null;
       const todayAppointment = todayApptRaw
         ? { starts_at: todayApptRaw.starts_at, session_type: todayApptRaw.session_type, title: todayApptRaw.title }
         : null;
 
-      const lastEva = lastEvaByPatient.get(p.id) ?? null;
-      const alertLevel = getAlertLevel(daysSinceContact, nextAppointment);
+      const lastEva = lastEvaByPatient.get(pid) ?? null;
+      const alertLevel = getAlertLevel(daysSinceContact, nextAppointment !== null);
 
-      return {
+      result.push({
         id: p.id,
         full_name: p.full_name,
         phone: p.phone,
@@ -190,10 +196,10 @@ export const seguimientosApi = {
         nextAppointment,
         todayAppointment,
         alertLevel
-      };
-    });
+      });
+    }
 
-    // Sort: today first (by appointment time ASC), then critical → warning → ok (alphabetical within each)
+    // Orden: hoy primero (por hora asc), luego crítico → en riesgo → al día (alfabético).
     result.sort((a, b) => {
       const aIsToday = a.todayAppointment ? 0 : 1;
       const bIsToday = b.todayAppointment ? 0 : 1;
