@@ -5,7 +5,6 @@ import { clinicalApi } from '../../services/clinicalApi';
 import type { Patient } from '../../types/clinical';
 import { money, CATEGORY_COLORS } from './financeUtils';
 import { BarChart, GroupedBarChart, GrowthBadge } from './FinanceCharts';
-import { ExpensesPanel } from './ExpensesPanel';
 import { PatientFinancePanel } from './PatientFinancePanel';
 import { CajaPanel } from './CajaPanel';
 import { MonthlyHistory } from './MonthlyHistory';
@@ -67,6 +66,7 @@ export function FinanceView(_props: FinanceViewProps) {
             type="button"
             onClick={() => exportFinancePdf(summary)}
             style={{
+              marginLeft: 'auto',
               alignSelf: 'center',
               flexShrink: 0,
               background: 'rgba(255,255,255,0.18)',
@@ -148,8 +148,6 @@ export function FinanceView(_props: FinanceViewProps) {
           {selectedPatient && <PatientFinancePanel patient={selectedPatient} />}
 
           <CajaPanel caja={caja} />
-
-          <ExpensesPanel />
 
           {/* === Mes en curso === */}
           <section className="card">
