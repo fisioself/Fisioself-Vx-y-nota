@@ -110,11 +110,16 @@ export const clinicalApi = {
   // Borrado lógico: marca deleted_at en vez de eliminar la fila. El paciente
   // desaparece de toda lectura (la política RLS oculta deleted_at IS NOT NULL)
   // pero su expediente se conserva y puede recuperarse desde la papelera.
+  //
+  // Se usa el RPC `delete_patient` (SECURITY DEFINER) en vez de un UPDATE
+  // directo: al poner deleted_at, la nueva fila deja de cumplir la política
+  // SELECT (deleted_at IS NULL) y Postgres rechazaba el UPDATE con
+  // "new row violates row-level security policy". El RPC valida permisos
+  // (admin + acceso a la clínica) y hace el soft-delete sin esa contradicción.
   async deletePatient(id: string): Promise<void> {
     const db = assertSupabase();
-    return unwrap(
-      await db.from('patients').update({ deleted_at: new Date().toISOString() }).eq('id', id)
-    );
+    const { error } = await db.rpc('delete_patient', { patient_id: id });
+    if (error) throw error;
   },
 
   // Papelera: pacientes borrados de la clínica (solo admin, vía RPC con

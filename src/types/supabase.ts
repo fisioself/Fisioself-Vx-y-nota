@@ -1017,6 +1017,7 @@ export type Database = {
       cleanup_google_oauth_states: { Args: never; Returns: number };
       current_profile_role: { Args: never; Returns: string };
       default_clinic_id: { Args: never; Returns: string };
+      delete_patient: { Args: { patient_id: string }; Returns: undefined };
       finance_appt_stats: { Args: { p_months_back?: number }; Returns: Json };
       is_active_clinical_user: { Args: never; Returns: boolean };
       is_admin: { Args: never; Returns: boolean };

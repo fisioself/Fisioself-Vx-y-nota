@@ -56,22 +56,23 @@ describe('clinicalApi writes', () => {
     expect(from).not.toHaveBeenCalledWith('audit_log');
   });
 
-  it('soft-deletes patients by stamping deleted_at instead of removing the row', async () => {
-    const eq = vi.fn().mockResolvedValue({ data: null, error: null });
-    const update = vi.fn(() => ({ eq }));
-    const deleteFn = vi.fn();
-    const from = vi.fn(() => ({ update, delete: deleteFn }));
-    const { clinicalApi } = await loadClinicalApi(from);
+  it('soft-deletes patients through the delete_patient RPC (no physical delete)', async () => {
+    const rpc = vi.fn().mockResolvedValue({ data: null, error: null });
+    const from = vi.fn();
+    vi.resetModules();
+    vi.doMock('../lib/supabaseClient.js', () => ({
+      isSupabaseConfigured: true,
+      supabase: { rpc, from },
+      assertSupabase: () => ({ rpc, from })
+    }));
+    const { clinicalApi } = await import('./clinicalApi');
 
-    await expect(clinicalApi.deletePatient('patient-1')).resolves.toBeNull();
+    await expect(clinicalApi.deletePatient('patient-1')).resolves.toBeUndefined();
 
-    expect(from).toHaveBeenCalledWith('patients');
-    // No es un borrado físico: usa update con deleted_at, no delete().
-    expect(deleteFn).not.toHaveBeenCalled();
-    expect(update).toHaveBeenCalledWith(
-      expect.objectContaining({ deleted_at: expect.any(String) })
-    );
-    expect(eq).toHaveBeenCalledWith('id', 'patient-1');
+    // El soft-delete se hace vía RPC SECURITY DEFINER para evitar el conflicto
+    // de RLS al poner deleted_at; no es un borrado físico ni un update directo.
+    expect(rpc).toHaveBeenCalledWith('delete_patient', { patient_id: 'patient-1' });
+    expect(from).not.toHaveBeenCalledWith('patients');
     expect(from).not.toHaveBeenCalledWith('audit_log');
   });
 

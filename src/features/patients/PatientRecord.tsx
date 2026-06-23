@@ -163,7 +163,13 @@ export const PatientRecord = memo(function PatientRecord({
       setShowDeleteConfirm(false);
       onPatientDeleted?.(current);
     } catch (err) {
-      setDeleteError(err instanceof Error ? err.message : 'No se pudo eliminar el paciente.');
+      // Los errores de Supabase (PostgrestError) no son instancias de Error,
+      // así que extraemos el mensaje del objeto para no ocultar la causa real.
+      const msg =
+        err instanceof Error
+          ? err.message
+          : (err as { message?: string } | null)?.message;
+      setDeleteError(msg || 'No se pudo eliminar el paciente.');
     } finally {
       setDeleting(false);
     }
