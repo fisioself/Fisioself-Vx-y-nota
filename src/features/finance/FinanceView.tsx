@@ -10,6 +10,7 @@ import { PatientFinancePanel } from './PatientFinancePanel';
 import { CajaPanel } from './CajaPanel';
 import { MonthlyHistory } from './MonthlyHistory';
 import { Skeleton } from '../../components/Skeleton';
+import { exportFinancePdf } from './exportFinancePdf';
 
 interface FinanceViewProps {
   onPatientSelect?: (patientId: string) => void;
@@ -55,10 +56,22 @@ export function FinanceView(_props: FinanceViewProps) {
   return (
     <div className="record-stack">
       <header className="hero" style={{ padding: 24, borderRadius: 22 }}>
-        <p className="eyebrow" style={{ color: 'rgba(255,255,255,0.7)' }}>
-          Control financiero y métricas
-        </p>
-        <h1 style={{ fontSize: 30, color: 'white', margin: 0 }}>Finanzas y métricas</h1>
+        <div>
+          <p className="eyebrow" style={{ color: 'rgba(255,255,255,0.7)' }}>
+            Control financiero y métricas
+          </p>
+          <h1 style={{ fontSize: 30, color: 'white', margin: 0 }}>Finanzas y métricas</h1>
+        </div>
+        {summary && (
+          <button
+            type="button"
+            className="secondary"
+            style={{ alignSelf: 'flex-end', whiteSpace: 'nowrap' }}
+            onClick={() => exportFinancePdf(summary)}
+          >
+            Exportar PDF
+          </button>
+        )}
       </header>
 
       {isLoading ? (

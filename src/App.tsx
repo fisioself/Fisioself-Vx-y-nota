@@ -9,6 +9,7 @@ import { setUser as sentrySetUser, clearUser as sentryClearUser } from './lib/se
 import { AppLogo } from './components/AppLogo';
 import { PushNotificationButton } from './features/notifications/PushNotificationButton';
 import { PanelErrorBoundary } from './app/ErrorBoundary';
+import { GlobalSearch } from './features/search/GlobalSearch';
 import type { Patient } from './types/clinical';
 
 interface LoginScreenProps {
@@ -93,12 +94,26 @@ export function App() {
   // mientras averiguamos si hace falta el segundo factor.
   const [mfaFactorId, setMfaFactorId] = useState<string | null>(null);
   const [mfaChecking, setMfaChecking] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
 
   // Siempre tema claro.
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', 'light');
     localStorage.removeItem('fisioself-theme');
   }, []);
+
+  // ⌘K / Ctrl+K → abre la búsqueda global.
+  useEffect(() => {
+    if (!session) return;
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [session]);
 
   useEffect(() => {
     let cancelled = false;
@@ -239,6 +254,29 @@ export function App() {
 
   return (
     <main className="shell app-grid">
+      {searchOpen && (
+        <GlobalSearch
+          onSelectPatient={(patient) => {
+            setSelectedPatient(patient);
+            setShowFinance(false);
+            setShowDashboard(false);
+            setSearchOpen(false);
+          }}
+          onNavigate={(view) => {
+            if (view === 'finance') {
+              setShowFinance(true);
+              setShowDashboard(false);
+            } else {
+              setShowDashboard(true);
+              setShowFinance(false);
+            }
+            setSelectedPatient(null);
+            setSearchOpen(false);
+          }}
+          onClose={() => setSearchOpen(false)}
+        />
+      )}
+
       <header className="hero app-hero">
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <AppLogo size={56} />
@@ -251,6 +289,15 @@ export function App() {
         <div className="hero-actions">
           <span className="pill">{session.user?.email}</span>
           {session.user?.id && <PushNotificationButton userId={session.user.id} />}
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => setSearchOpen(true)}
+            title="Búsqueda global (Ctrl+K)"
+            aria-label="Búsqueda global"
+          >
+            Buscar
+          </button>
           <button type="button" className="secondary" onClick={() => setShowMfaSettings(true)}>
             Seguridad
           </button>
