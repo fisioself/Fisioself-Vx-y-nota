@@ -62,18 +62,27 @@ export function FinanceView(_props: FinanceViewProps) {
           </p>
           <h1 style={{ fontSize: 30, color: 'white', margin: 0 }}>Finanzas y métricas</h1>
         </div>
-      </header>
-      {summary && (
-        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+        {summary && (
           <button
             type="button"
-            className="secondary"
             onClick={() => exportFinancePdf(summary)}
+            style={{
+              alignSelf: 'center',
+              flexShrink: 0,
+              background: 'rgba(255,255,255,0.18)',
+              border: '1px solid rgba(255,255,255,0.4)',
+              color: 'white',
+              borderRadius: 12,
+              padding: '10px 18px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              whiteSpace: 'nowrap'
+            }}
           >
             Exportar PDF
           </button>
-        </div>
-      )}
+        )}
+      </header>
 
       {isLoading ? (
         <section className="card" aria-busy="true">
@@ -139,6 +148,8 @@ export function FinanceView(_props: FinanceViewProps) {
           {selectedPatient && <PatientFinancePanel patient={selectedPatient} />}
 
           <CajaPanel caja={caja} />
+
+          <ExpensesPanel />
 
           {/* === Mes en curso === */}
           <section className="card">
@@ -346,7 +357,6 @@ export function FinanceView(_props: FinanceViewProps) {
             </section>
           )}
 
-          <ExpensesPanel />
         </>
       )}
     </div>
