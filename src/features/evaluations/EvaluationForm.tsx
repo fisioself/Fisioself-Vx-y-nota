@@ -114,8 +114,102 @@ interface EvaluationFormProps {
   patient?: Patient | null;
   patientId?: string;
   therapistId?: string | null;
+  editingEvaluation?: Evaluation | null;
   onCreated?: (evaluation: Evaluation) => void;
+  onUpdated?: (evaluation: Evaluation) => void;
   onCancel?: () => void;
+}
+
+function evaluationToFormValues(ev: Evaluation): EvaluationFormValues {
+  const s = ev.sections || {};
+  const id = (s.patient_identity || {}) as Record<string, string | null | undefined>;
+  const hist = (s.history || {}) as Record<string, string | null | undefined>;
+  const c = s.consultation || {};
+  const g = s.general_assessment || {};
+  const rf = s.red_flags || {};
+  const yf = s.yellow_flags || {};
+  const fs = s.functional_scales || {};
+  const cl = s.conclusion || {};
+
+  const zones: ZoneFormData[] = (s.zones || []).map((zone) => ({
+    zone_id: zone.zone_id || '',
+    zone_label: zone.zone_id ? '' : (zone.zone || ''),
+    pain_location: zone.pain?.location || '',
+    pain_intensity: zone.pain?.intensity != null ? String(zone.pain.intensity) : '',
+    pain_type: zone.pain?.type || '',
+    aggravating_factors: zone.pain?.aggravating_factors || '',
+    easing_factors: zone.pain?.easing_factors || '',
+    movement_ranges: zone.movement_ranges?.length
+      ? zone.movement_ranges.map((r) => ({
+          movement: r.movement || '',
+          type: r.type || '',
+          range: r.range || '',
+          degrees: r.degrees || '',
+          pain: r.pain || '',
+          notes: r.notes || ''
+        }))
+      : [{ ...emptyRomRow }],
+    muscle_strength: zone.muscle_strength?.length
+      ? zone.muscle_strength.map((r) => ({
+          muscle: r.muscle || '',
+          daniels: r.daniels || '',
+          pain: r.pain || '',
+          notes: r.notes || ''
+        }))
+      : [{ ...emptyStrengthRow }],
+    special_results: Object.fromEntries(
+      (zone.special_tests || []).map((t) => [
+        t.name || '',
+        { result: t.result || '', notes: t.notes || '' }
+      ])
+    ),
+    palpation: zone.palpation || ''
+  }));
+
+  return {
+    full_name: id.full_name || '',
+    birth_date: id.birth_date || '',
+    sex: id.sex || '',
+    admission_date: id.admission_date || ev.evaluation_date || today(),
+    occupation: id.occupation || '',
+    phone: id.phone || '',
+    emergency_contact: id.emergency_contact || '',
+    referred_by: id.referred_by || '',
+    therapist_name: id.therapist_name || '',
+    family_history: hist.family_history || '',
+    personal_history: hist.personal_history || '',
+    surgical_history: hist.surgical_history || '',
+    current_medications: hist.current_medications || '',
+    known_allergies: hist.known_allergies || '',
+    physical_activity: hist.physical_activity || '',
+    previous_imaging: hist.previous_imaging || '',
+    medical_diagnosis: c.medical_diagnosis || '',
+    consultation_reason: c.reason || '',
+    symptom_onset_date: c.symptom_onset_date || '',
+    symptom_classification: c.symptom_classification || '',
+    injury_mechanism: c.injury_mechanism || '',
+    clinical_history: c.clinical_history || '',
+    red_flags: rf.items || [],
+    red_flags_other: rf.other || '',
+    yellow_flags: yf.items || [],
+    yellow_flags_other: yf.other || '',
+    blood_pressure: g.blood_pressure || '',
+    heart_rate: g.heart_rate || '',
+    respiratory_rate: g.respiratory_rate || '',
+    oxygen_saturation: g.oxygen_saturation || '',
+    general_inspection: g.inspection || '',
+    posture: g.posture || '',
+    gait: g.gait || '',
+    zones,
+    functional_scale_name: fs.name || '',
+    functional_scale_score: fs.score || '',
+    functional_scale_notes: fs.notes || '',
+    prognosis: cl.diagnosis || ev.prognosis || '',
+    objectives_short: cl.objectives_short || '',
+    objectives_mid: cl.objectives_mid || '',
+    objectives_long: cl.objectives_long || '',
+    treatment_plan: cl.treatment_plan || ''
+  };
 }
 
 const today = (): string => getLocalISODate();
@@ -219,18 +313,22 @@ export function EvaluationForm({
   patient,
   patientId,
   therapistId,
+  editingEvaluation,
   onCreated,
+  onUpdated,
   onCancel
 }: EvaluationFormProps) {
   const resolvedPatientId = patient?.id || patientId;
-  const draftKey = getEvaluationDraftKey(resolvedPatientId);
+  // En modo edición no guardamos borrador (la valoración ya existe en la BD).
+  const draftKey = editingEvaluation ? null : getEvaluationDraftKey(resolvedPatientId);
 
   const [values, setValues] = useState<EvaluationFormValues>(() => {
-    const draft = draftStorage.get(draftKey);
+    if (editingEvaluation) {
+      return evaluationToFormValues(editingEvaluation);
+    }
+    const draft = draftStorage.get(draftKey ?? '');
     if (draft) {
       try {
-        // Mezclamos con emptyEvaluation por si el borrador es de una versión vieja
-        // del formulario (campos nuevos quedan con su default).
         return { ...emptyEvaluation, ...(JSON.parse(draft) as EvaluationFormValues) };
       } catch {
         // ignore
@@ -437,7 +535,7 @@ export function EvaluationForm({
         return max === null ? n : Math.max(max, n);
       }, null);
 
-      const evaluation = await clinicalApi.addEvaluation({
+      const payload = {
         patient_id: resolvedPatientId,
         therapist_id: therapistId || null,
         evaluation_date: values.admission_date || today(),
@@ -445,10 +543,17 @@ export function EvaluationForm({
         red_flags: redFlagsSummary,
         prognosis: values.prognosis.trim() || null,
         sections
-      });
-      draftStorage.remove(draftKey);
-      setValues({ ...emptyEvaluation, admission_date: today() });
-      onCreated?.(evaluation);
+      };
+
+      if (editingEvaluation) {
+        const evaluation = await clinicalApi.updateEvaluation(editingEvaluation.id, payload);
+        onUpdated?.(evaluation);
+      } else {
+        const evaluation = await clinicalApi.addEvaluation(payload);
+        draftStorage.remove(draftKey ?? '');
+        setValues({ ...emptyEvaluation, admission_date: today() });
+        onCreated?.(evaluation);
+      }
     } catch (err) {
       if (isOfflineError(err)) {
         setError(OFFLINE_MESSAGE);
@@ -465,8 +570,8 @@ export function EvaluationForm({
     <form className="card form-grid clinical-evaluation-form" onSubmit={submit}>
       <div className="form-header span-2">
         <div>
-          <p className="eyebrow">Valoracion inicial</p>
-          <h2>Nueva valoración clínica</h2>
+          <p className="eyebrow">{editingEvaluation ? 'Editar valoracion' : 'Valoracion inicial'}</p>
+          <h2>{editingEvaluation ? 'Editar valoración clínica' : 'Nueva valoración clínica'}</h2>
         </div>
         {onCancel && (
           <button type="button" className="secondary" onClick={onCancel}>
@@ -932,7 +1037,13 @@ export function EvaluationForm({
 
       <div className="actions span-2">
         <button type="submit" disabled={saving}>
-          {saving ? 'Guardando...' : 'Guardar valoración'}
+          {saving
+            ? editingEvaluation
+              ? 'Actualizando...'
+              : 'Guardando...'
+            : editingEvaluation
+              ? 'Actualizar valoración'
+              : 'Guardar valoración'}
         </button>
       </div>
     </form>

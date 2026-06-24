@@ -2,7 +2,7 @@ import { useMemo, useState, memo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { clinicalApi } from '../../services/clinicalApi';
 import type { Patient, SessionNote, Evaluation, ClinicalRecord } from '../../types/clinical';
-import { exportToPdf } from '../../shared/exportClinicalRecord';
+import { exportToPdf, printEvaluation } from '../../shared/exportClinicalRecord';
 import { EvaluationForm } from '../evaluations/EvaluationForm';
 import { SessionNoteEditor } from '../session-notes/SessionNoteEditor';
 import { SessionNotesList } from '../session-notes/SessionNotesList';
@@ -62,6 +62,17 @@ export const buildPatientSummary = ({
       ? (latestEva as number) - (initialEva as number)
       : null;
 
+  const evaHistory: { date: string; value: number }[] = [];
+  if (Number.isFinite(initialEva) && latestEvaluation?.evaluation_date) {
+    evaHistory.push({ date: latestEvaluation.evaluation_date, value: initialEva as number });
+  }
+  sortedNotes.forEach((note) => {
+    const nv = Number(note.eva);
+    if (Number.isFinite(nv) && note.session_date) {
+      evaHistory.push({ date: note.session_date, value: nv });
+    }
+  });
+
   return {
     sessionsCount: sortedNotes.length,
     latestSessionNumber: latestNote?.session_number ?? null,
@@ -69,6 +80,7 @@ export const buildPatientSummary = ({
     latestEva: Number.isFinite(latestEva) ? (latestEva as number) : null,
     initialEva: Number.isFinite(initialEva) ? (initialEva as number) : null,
     evaChange,
+    evaHistory,
     diagnosis: latestEvaluation?.prognosis || '',
     medicalDiagnosis: latestMedicalDiagnosis,
     latestNotePreview: latestNote?.raw_text?.trim().slice(0, 180) || ''
@@ -94,6 +106,7 @@ export const PatientRecord = memo(function PatientRecord({
   const [showEvaluation, setShowEvaluation] = useState(false);
   const [showSessionNote, setShowSessionNote] = useState(false);
   const [openEvaluationId, setOpenEvaluationId] = useState<string | null>(null);
+  const [editingEvaluation, setEditingEvaluation] = useState<Evaluation | null>(null);
 
   const {
     data: record,
@@ -135,7 +148,10 @@ export const PatientRecord = memo(function PatientRecord({
   }, [record]);
 
   const timeline = useMemo(() => clinicalApi.buildTimeline(record), [record]);
-  const summary = useMemo(() => buildPatientSummary({ notes, evaluations }), [notes, evaluations]);
+  const summary = useMemo(
+    () => buildPatientSummary({ notes, evaluations }),
+    [notes, evaluations]
+  );
 
   const { data: role } = useRole();
   const isAdmin = role === 'admin';
@@ -274,14 +290,24 @@ export const PatientRecord = memo(function PatientRecord({
 
       {showEvaluation && (
         <EvaluationForm
-          // key por paciente: fuerza remount al cambiar de paciente para que el
-          // borrador (lazy-init desde draftKey) se recargue correctamente y no
-          // se "filtre" el del paciente anterior a la nueva draftKey.
           key={current?.id}
           patient={current}
           onCancel={() => setShowEvaluation(false)}
           onCreated={() => {
             setShowEvaluation(false);
+            refreshRecord();
+          }}
+        />
+      )}
+
+      {editingEvaluation && (
+        <EvaluationForm
+          key={`edit-${editingEvaluation.id}`}
+          patient={current}
+          editingEvaluation={editingEvaluation}
+          onCancel={() => setEditingEvaluation(null)}
+          onUpdated={() => {
+            setEditingEvaluation(null);
             refreshRecord();
           }}
         />
@@ -359,26 +385,53 @@ export const PatientRecord = memo(function PatientRecord({
             <div className="list-stack">
               {evaluations.map((evaluation) => {
                 const isOpen = openEvaluationId === evaluation.id;
+                const yellowItems = evaluation.sections?.yellow_flags?.items;
+                const yellowOther = evaluation.sections?.yellow_flags?.other;
+                const yellowList = [...(yellowItems ?? []), yellowOther].filter(Boolean).join('; ');
                 return (
                   <article key={evaluation.id} className="note-row">
-                    <button
-                      type="button"
-                      className="note-toggle"
-                      onClick={() => setOpenEvaluationId(isOpen ? null : evaluation.id)}
-                    >
-                      <span>
-                        <strong>{evaluation.evaluation_date}</strong>
-                      </span>
-                      {evaluation.eva_initial !== null && evaluation.eva_initial !== undefined && (
-                        <span>EVA inicial {evaluation.eva_initial}/10</span>
-                      )}
-                    </button>
-                    <p style={{ marginTop: '0.5rem', marginBottom: '0.5rem' }}>
+                    <div className="form-header" style={{ alignItems: 'flex-start', gap: 8 }}>
+                      <button
+                        type="button"
+                        className="note-toggle"
+                        style={{ flex: 1 }}
+                        onClick={() => setOpenEvaluationId(isOpen ? null : evaluation.id)}
+                      >
+                        <span>
+                          <strong>{evaluation.evaluation_date}</strong>
+                        </span>
+                        {evaluation.eva_initial !== null && evaluation.eva_initial !== undefined && (
+                          <span>EVA inicial {evaluation.eva_initial}/10</span>
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        className="secondary"
+                        style={{ minHeight: 32, padding: '2px 10px', fontSize: '0.78rem' }}
+                        onClick={() => setEditingEvaluation(evaluation)}
+                      >
+                        Editar
+                      </button>
+                      <button
+                        type="button"
+                        className="secondary"
+                        style={{ minHeight: 32, padding: '2px 10px', fontSize: '0.78rem' }}
+                        onClick={() => printEvaluation(evaluation, current.full_name || '')}
+                      >
+                        PDF
+                      </button>
+                    </div>
+                    <p style={{ marginTop: '0.5rem', marginBottom: '0.25rem' }}>
                       {evaluation.prognosis || 'Sin diagnostico fisioterapeutico registrado'}
                     </p>
                     {evaluation.red_flags && (
-                      <p className="error" style={{ marginBottom: '0.5rem' }}>
-                        Banderas rojas: {evaluation.red_flags}
+                      <p className="error" style={{ marginBottom: '0.25rem', fontSize: '0.85rem' }}>
+                        🚩 {evaluation.red_flags}
+                      </p>
+                    )}
+                    {yellowList && (
+                      <p style={{ marginBottom: '0.25rem', fontSize: '0.85rem', color: '#b45309' }}>
+                        ⚠ {yellowList}
                       </p>
                     )}
                     {isOpen && <EvaluationSummary evaluation={evaluation} />}

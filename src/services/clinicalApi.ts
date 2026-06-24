@@ -346,7 +346,12 @@ export const clinicalApi = {
       type: 'evaluation',
       label: 'Valoracion inicial',
       date: item.evaluation_date || item.created_at || new Date(0).toISOString(),
-      description: item.prognosis || item.red_flags || 'Valoracion registrada',
+      description: (() => {
+        const base = item.prognosis || item.red_flags || 'Valoracion registrada';
+        const yf = (item.sections as { yellow_flags?: { items?: string[] } } | undefined)
+          ?.yellow_flags?.items;
+        return yf?.length ? `${base} · ${yf.length} bandera(s) amarilla(s)` : base;
+      })(),
       payload: item
     }));
 
