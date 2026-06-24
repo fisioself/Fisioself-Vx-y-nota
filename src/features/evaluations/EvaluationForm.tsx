@@ -265,37 +265,30 @@ export function EvaluationForm({
 
   const age = useMemo(() => computeAge(values.birth_date), [values.birth_date]);
 
+  const clearError = () => {
+    setError('');
+    setErrorAnchorId(null);
+  };
+
   const setField = <K extends keyof EvaluationFormValues>(
     field: K,
     value: EvaluationFormValues[K]
   ) => {
     setValues((current) => ({ ...current, [field]: value }));
-    setError('');
+    clearError();
   };
 
-  const toggleRedFlag = (flag: string) => {
+  const toggleFlag = (field: 'red_flags' | 'yellow_flags', flag: string) => {
     setValues((current) => {
-      const has = current.red_flags.includes(flag);
-      return {
-        ...current,
-        red_flags: has ? current.red_flags.filter((f) => f !== flag) : [...current.red_flags, flag]
-      };
+      const arr = current[field] as string[];
+      const has = arr.includes(flag);
+      return { ...current, [field]: has ? arr.filter((f) => f !== flag) : [...arr, flag] };
     });
-    setError('');
+    clearError();
   };
 
-  const toggleYellowFlag = (flag: string) => {
-    setValues((current) => {
-      const has = current.yellow_flags.includes(flag);
-      return {
-        ...current,
-        yellow_flags: has
-          ? current.yellow_flags.filter((f) => f !== flag)
-          : [...current.yellow_flags, flag]
-      };
-    });
-    setError('');
-  };
+  const toggleRedFlag = (flag: string) => toggleFlag('red_flags', flag);
+  const toggleYellowFlag = (flag: string) => toggleFlag('yellow_flags', flag);
 
   // --- Zonas ---
   const updateZone = (index: number, updater: (z: ZoneFormData) => ZoneFormData) => {
@@ -454,7 +447,7 @@ export function EvaluationForm({
         sections
       });
       draftStorage.remove(draftKey);
-      setValues(emptyEvaluation);
+      setValues({ ...emptyEvaluation, admission_date: today() });
       onCreated?.(evaluation);
     } catch (err) {
       if (isOfflineError(err)) {

@@ -14,15 +14,14 @@ export const OFFLINE_MESSAGE =
 //   Safari:  "Load failed"
 // Además, navigator.onLine === false es señal inequívoca de estar offline.
 export const isOfflineError = (err: unknown): boolean => {
+  if (!(err instanceof TypeError)) return false;
+  const message = err.message.toLowerCase();
+  const isNetworkMessage =
+    message.includes('failed to fetch') ||
+    message.includes('networkerror') ||
+    message.includes('load failed') ||
+    message.includes('network request failed');
+  if (isNetworkMessage) return true;
   if (typeof navigator !== 'undefined' && navigator.onLine === false) return true;
-  if (err instanceof TypeError) {
-    const message = err.message.toLowerCase();
-    return (
-      message.includes('failed to fetch') ||
-      message.includes('networkerror') ||
-      message.includes('load failed') ||
-      message.includes('network request failed')
-    );
-  }
   return false;
 };
