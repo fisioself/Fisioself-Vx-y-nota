@@ -20,7 +20,8 @@ import {
   FUNCTIONAL_SCALE_OPTIONS,
   SYMPTOM_CLASSIFICATION,
   INJURY_MECHANISM,
-  PAIN_TYPE_OPTIONS
+  PAIN_TYPE_OPTIONS,
+  PAIN_MECHANISM_OPTIONS
 } from './evaluationCatalog';
 import type { Patient, Evaluation, EvaluationSections, EvaluationZone } from '../../types/clinical';
 import './EvaluationForm.css';
@@ -84,6 +85,7 @@ interface EvaluationFormValues {
   symptom_onset_date: string;
   symptom_classification: string;
   injury_mechanism: string;
+  pain_mechanism: string;
   clinical_history: string;
   // Banderas rojas
   red_flags: string[];
@@ -191,6 +193,7 @@ function evaluationToFormValues(ev: Evaluation): EvaluationFormValues {
     symptom_onset_date: c.symptom_onset_date || '',
     symptom_classification: c.symptom_classification || '',
     injury_mechanism: c.injury_mechanism || '',
+    pain_mechanism: c.pain_mechanism || '',
     clinical_history: c.clinical_history || '',
     red_flags: rf.items || [],
     red_flags_other: rf.other || '',
@@ -263,6 +266,7 @@ const emptyEvaluation: EvaluationFormValues = {
   symptom_onset_date: '',
   symptom_classification: '',
   injury_mechanism: '',
+  pain_mechanism: '',
   clinical_history: '',
   red_flags: [],
   red_flags_other: '',
@@ -513,6 +517,7 @@ export function EvaluationForm({
           symptom_onset_date: toNullable(values.symptom_onset_date),
           symptom_classification: toNullable(values.symptom_classification),
           injury_mechanism: toNullable(values.injury_mechanism),
+          pain_mechanism: toNullable(values.pain_mechanism),
           clinical_history: toNullable(values.clinical_history)
         },
         general_assessment: {
@@ -799,6 +804,20 @@ export function EvaluationForm({
             >
               <option value="">—</option>
               {INJURY_MECHANISM.map((o) => (
+                <option key={o} value={o}>
+                  {o}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Mecanismo del dolor
+            <select
+              value={values.pain_mechanism}
+              onChange={(e) => setField('pain_mechanism', e.target.value)}
+            >
+              <option value="">—</option>
+              {PAIN_MECHANISM_OPTIONS.map((o) => (
                 <option key={o} value={o}>
                   {o}
                 </option>

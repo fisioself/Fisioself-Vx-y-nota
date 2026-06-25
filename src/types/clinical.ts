@@ -78,6 +78,7 @@ export interface EvaluationSections {
     symptom_onset_date?: string | null;
     symptom_classification?: string | null;
     injury_mechanism?: string | null;
+    pain_mechanism?: string | null; // Nociceptivo / Neuropático / Nociplástico / Mixto
   } | null;
   pain?: {
     location?: string | null;

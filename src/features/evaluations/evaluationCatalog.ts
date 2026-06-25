@@ -966,3 +966,11 @@ export const PAIN_TYPE_OPTIONS = [
   'Opresivo',
   'Idiopático'
 ] as const;
+
+// Mecanismo del dolor predominante (clasificación clínica actual del dolor).
+export const PAIN_MECHANISM_OPTIONS = [
+  'Nociceptivo',
+  'Neuropático',
+  'Nociplástico',
+  'Mixto'
+] as const;

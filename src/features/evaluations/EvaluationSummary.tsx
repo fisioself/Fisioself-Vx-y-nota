@@ -70,6 +70,7 @@ export function EvaluationSummary({ evaluation }: EvaluationSummaryProps) {
             <p>Clasificación: {consultation.symptom_classification}</p>
           )}
           {consultation.injury_mechanism && <p>Mecanismo: {consultation.injury_mechanism}</p>}
+          {consultation.pain_mechanism && <p>Mec. dolor: {consultation.pain_mechanism}</p>}
           {consultation.medical_diagnosis && <p>Dx médico: {consultation.medical_diagnosis}</p>}
         </div>
       </div>

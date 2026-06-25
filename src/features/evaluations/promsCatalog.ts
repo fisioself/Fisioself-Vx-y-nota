@@ -322,7 +322,308 @@ const WOMAC: PromScale = {
   }
 };
 
-export const PROM_SCALES: PromScale[] = [SPPB, ODI, QUICKDASH, WOMAC];
+// ── LEFS — Lower Extremity Functional Scale (miembro inferior) ──────────────
+const LEFS_OPTS: PromOption[] = [
+  { label: '0 · Actividad extremadamente difícil o imposible', points: 0 },
+  { label: '1 · Mucha dificultad', points: 1 },
+  { label: '2 · Dificultad moderada', points: 2 },
+  { label: '3 · Poca dificultad', points: 3 },
+  { label: '4 · Sin dificultad', points: 4 }
+];
+const lefsQ = (text: string): PromQuestion => ({ text, options: LEFS_OPTS });
+const LEFS: PromScale = {
+  id: 'lefs',
+  name: 'LEFS (miembro inferior)',
+  description: '20 ítems, 0–4 cada uno. Total 0–80; MAYOR = mejor función.',
+  questions: [
+    lefsQ('Cualquier actividad laboral, doméstica o escolar habitual'),
+    lefsQ('Sus pasatiempos o actividades recreativas'),
+    lefsQ('Entrar o salir de la tina/regadera'),
+    lefsQ('Caminar entre habitaciones'),
+    lefsQ('Ponerse los zapatos o calcetines'),
+    lefsQ('Ponerse en cuclillas'),
+    lefsQ('Levantar un objeto del suelo'),
+    lefsQ('Realizar actividades ligeras en casa'),
+    lefsQ('Realizar actividades pesadas en casa'),
+    lefsQ('Subir o bajar de un coche'),
+    lefsQ('Caminar 2 cuadras'),
+    lefsQ('Caminar 1.5 km'),
+    lefsQ('Subir o bajar 10 escalones (≈1 piso)'),
+    lefsQ('Permanecer de pie 1 hora'),
+    lefsQ('Permanecer sentado 1 hora'),
+    lefsQ('Correr en terreno plano'),
+    lefsQ('Correr en terreno irregular'),
+    lefsQ('Girar o cambiar de dirección al correr'),
+    lefsQ('Saltar'),
+    lefsQ('Darse vuelta en la cama')
+  ],
+  minAnswered: 20,
+  score: (answers) => {
+    const { total, answered } = sum(answers);
+    if (answered < 20) return null;
+    const pct = Math.round((total / 80) * 100);
+    let interp: string;
+    if (pct >= 80) interp = 'Función buena / mínima limitación.';
+    else if (pct >= 60) interp = 'Limitación leve.';
+    else if (pct >= 40) interp = 'Limitación moderada.';
+    else interp = 'Limitación severa.';
+    return {
+      display: `${total}/80 · ${pct}%`,
+      interpretation: `LEFS ${total}/80 (${pct}%) — ${interp}`
+    };
+  }
+};
+
+// ── NDI — Neck Disability Index (columna cervical) ──────────────────────────
+const ndiSection = (group: string, items: string[]): PromQuestion => ({
+  group,
+  text: group,
+  options: items.map((label, i) => ({ label: `${i} · ${label}`, points: i }))
+});
+const NDI: PromScale = {
+  id: 'ndi',
+  name: 'NDI (columna cervical)',
+  description: '10 secciones, 0–5 cada una. Se reporta como % de discapacidad cervical.',
+  questions: [
+    ndiSection('Intensidad del dolor', [
+      'Sin dolor',
+      'Muy leve',
+      'Moderado',
+      'Bastante intenso',
+      'Muy intenso',
+      'El peor imaginable'
+    ]),
+    ndiSection('Cuidado personal', [
+      'Normal sin dolor',
+      'Normal con dolor',
+      'Doloroso, lento y cuidadoso',
+      'Necesito algo de ayuda',
+      'Necesito ayuda a diario',
+      'No me visto, en cama'
+    ]),
+    ndiSection('Levantar peso', [
+      'Pesos sin dolor',
+      'Pesos con dolor',
+      'No del suelo, sí en mesa',
+      'Solo pesos ligeros',
+      'Solo muy ligeros',
+      'No puedo levantar nada'
+    ]),
+    ndiSection('Lectura', [
+      'Todo lo que quiero sin dolor',
+      'Con dolor leve',
+      'Con dolor moderado',
+      'No tanto como quiero por dolor',
+      'Apenas puedo leer',
+      'No puedo leer'
+    ]),
+    ndiSection('Dolor de cabeza', [
+      'Ninguno',
+      'Leve infrecuente',
+      'Moderado infrecuente',
+      'Moderado frecuente',
+      'Intenso frecuente',
+      'Casi constante'
+    ]),
+    ndiSection('Concentración', [
+      'Sin dificultad',
+      'Dificultad leve',
+      'Dificultad moderada',
+      'Bastante dificultad',
+      'Mucha dificultad',
+      'No puedo concentrarme'
+    ]),
+    ndiSection('Trabajo', [
+      'Todo el que quiero',
+      'Solo mi trabajo habitual',
+      'La mayor parte',
+      'No puedo del todo',
+      'Apenas algo',
+      'No puedo trabajar'
+    ]),
+    ndiSection('Conducir', [
+      'Sin dolor',
+      'Con dolor leve',
+      'Con dolor moderado',
+      'No tanto como quiero',
+      'Apenas puedo',
+      'No puedo conducir'
+    ]),
+    ndiSection('Dormir', [
+      'Sin alteración',
+      'Muy leve (<1 h)',
+      'Leve (1-2 h)',
+      'Moderada (2-3 h)',
+      'Mucha (3-5 h)',
+      'No duermo (5-7 h)'
+    ]),
+    ndiSection('Actividades recreativas', [
+      'Todas sin dolor',
+      'Todas con algo de dolor',
+      'Casi todas',
+      'Solo algunas',
+      'Apenas algunas',
+      'Ninguna'
+    ])
+  ],
+  minAnswered: 5,
+  score: (answers) => {
+    const { total, answered } = sum(answers);
+    if (answered < 5) return null;
+    const pct = Math.round((total / (answered * 5)) * 100);
+    let interp: string;
+    if (pct <= 8) interp = 'Sin discapacidad.';
+    else if (pct <= 28) interp = 'Discapacidad leve.';
+    else if (pct <= 48) interp = 'Discapacidad moderada.';
+    else if (pct <= 68) interp = 'Discapacidad severa.';
+    else interp = 'Discapacidad completa.';
+    return {
+      display: `${pct}% (${total}/${answered * 5})`,
+      interpretation: `NDI ${pct}% — ${interp}`
+    };
+  }
+};
+
+// ── SPADI — Shoulder Pain and Disability Index (hombro) ─────────────────────
+const spadiOpts: PromOption[] = Array.from({ length: 11 }, (_, i) => ({
+  label: String(i),
+  points: i
+}));
+const spadiQ = (group: string, text: string): PromQuestion => ({
+  group,
+  text,
+  options: spadiOpts
+});
+const SPADI: PromScale = {
+  id: 'spadi',
+  name: 'SPADI (hombro)',
+  description: '13 ítems (dolor 0–10 y discapacidad 0–10). Se reporta % total; mayor = peor.',
+  questions: [
+    spadiQ('Dolor', 'En su punto más intenso'),
+    spadiQ('Dolor', 'Al acostarse sobre el lado afectado'),
+    spadiQ('Dolor', 'Al alcanzar algo en un estante alto'),
+    spadiQ('Dolor', 'Al tocarse la nuca'),
+    spadiQ('Dolor', 'Al empujar con el brazo afectado'),
+    spadiQ('Discapacidad', 'Lavarse el cabello'),
+    spadiQ('Discapacidad', 'Lavarse la espalda'),
+    spadiQ('Discapacidad', 'Ponerse una camiseta'),
+    spadiQ('Discapacidad', 'Ponerse una camisa con botones'),
+    spadiQ('Discapacidad', 'Ponerse los pantalones'),
+    spadiQ('Discapacidad', 'Colocar un objeto en un estante alto'),
+    spadiQ('Discapacidad', 'Cargar un objeto pesado (≈4.5 kg)'),
+    spadiQ('Discapacidad', 'Sacar algo del bolsillo trasero')
+  ],
+  minAnswered: 13,
+  score: (answers) => {
+    const { answered } = sum(answers);
+    if (answered < 13) return null;
+    const painItems = answers.slice(0, 5).map((a) => a ?? 0);
+    const disItems = answers.slice(5).map((a) => a ?? 0);
+    const painPct = (painItems.reduce((a, b) => a + b, 0) / 50) * 100;
+    const disPct = (disItems.reduce((a, b) => a + b, 0) / 80) * 100;
+    const totalPct = Math.round((painPct + disPct) / 2);
+    let interp: string;
+    if (totalPct <= 30) interp = 'Afectación leve.';
+    else if (totalPct <= 50) interp = 'Afectación moderada.';
+    else if (totalPct <= 70) interp = 'Afectación importante.';
+    else interp = 'Afectación severa.';
+    return {
+      display: `${totalPct}% (dolor ${Math.round(painPct)}% · función ${Math.round(disPct)}%)`,
+      interpretation: `SPADI ${totalPct}% — ${interp}`
+    };
+  }
+};
+
+// ── KOOS-12 — rodilla (versión corta validada, 12 ítems) ────────────────────
+const KOOS_OPTS: PromOption[] = [
+  { label: 'Ninguno', points: 0 },
+  { label: 'Leve', points: 1 },
+  { label: 'Moderado', points: 2 },
+  { label: 'Severo', points: 3 },
+  { label: 'Extremo', points: 4 }
+];
+const koosQ = (group: string, text: string): PromQuestion => ({ group, text, options: KOOS_OPTS });
+const KOOS12: PromScale = {
+  id: 'koos12',
+  name: 'KOOS-12 (rodilla)',
+  description: '12 ítems (dolor, función, calidad de vida), 0–4. Se reporta 0–100; MAYOR = mejor.',
+  questions: [
+    koosQ('Dolor', 'Frecuencia del dolor de rodilla'),
+    koosQ('Dolor', 'Al girar/pivotar sobre la rodilla'),
+    koosQ('Dolor', 'Al estirar completamente la rodilla'),
+    koosQ('Dolor', 'Al caminar en superficie plana'),
+    koosQ('Función', 'Al bajar escaleras'),
+    koosQ('Función', 'Al subir escaleras'),
+    koosQ('Función', 'Al levantarse de estar sentado'),
+    koosQ('Función', 'Al ponerse de pie'),
+    koosQ('Calidad de vida', 'Conciencia del problema de rodilla'),
+    koosQ('Calidad de vida', 'Modificación del estilo de vida'),
+    koosQ('Calidad de vida', 'Confianza en la rodilla'),
+    koosQ('Calidad de vida', 'Dificultad general por la rodilla')
+  ],
+  minAnswered: 12,
+  score: (answers) => {
+    const { total, answered } = sum(answers);
+    if (answered < 12) return null;
+    // Transformación KOOS: 100 - (media * 25). Mayor = mejor.
+    const score = Math.round(100 - (total / answered) * 25);
+    let interp: string;
+    if (score >= 80) interp = 'Buen estado de la rodilla.';
+    else if (score >= 60) interp = 'Afectación leve.';
+    else if (score >= 40) interp = 'Afectación moderada.';
+    else interp = 'Afectación severa.';
+    return { display: `${score}/100`, interpretation: `KOOS-12 ${score}/100 — ${interp}` };
+  }
+};
+
+// ── TSK-11 — Tampa Scale of Kinesiophobia (miedo al movimiento) ─────────────
+const TSK_OPTS: PromOption[] = [
+  { label: '1 · Muy en desacuerdo', points: 1 },
+  { label: '2 · En desacuerdo', points: 2 },
+  { label: '3 · De acuerdo', points: 3 },
+  { label: '4 · Muy de acuerdo', points: 4 }
+];
+const tskQ = (text: string): PromQuestion => ({ text, options: TSK_OPTS });
+const TSK11: PromScale = {
+  id: 'tsk11',
+  name: 'Tampa / TSK-11 (kinesiofobia)',
+  description: '11 ítems, 1–4. Total 11–44; MAYOR = más miedo al movimiento.',
+  questions: [
+    tskQ('Tengo miedo de lesionarme si hago ejercicio'),
+    tskQ('Si me dejara vencer por el dolor, este aumentaría'),
+    tskQ('Mi cuerpo me avisa que algo va peligrosamente mal'),
+    tskQ('El dolor probablemente se aliviaría si hiciera ejercicio'),
+    tskQ('La gente no toma mi problema médico lo suficientemente en serio'),
+    tskQ('Mi lesión ha puesto mi cuerpo en riesgo el resto de mi vida'),
+    tskQ('El dolor siempre significa que me he lesionado'),
+    tskQ('Que algo aumente mi dolor no significa que sea peligroso'),
+    tskQ('Tengo miedo de lesionarme sin querer'),
+    tskQ('Lo más seguro para evitar más dolor es tener cuidado y no moverme'),
+    tskQ('No tendría tanto dolor si no hubiera algo serio en mi cuerpo')
+  ],
+  minAnswered: 11,
+  score: (answers) => {
+    const { total, answered } = sum(answers);
+    if (answered < 11) return null;
+    let interp: string;
+    if (total <= 22) interp = 'Kinesiofobia baja.';
+    else if (total <= 37) interp = 'Kinesiofobia moderada.';
+    else interp = 'Kinesiofobia alta — abordar miedo al movimiento.';
+    return { display: `${total}/44`, interpretation: `TSK-11 ${total}/44 — ${interp}` };
+  }
+};
+
+export const PROM_SCALES: PromScale[] = [
+  SPPB,
+  ODI,
+  NDI,
+  QUICKDASH,
+  WOMAC,
+  KOOS12,
+  LEFS,
+  SPADI,
+  TSK11
+];
 
 export const getPromScale = (id: string): PromScale | undefined =>
   PROM_SCALES.find((s) => s.id === id);

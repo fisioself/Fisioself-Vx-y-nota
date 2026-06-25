@@ -94,6 +94,10 @@ function buildEvaluationHtml(evaluation: Evaluation, patientName: string): strin
     table{width:100%;border-collapse:collapse;font-size:11px;margin:6px 0}
     th{background:#f0f4f8;text-align:left;padding:4px 8px;font-size:10px;color:#52606d;font-weight:600;text-transform:uppercase}
     td{padding:4px 8px;border-bottom:1px solid #f0f4f8}
+    .signature{display:flex;justify-content:space-around;gap:40px;margin-top:48px}
+    .sign-line{flex:1;text-align:center;border-top:1px solid #1f2933;padding-top:6px;max-width:260px}
+    .sign-line span{display:block;font-weight:600}
+    .sign-line small{color:#52606d;font-size:10px}
     .footer{margin-top:24px;font-size:10px;color:#9aa5b1;border-top:1px solid #e4e7eb;padding-top:8px}
     @media print{body{padding:0}@page{margin:1.5cm}}
   </style>
@@ -125,6 +129,7 @@ function buildEvaluationHtml(evaluation: Evaluation, patientName: string): strin
   ${row('Inicio de síntomas', fmtDateMX(c.symptom_onset_date))}
   ${row('Clasificación', c.symptom_classification)}
   ${row('Mecanismo de lesión', c.injury_mechanism)}
+  ${row('Mecanismo del dolor', c.pain_mechanism)}
   ${c.clinical_history ? `<p><strong>Historia clínica:</strong><br/>${c.clinical_history}</p>` : ''}
 
   ${redList ? `<p class="red" style="margin-top:8px">🚩 Banderas rojas: ${redList}</p>` : ''}
@@ -168,6 +173,17 @@ function buildEvaluationHtml(evaluation: Evaluation, patientName: string): strin
     ${row('Plan de intervención', cl.treatment_plan)}`
       : ''
   }
+
+  <div class="signature">
+    <div class="sign-line">
+      <span>${v(id.therapist_name)}</span>
+      <small>Fisioterapeuta a cargo</small>
+    </div>
+    <div class="sign-line">
+      <span>${fmtDateMX(evaluation.evaluation_date)}</span>
+      <small>Fecha de valoración</small>
+    </div>
+  </div>
 
   <p class="footer">Valoración generada por Fisioself — documento clínico confidencial.</p>
 </body>
