@@ -43,6 +43,12 @@ export function PushNotificationButton({ userId }: { userId: string }) {
   // clave VAPID, no mostramos el botón para no ofrecer algo que no funcionará.
   if (!available) return null;
 
+  const label = toggle.isPending
+    ? 'Guardando...'
+    : enabled
+      ? 'Notificaciones activas'
+      : 'Activar notificaciones';
+
   return (
     <button
       type="button"
@@ -50,12 +56,11 @@ export function PushNotificationButton({ userId }: { userId: string }) {
       onClick={() => toggle.mutate()}
       disabled={toggle.isPending}
       aria-pressed={enabled}
+      aria-label={label}
+      title={label}
     >
-      {toggle.isPending
-        ? 'Guardando...'
-        : enabled
-          ? 'Notificaciones activas'
-          : 'Activar notificaciones'}
+      <span aria-hidden="true">{enabled ? '🔔' : '🔕'}</span>
+      <span className="btn-label">{label}</span>
     </button>
   );
 }

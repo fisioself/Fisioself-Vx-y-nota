@@ -300,13 +300,28 @@ export function App() {
             title="Búsqueda global (Ctrl+K)"
             aria-label="Búsqueda global"
           >
-            Buscar
+            <span aria-hidden="true">🔍</span>
+            <span className="btn-label">Buscar</span>
           </button>
-          <button type="button" className="secondary" onClick={() => setShowMfaSettings(true)}>
-            Seguridad
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => setShowMfaSettings(true)}
+            aria-label="Seguridad"
+            title="Seguridad"
+          >
+            <span aria-hidden="true">🛡️</span>
+            <span className="btn-label">Seguridad</span>
           </button>
-          <button type="button" className="secondary" onClick={logout}>
-            Salir
+          <button
+            type="button"
+            className="secondary"
+            onClick={logout}
+            aria-label="Cerrar sesión"
+            title="Cerrar sesión"
+          >
+            <span aria-hidden="true">🚪</span>
+            <span className="btn-label">Salir</span>
           </button>
         </div>
       </header>

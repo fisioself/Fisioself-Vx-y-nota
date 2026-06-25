@@ -428,6 +428,29 @@ textarea {
   gap: 16px;
   align-items: flex-start;
 }
+.record-header-info {
+  min-width: 0;
+}
+/* Acciones secundarias del expediente: fila compacta que envuelve. */
+.record-secondary-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+/* Botón compacto reutilizable (acciones secundarias). */
+.btn-sm {
+  min-height: 36px;
+  padding: 6px 12px;
+  font-size: 0.82rem;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+a.btn-sm {
+  text-decoration: none;
+}
 .record-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -662,10 +685,10 @@ button:not(:disabled):active {
 }
 
 @media (max-width: 700px) {
-  /* Shell: bottom padding = nav bar + safe area + space for floating action bar. */
+  /* Shell: bottom padding = nav bar + safe area + barra flotante (1 fila). */
   .shell {
     width: min(100% - 20px, 1280px);
-    padding-bottom: max(calc(var(--bottom-nav-h) + env(safe-area-inset-bottom) + 170px), 240px);
+    padding-bottom: max(calc(var(--bottom-nav-h) + env(safe-area-inset-bottom) + 96px), 168px);
   }
   .card {
     border-radius: 16px;
@@ -744,36 +767,48 @@ button:not(:disabled):active {
     border-radius: 0 0 4px 4px;
   }
 
-  /* ── Barra de acciones del expediente → flota sobre el tab bar ─────────── */
-  .record-header .hero-actions {
+  /* ── Acciones primarias del expediente → barra flotante compacta ───────── */
+  /* Solo lleva las 2 acciones de captura (Nueva valoración · Nota de sesión),
+     así ocupa una sola fila y libera la pantalla. Las secundarias (PDF, editar,
+     eliminar, WhatsApp) viven dentro de la tarjeta y hacen scroll normal. */
+  .record-header .record-primary-actions {
     position: fixed;
     left: 10px;
     right: 10px;
-    /* Se sienta justo encima del tab bar + safe area */
-    bottom: max(calc(var(--bottom-nav-h) + env(safe-area-inset-bottom) + 10px), 78px);
+    bottom: max(calc(var(--bottom-nav-h) + env(safe-area-inset-bottom) + 8px), 74px);
     z-index: 20;
     display: flex;
     flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: flex-start;
+    flex-wrap: nowrap;
     gap: 8px;
-    padding: 10px;
+    padding: 8px;
     border: 1px solid rgba(18, 55, 42, 0.12);
-    border-radius: 18px;
+    border-radius: 16px;
     background: rgba(255, 250, 240, 0.92);
     backdrop-filter: blur(16px) saturate(180%);
     -webkit-backdrop-filter: blur(16px) saturate(180%);
     box-shadow: 0 8px 32px rgba(18, 55, 42, 0.18);
   }
-  html[data-theme='dark'] .record-header .hero-actions {
+  html[data-theme='dark'] .record-header .record-primary-actions {
     background: rgba(20, 28, 25, 0.92);
     border-color: rgba(255, 255, 255, 0.1);
   }
-  .record-header .hero-actions button,
-  .record-header .hero-actions a {
-    min-height: 44px;
+  .record-header .record-primary-actions button {
+    min-height: 42px;
+    padding: 8px 10px;
+    font-size: 0.84rem;
     white-space: nowrap;
+    flex: 1 1 50%;
+  }
+  /* Las acciones secundarias a todo el ancho, en una rejilla cómoda. */
+  .record-secondary-actions {
+    margin-top: 10px;
+  }
+  .record-secondary-actions .btn-sm,
+  .record-secondary-actions a.btn-sm {
     flex: 1 1 calc(50% - 4px);
+    justify-content: center;
+    min-height: 38px;
   }
 
   /* ── Encabezado principal de la app → barra compacta horizontal ─────────── */
@@ -789,13 +824,18 @@ button:not(:disabled):active {
     flex: 1;
     min-width: 0;
   }
-  /* Ocultar eyebrow y subtítulo de descripción en móvil */
+  /* El div de textos (anidado junto al logo) también necesita min-width:0 para
+     que el h1 trunque con ellipsis en vez de pasar por debajo de los iconos. */
+  .app-hero > div:first-child > div {
+    min-width: 0;
+  }
+  /* Ocultar eyebrow y subtítulo de descripción en móvil (el h1 basta). */
   .app-hero .eyebrow,
-  .app-hero > div:first-child > p:last-of-type {
+  .app-hero h1 ~ p {
     display: none;
   }
   .app-hero h1 {
-    font-size: 1.1rem !important;
+    font-size: 1rem !important;
     margin: 0;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -807,20 +847,29 @@ button:not(:disabled):active {
     height: 36px !important;
     border-radius: 9px !important;
   }
-  /* Acciones del header: ocultar email y alinear botones en fila */
+  /* Acciones del header: solo iconos (el texto se oculta) para que los 4
+     botones quepan sin desbordar el margen. El email (pill) también se oculta. */
   .app-hero .hero-actions {
     flex-wrap: nowrap;
     gap: 6px;
     justify-content: flex-end;
+    flex-shrink: 0;
   }
   .app-hero .hero-actions .pill {
     display: none;
   }
+  .app-hero .hero-actions .btn-label {
+    display: none;
+  }
   .app-hero .hero-actions button {
-    min-height: 36px;
-    padding: 5px 10px;
-    font-size: 0.78rem;
-    white-space: nowrap;
+    min-height: 38px;
+    min-width: 38px;
+    padding: 5px;
+    font-size: 1.05rem;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .actions,
