@@ -15,6 +15,7 @@ import {
   DEFAULT_TEST_OPTIONS,
   DANIELS_OPTIONS,
   ROM_RANGE_OPTIONS,
+  getRomNorm,
   RED_FLAG_OPTIONS,
   YELLOW_FLAG_OPTIONS,
   FUNCTIONAL_SCALE_OPTIONS,
@@ -30,7 +31,8 @@ interface RomRow {
   movement: string;
   type: string; // 'Activo' | 'Pasivo'
   range: string;
-  degrees: string;
+  degrees: string; // lado afectado
+  degrees_healthy: string; // lado sano (comparativo bilateral)
   pain: string; // 'Sí' | 'No'
   notes: string;
 }
@@ -150,6 +152,7 @@ function evaluationToFormValues(ev: Evaluation): EvaluationFormValues {
           type: r.type || '',
           range: r.range || '',
           degrees: r.degrees || '',
+          degrees_healthy: r.degrees_healthy || '',
           pain: r.pain || '',
           notes: r.notes || ''
         }))
@@ -225,6 +228,7 @@ const emptyRomRow: RomRow = {
   type: '',
   range: '',
   degrees: '',
+  degrees_healthy: '',
   pain: '',
   notes: ''
 };
@@ -1345,11 +1349,22 @@ function ZoneEditor({ zone, index, onChange, onRemove }: ZoneEditorProps) {
                   ))}
                 </select>
                 <input
-                  aria-label="Grados"
-                  placeholder="Grados °"
+                  aria-label="Grados lado afectado"
+                  placeholder={
+                    catalog && getRomNorm(catalog.id, row.movement)
+                      ? `Afect. (nl ${getRomNorm(catalog.id, row.movement)})`
+                      : 'Grados afectado °'
+                  }
                   inputMode="numeric"
                   value={row.degrees}
                   onChange={(e) => setRom(i, 'degrees', e.target.value)}
+                />
+                <input
+                  aria-label="Grados lado sano"
+                  placeholder="Sano °"
+                  inputMode="numeric"
+                  value={row.degrees_healthy}
+                  onChange={(e) => setRom(i, 'degrees_healthy', e.target.value)}
                 />
                 <select
                   aria-label="¿Genera dolor?"

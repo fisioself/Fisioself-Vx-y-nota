@@ -33,7 +33,8 @@ export interface EvaluationZoneRom {
   movement?: string | null;
   type?: string | null; // 'Activo' | 'Pasivo'
   range?: string | null;
-  degrees?: string | null;
+  degrees?: string | null; // grados del lado afectado
+  degrees_healthy?: string | null; // grados del lado sano (comparativo bilateral)
   pain?: string | null; // 'Sí' | 'No'
   notes?: string | null;
 }

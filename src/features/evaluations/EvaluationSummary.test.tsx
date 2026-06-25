@@ -111,7 +111,7 @@ describe('EvaluationSummary', () => {
 
     expect(screen.getByText('Zona: Rodilla')).toBeInTheDocument();
     expect(screen.getByText(/Cara medial/)).toBeInTheDocument();
-    expect(screen.getByText(/Flexión: Limitado \(90°\)/)).toBeInTheDocument();
+    expect(screen.getByText(/Flexión: Limitado · afectado 90°/)).toBeInTheDocument();
     expect(screen.getByText(/Lachman \(LCA\): Negativo/)).toBeInTheDocument();
     expect(screen.getByText(/TA 120\/80/)).toBeInTheDocument();
     expect(screen.getByText(/Objetivos corto plazo: Reducir dolor/)).toBeInTheDocument();

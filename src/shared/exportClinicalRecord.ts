@@ -31,8 +31,8 @@ function buildZoneHtml(zone: EvaluationZone): string {
     ${pain ? `<p>Dolor: ${v(pain.location)}${pain.intensity != null ? ` · EVA ${pain.intensity}/10` : ''}${pain.type ? ` · ${pain.type}` : ''}</p>` : ''}
     ${
       roms.length
-        ? `<table><thead><tr><th>Movimiento</th><th>Tipo</th><th>Rango</th><th>Grados</th><th>Dolor</th><th>Notas</th></tr></thead><tbody>
-      ${roms.map((r) => `<tr><td>${v(r.movement)}</td><td>${v(r.type)}</td><td>${v(r.range)}</td><td>${v(r.degrees)}</td><td>${v(r.pain)}</td><td>${v(r.notes)}</td></tr>`).join('')}
+        ? `<table><thead><tr><th>Movimiento</th><th>Tipo</th><th>Rango</th><th>Afectado</th><th>Sano</th><th>Dolor</th><th>Notas</th></tr></thead><tbody>
+      ${roms.map((r) => `<tr><td>${v(r.movement)}</td><td>${v(r.type)}</td><td>${v(r.range)}</td><td>${r.degrees ? `${r.degrees}°` : '—'}</td><td>${r.degrees_healthy ? `${r.degrees_healthy}°` : '—'}</td><td>${v(r.pain)}</td><td>${v(r.notes)}</td></tr>`).join('')}
     </tbody></table>`
         : ''
     }

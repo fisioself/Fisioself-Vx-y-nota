@@ -138,12 +138,13 @@ details.form-section[open] > summary {
   padding-bottom: 4px;
 }
 
-/* Filas de ROM (7 columnas: movimiento, tipo, rango, grados, dolor, notas, quitar)
-   y fuerza (5 columnas) sobreescriben el grid base. */
+/* Filas de ROM (8 columnas: movimiento, tipo, rango, grados afectado, grados
+   sano, dolor, notas, quitar) y fuerza (5 columnas) sobreescriben el grid base. */
 .clinical-table-row.rom-row {
   grid-template-columns:
-    minmax(115px, 1.1fr) minmax(85px, 0.55fr) minmax(95px, 0.65fr)
-    minmax(70px, 0.45fr) minmax(80px, 0.5fr) minmax(105px, 0.85fr) auto;
+    minmax(110px, 1fr) minmax(80px, 0.5fr) minmax(90px, 0.6fr)
+    minmax(95px, 0.6fr) minmax(70px, 0.45fr) minmax(75px, 0.45fr)
+    minmax(95px, 0.75fr) auto;
 }
 .clinical-table-row.strength-row {
   grid-template-columns:

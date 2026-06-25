@@ -145,7 +145,8 @@ export function EvaluationSummary({ evaluation }: EvaluationSummaryProps) {
                 <p key={`zr-${i}`}>
                   {val(r.movement)}
                   {r.type ? ` (${r.type})` : ''}: {val(r.range)}
-                  {r.degrees ? ` (${r.degrees}°)` : ''}
+                  {r.degrees ? ` · afectado ${r.degrees}°` : ''}
+                  {r.degrees_healthy ? ` / sano ${r.degrees_healthy}°` : ''}
                   {r.pain ? ` · dolor: ${r.pain}` : ''}
                   {r.notes ? ` - ${r.notes}` : ''}
                 </p>

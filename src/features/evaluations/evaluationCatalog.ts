@@ -908,6 +908,57 @@ export const ZONE_CATALOGS: ZoneCatalog[] = [
 export const getZoneCatalog = (id: string): ZoneCatalog | undefined =>
   ZONE_CATALOGS.find((z) => z.id === id);
 
+// Rango de movimiento NORMAL de referencia (grados aprox. AAOS), por
+// `${zoneId}:${movimiento}`. Se muestra como guía junto al campo de grados.
+export const ROM_NORMS: Record<string, string> = {
+  'tobillo_pie:Flexión dorsal': '20°',
+  'tobillo_pie:Flexión plantar': '50°',
+  'tobillo_pie:Inversión': '35°',
+  'tobillo_pie:Eversión': '15°',
+  'rodilla:Flexión': '135°',
+  'rodilla:Extensión': '0°',
+  'rodilla:Rotación interna': '10°',
+  'rodilla:Rotación externa': '10°',
+  'cadera_pelvis:Flexión': '120°',
+  'cadera_pelvis:Extensión': '20°',
+  'cadera_pelvis:Abducción': '45°',
+  'cadera_pelvis:Aducción': '30°',
+  'cadera_pelvis:Rotación interna': '45°',
+  'cadera_pelvis:Rotación externa': '45°',
+  'columna_lumbar:Flexión': '60°',
+  'columna_lumbar:Extensión': '25°',
+  'columna_lumbar:Flexión lateral derecha': '25°',
+  'columna_lumbar:Flexión lateral izquierda': '25°',
+  'columna_lumbar:Rotación derecha': '30°',
+  'columna_lumbar:Rotación izquierda': '30°',
+  'columna_cervical:Flexión': '50°',
+  'columna_cervical:Extensión': '60°',
+  'columna_cervical:Flexión lateral derecha': '45°',
+  'columna_cervical:Flexión lateral izquierda': '45°',
+  'columna_cervical:Rotación derecha': '80°',
+  'columna_cervical:Rotación izquierda': '80°',
+  'hombro:Flexión': '180°',
+  'hombro:Extensión': '60°',
+  'hombro:Abducción': '180°',
+  'hombro:Aducción': '50°',
+  'hombro:Rotación interna': '70°',
+  'hombro:Rotación externa': '90°',
+  'hombro:Elevación en el plano escapular (ERCS)': '180°',
+  'codo_antebrazo:Flexión': '145°',
+  'codo_antebrazo:Extensión': '0°',
+  'codo_antebrazo:Pronación': '80°',
+  'codo_antebrazo:Supinación': '80°',
+  'mano_muneca:Flexión de muñeca': '80°',
+  'mano_muneca:Extensión de muñeca': '70°',
+  'mano_muneca:Desviación radial': '20°',
+  'mano_muneca:Desviación cubital': '30°',
+  'mano_muneca:Pronación': '80°',
+  'mano_muneca:Supinación': '80°'
+};
+
+export const getRomNorm = (zoneId: string, movement: string): string | undefined =>
+  ROM_NORMS[`${zoneId}:${movement}`];
+
 // Banderas rojas más relevantes en fisioterapia (checklist). "Otras" va aparte.
 export const RED_FLAG_OPTIONS = [
   'Fiebre / escalofríos',
