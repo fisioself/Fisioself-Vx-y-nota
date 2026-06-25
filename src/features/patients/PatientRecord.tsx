@@ -14,6 +14,7 @@ import { ClinicalSummary } from './ClinicalSummary';
 import { useRole } from '../../shared/useRole';
 import { EvaluationSummary } from '../evaluations/EvaluationSummary';
 import { EvaluationComparison } from '../evaluations/EvaluationComparison';
+import { isEvaluationOpen, setEvaluationOpen } from '../evaluations/evaluationOpenState';
 import { SkeletonList } from '../../components/Skeleton';
 
 const buildPatientWhatsAppUrl = (patient: Patient | Partial<Patient>): string => {
@@ -104,11 +105,7 @@ export const PatientRecord = memo(function PatientRecord({
   const [deleteError, setDeleteError] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
-  const [showEvaluation, setShowEvaluation] = useState(() => {
-    const pid = patient?.id;
-    if (!pid) return false;
-    return sessionStorage.getItem(`fisioself_eval_open_${pid}`) === '1';
-  });
+  const [showEvaluation, setShowEvaluation] = useState(() => isEvaluationOpen(patient?.id));
   const [showSessionNote, setShowSessionNote] = useState(false);
   const [openEvaluationId, setOpenEvaluationId] = useState<string | null>(null);
   const [editingEvaluation, setEditingEvaluation] = useState<Evaluation | null>(null);
@@ -116,13 +113,7 @@ export const PatientRecord = memo(function PatientRecord({
   // Persiste si la valoración estaba abierta para que volver de otra pestaña
   // la restaure sin perder el borrador (que ya vive en localStorage).
   useEffect(() => {
-    const pid = patient?.id;
-    if (!pid) return;
-    if (showEvaluation) {
-      sessionStorage.setItem(`fisioself_eval_open_${pid}`, '1');
-    } else {
-      sessionStorage.removeItem(`fisioself_eval_open_${pid}`);
-    }
+    setEvaluationOpen(patient?.id, showEvaluation);
   }, [showEvaluation, patient?.id]);
 
   const {
@@ -231,7 +222,20 @@ export const PatientRecord = memo(function PatientRecord({
           >
             {showSessionNote ? 'Cerrar nota' : `Nota de sesion #${nextSession}`}
           </button>
-          <button type="button" className="secondary" onClick={() => exportToPdf(current)}>
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => {
+              // Si hay valoraciones, exportamos la más reciente con el formato
+              // clínico (firma, mapa de dolor, zonas). Sin valoraciones caemos a
+              // imprimir la página para no dejar al usuario sin salida.
+              if (evaluations.length > 0) {
+                printEvaluation(evaluations[0], current.full_name || 'Paciente');
+              } else {
+                exportToPdf(current);
+              }
+            }}
+          >
             Exportar PDF
           </button>
           {current.phone && (

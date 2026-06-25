@@ -8,6 +8,19 @@ interface BodyPainMapProps {
   readOnly?: boolean;
 }
 
+// Convierte coordenadas de pantalla (clientX/Y dentro del rect del SVG) al
+// sistema del viewBox (ancho 100 × alto 200). Pura para poder testearla sin DOM.
+export function viewBoxCoords(
+  rect: { left: number; top: number; width: number; height: number },
+  clientX: number,
+  clientY: number
+): { x: number; y: number } {
+  return {
+    x: ((clientX - rect.left) / rect.width) * 100,
+    y: ((clientY - rect.top) / rect.height) * 200
+  };
+}
+
 // Silueta humanoide simple (cabeza, tronco, brazos, piernas) en un viewBox
 // 0 0 100 200. Misma forma para vista frontal y posterior.
 function Silhouette() {
@@ -43,9 +56,7 @@ function BodyView({
 
   const handleClick = (e: MouseEvent<SVGSVGElement>) => {
     if (readOnly) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 100; // viewBox width = 100
-    const y = ((e.clientY - rect.top) / rect.height) * 200; // viewBox height = 200
+    const { x, y } = viewBoxCoords(e.currentTarget.getBoundingClientRect(), e.clientX, e.clientY);
     onAdd(x, y);
   };
 
