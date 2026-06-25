@@ -2,6 +2,7 @@
   --bg-main: #f7f3ea;
   --text-main: #12372a;
   --bg-card: #fff;
+  --bg-card-alpha: rgba(255, 255, 255, 0.92);
   --bg-sunken: #fffaf0;
   --border: #eaebec;
   --primary: #12372a;
@@ -13,6 +14,7 @@
   --pill-bg: #eaebec;
   --hero-gradient: linear-gradient(180deg, #f8f5ee 0%, #efe7d8 100%);
   --logo-gradient: linear-gradient(145deg, #0f3327, #1f5d45);
+  --bottom-nav-h: 60px;
 
   /* RGB del color primario para usar en rgba(): lo consumen .monthly-history-table
      y .mini-table para sus bordes/hover. Sin esta variable el navegador descarta
@@ -42,6 +44,7 @@ html[data-theme='dark'] {
   --bg-main: #0b0f0e;
   --text-main: #dfece5;
   --bg-card: #141c19;
+  --bg-card-alpha: rgba(20, 28, 25, 0.92);
   --bg-sunken: #0b0f0e;
   --border: #2a3a33;
   --primary: #1f5d45;
@@ -659,41 +662,167 @@ button:not(:disabled):active {
 }
 
 @media (max-width: 700px) {
+  /* Shell: bottom padding = nav bar + safe area + space for floating action bar. */
   .shell {
     width: min(100% - 20px, 1280px);
-    /* Espacio para la barra de acciones fija (hasta 3 filas de botones). */
-    padding-bottom: 200px;
+    padding-bottom: max(calc(var(--bottom-nav-h) + env(safe-area-inset-bottom) + 170px), 240px);
   }
   .card {
     border-radius: 16px;
     padding: 16px;
   }
+
+  /* ── Barra de navegación principal → fixed bottom tab bar ──────────────── */
+  .main-tabs {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    /* padding inferior para cubrir el home indicator de iOS */
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+    gap: 0;
+    background: var(--bg-card-alpha);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-top: 1px solid var(--border);
+    border-radius: 0;
+    box-shadow: 0 -2px 20px rgba(18, 55, 42, 0.1);
+  }
+  .main-tabs button {
+    border-radius: 0;
+    min-height: var(--bottom-nav-h);
+    padding: 6px 4px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    position: relative;
+    line-height: 1.15;
+  }
+  /* Iconos via ::before (nth-child fijo: Panel · Finanzas · Seguimientos) */
+  .main-tabs button::before {
+    font-size: 1.25rem;
+    line-height: 1;
+  }
+  .main-tabs button:nth-child(1)::before {
+    content: '🏠';
+  }
+  .main-tabs button:nth-child(2)::before {
+    content: '💳';
+  }
+  .main-tabs button:nth-child(3)::before {
+    content: '📅';
+  }
+  /* Pestaña inactiva */
+  .main-tabs button.secondary {
+    background: transparent;
+    color: var(--muted);
+  }
+  .main-tabs button.secondary::before {
+    filter: grayscale(1);
+    opacity: 0.55;
+  }
+  /* Pestaña activa */
+  .main-tabs button:not(.secondary) {
+    background: transparent;
+    color: var(--primary);
+  }
+  /* Indicador activo: línea verde sobre el botón */
+  .main-tabs button:not(.secondary)::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 22%;
+    right: 22%;
+    height: 3px;
+    background: var(--primary);
+    border-radius: 0 0 4px 4px;
+  }
+
+  /* ── Barra de acciones del expediente → flota sobre el tab bar ─────────── */
   .record-header .hero-actions {
     position: fixed;
     left: 10px;
     right: 10px;
-    bottom: 10px;
+    /* Se sienta justo encima del tab bar + safe area */
+    bottom: max(calc(var(--bottom-nav-h) + env(safe-area-inset-bottom) + 10px), 78px);
     z-index: 20;
     display: flex;
     flex-direction: row;
     flex-wrap: wrap;
-    /* flex-start es clave: con flex-end (heredado de .hero-actions) el scroll
-       quedaba anclado al final y "Nueva valoración" no se podía alcanzar. */
     justify-content: flex-start;
     gap: 8px;
     padding: 10px;
-    border: 1px solid rgba(18, 55, 42, 0.14);
+    border: 1px solid rgba(18, 55, 42, 0.12);
     border-radius: 18px;
-    background: rgba(255, 250, 240, 0.96);
-    box-shadow: 0 16px 40px rgba(18, 55, 42, 0.2);
+    background: rgba(255, 250, 240, 0.92);
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    box-shadow: 0 8px 32px rgba(18, 55, 42, 0.18);
+  }
+  html[data-theme='dark'] .record-header .hero-actions {
+    background: rgba(20, 28, 25, 0.92);
+    border-color: rgba(255, 255, 255, 0.1);
   }
   .record-header .hero-actions button,
-  .record-header .hero-actions .pill {
+  .record-header .hero-actions a {
     min-height: 44px;
     white-space: nowrap;
-    /* Dos botones por fila: todos visibles sin necesidad de deslizar. */
     flex: 1 1 calc(50% - 4px);
   }
+
+  /* ── Encabezado principal de la app → barra compacta horizontal ─────────── */
+  .hero.app-hero {
+    flex-direction: row !important;
+    align-items: center;
+    padding: 10px 14px;
+    border-radius: 14px;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .app-hero > div:first-child {
+    flex: 1;
+    min-width: 0;
+  }
+  /* Ocultar eyebrow y subtítulo de descripción en móvil */
+  .app-hero .eyebrow,
+  .app-hero > div:first-child > p:last-of-type {
+    display: none;
+  }
+  .app-hero h1 {
+    font-size: 1.1rem !important;
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  /* Logo más pequeño en el header compacto */
+  .app-hero > div:first-child img {
+    width: 36px !important;
+    height: 36px !important;
+    border-radius: 9px !important;
+  }
+  /* Acciones del header: ocultar email y alinear botones en fila */
+  .app-hero .hero-actions {
+    flex-wrap: nowrap;
+    gap: 6px;
+    justify-content: flex-end;
+  }
+  .app-hero .hero-actions .pill {
+    display: none;
+  }
+  .app-hero .hero-actions button {
+    min-height: 36px;
+    padding: 5px 10px;
+    font-size: 0.78rem;
+    white-space: nowrap;
+  }
+
   .actions,
   .row {
     align-items: stretch;
@@ -703,15 +832,14 @@ button:not(:disabled):active {
     width: 100%;
   }
 
-  /* iOS hace zoom al enfocar inputs con letra < 16px; lo evitamos para que la
-     pantalla no "salte" al escribir en celular. */
+  /* iOS: evitar zoom automático al enfocar inputs (font-size < 16px). */
   input,
   textarea,
   select {
     font-size: 16px;
   }
 
-  /* El hero ocupaba demasiado alto en celular; lo compactamos. */
+  /* Hero de sección (Panel/Finanzas/Seguimientos): más compacto. */
   .hero {
     padding: 20px;
     border-radius: 20px;
@@ -721,7 +849,6 @@ button:not(:disabled):active {
     font-size: clamp(26px, 7vw, 34px);
   }
 
-  /* La navegación principal (Resumen / Finanzas / Pacientes) en una fila táctil. */
   .split-actions button {
     min-height: 44px;
   }
