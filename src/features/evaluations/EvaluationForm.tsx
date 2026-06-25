@@ -24,8 +24,7 @@ import {
   SYMPTOM_CLASSIFICATION,
   INJURY_MECHANISM,
   PAIN_TYPE_OPTIONS,
-  PAIN_MECHANISM_OPTIONS,
-  EVALUATION_TEMPLATES
+  PAIN_MECHANISM_OPTIONS
 } from './evaluationCatalog';
 import type {
   Patient,
@@ -68,8 +67,6 @@ interface ZoneFormData {
   movement_ranges: RomRow[];
   muscle_strength: StrengthRow[];
   special_results: Record<string, TestResult>;
-  // Pruebas clave sugeridas por la plantilla del motivo (solo UI, no se guarda).
-  suggested_tests: string[];
   palpation: string;
 }
 
@@ -184,7 +181,6 @@ function evaluationToFormValues(ev: Evaluation): EvaluationFormValues {
         { result: t.result || '', notes: t.notes || '' }
       ])
     ),
-    suggested_tests: [],
     palpation: zone.palpation || ''
   }));
 
@@ -260,7 +256,6 @@ const newZone = (): ZoneFormData => ({
   movement_ranges: [{ ...emptyRomRow }],
   muscle_strength: [{ ...emptyStrengthRow }],
   special_results: {},
-  suggested_tests: [],
   palpation: ''
 });
 
@@ -457,23 +452,6 @@ export function EvaluationForm({
       'zones',
       values.zones.filter((_, i) => i !== index)
     );
-
-  // Plantilla por motivo: agrega la zona (con su batería de pruebas) y rellena
-  // los campos típicos del cuadro que estén vacíos, sin pisar lo ya capturado.
-  const applyTemplate = (templateId: string) => {
-    const tpl = EVALUATION_TEMPLATES.find((t) => t.id === templateId);
-    if (!tpl) return;
-    const zone = { ...newZone(), zone_id: tpl.zoneId, suggested_tests: tpl.keyTests || [] };
-    setValues((current) => ({
-      ...current,
-      zones: [...current.zones, zone],
-      symptom_classification: current.symptom_classification || tpl.symptom_classification || '',
-      injury_mechanism: current.injury_mechanism || tpl.injury_mechanism || '',
-      pain_mechanism: current.pain_mechanism || tpl.pain_mechanism || ''
-    }));
-    clearError();
-    notify({ tone: 'success', message: `Plantilla "${tpl.label}" aplicada.` });
-  };
 
   // Arma un texto estructurado con los hallazgos marcados, para que la IA
   // redacte el diagnóstico solo a partir de datos reales de la valoración.
@@ -755,28 +733,6 @@ export function EvaluationForm({
           </button>
         )}
       </div>
-
-      {/* Plantilla rápida por motivo: arranca la valoración en segundos. */}
-      {!editingEvaluation && (
-        <div className="template-bar span-2">
-          <label>
-            ⚡ Plantilla rápida por motivo
-            <select
-              value=""
-              onChange={(e) => {
-                if (e.target.value) applyTemplate(e.target.value);
-              }}
-            >
-              <option value="">— Elige un motivo para pre-cargar zona y pruebas —</option>
-              {EVALUATION_TEMPLATES.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.label}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-      )}
 
       {/* 1. Datos generales */}
       <details className="form-section span-2" open>
@@ -1653,28 +1609,16 @@ function ZoneEditor({ zone, index, onChange, onRemove }: ZoneEditorProps) {
 
           {/* D. Pruebas especiales (catálogo de la zona) */}
           <p className="zone-subtitle">D. Pruebas especiales / ortopédicas</p>
-          {zone.suggested_tests.length > 0 && (
-            <p className="suggested-banner">
-              ⭐ Pruebas sugeridas para este motivo: {zone.suggested_tests.join(' · ')}
-            </p>
-          )}
           {groupedTests.map((g) => (
             <div className="test-group" key={g.group}>
               <p className="test-group-title">{g.group}</p>
               {g.tests.map((t) => {
                 const r = zone.special_results[t.name] ?? { result: '', notes: '' };
                 const options = t.options ?? [...DEFAULT_TEST_OPTIONS];
-                const isSuggested = zone.suggested_tests.includes(t.name);
                 return (
-                  <div
-                    className={`test-row${isSuggested ? ' test-row--suggested' : ''}`}
-                    key={t.name}
-                  >
+                  <div className="test-row" key={t.name}>
                     <div className="test-info">
-                      <span className="test-name">
-                        {isSuggested && <span className="test-star">⭐</span>}
-                        {t.name}
-                      </span>
+                      <span className="test-name">{t.name}</span>
                       {t.note && <span className="test-note">{t.note}</span>}
                     </div>
                     <div className="test-inputs">

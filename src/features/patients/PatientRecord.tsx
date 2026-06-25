@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { clinicalApi } from '../../services/clinicalApi';
 import type { Patient, SessionNote, Evaluation, ClinicalRecord } from '../../types/clinical';
 import { exportToPdf, printEvaluation } from '../../shared/exportClinicalRecord';
+import { fmtDateMX } from '../../shared/dateUtils';
 import { EvaluationForm } from '../evaluations/EvaluationForm';
 import { SessionNoteEditor } from '../session-notes/SessionNoteEditor';
 import { SessionNotesList } from '../session-notes/SessionNotesList';
@@ -427,18 +428,23 @@ export const PatientRecord = memo(function PatientRecord({
                         onClick={() => setOpenEvaluationId(isOpen ? null : evaluation.id)}
                       >
                         <span>
-                          <strong>{evaluation.evaluation_date}</strong>
+                          <strong>{fmtDateMX(evaluation.evaluation_date)}</strong>
+                          {evaluation.eva_initial !== null &&
+                            evaluation.eva_initial !== undefined && (
+                              <span style={{ marginLeft: 10, fontWeight: 400 }}>
+                                EVA {evaluation.eva_initial}/10
+                              </span>
+                            )}
                         </span>
-                        {evaluation.eva_initial !== null &&
-                          evaluation.eva_initial !== undefined && (
-                            <span>EVA inicial {evaluation.eva_initial}/10</span>
-                          )}
                       </button>
                       <button
                         type="button"
                         className="secondary"
                         style={{ minHeight: 32, padding: '2px 10px', fontSize: '0.78rem' }}
-                        onClick={() => setEditingEvaluation(evaluation)}
+                        onClick={() => {
+                          setEditingEvaluation(evaluation);
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }}
                       >
                         Editar
                       </button>
