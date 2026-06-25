@@ -44,8 +44,8 @@ function BodyView({
   const handleClick = (e: MouseEvent<SVGSVGElement>) => {
     if (readOnly) return;
     const rect = e.currentTarget.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 100;   // viewBox width = 100
-    const y = ((e.clientY - rect.top) / rect.height) * 200;   // viewBox height = 200
+    const x = ((e.clientX - rect.left) / rect.width) * 100; // viewBox width = 100
+    const y = ((e.clientY - rect.top) / rect.height) * 200; // viewBox height = 200
     onAdd(x, y);
   };
 

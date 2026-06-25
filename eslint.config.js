@@ -66,7 +66,10 @@ export default [
         'warn',
         { argsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' }
       ],
-      'react/jsx-uses-vars': 'error'
+      'react/jsx-uses-vars': 'error',
+      // DateField es un control de fecha propio (envuelve un <input>); la regla
+      // a11y no lo detecta como control nativo, así que se lo declaramos.
+      'jsx-a11y/label-has-associated-control': ['error', { controlComponents: ['DateField'] }]
     }
   },
   {

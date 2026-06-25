@@ -26,7 +26,9 @@ function EvaSparkline({ data }: { data: EvaPoint[] }) {
   const PAD = 4;
   const xs = data.map((_, i) => PAD + (i / (data.length - 1)) * (W - PAD * 2));
   const ys = data.map((d) => PAD + ((10 - d.value) / 10) * (H - PAD * 2));
-  const path = xs.map((x, i) => `${i === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${ys[i].toFixed(1)}`).join(' ');
+  const path = xs
+    .map((x, i) => `${i === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${ys[i].toFixed(1)}`)
+    .join(' ');
   const lastX = xs[xs.length - 1];
   const lastY = ys[ys.length - 1];
   const firstY = ys[0];
