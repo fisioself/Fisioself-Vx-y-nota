@@ -8,6 +8,7 @@ import { getLocalISODate } from '../../shared/dateUtils';
 import { hasErrors, validateSessionNote } from '../../shared/clinicalValidation';
 import { consent, CONSENT_KEYS } from '../../shared/consent';
 import { draftStorage, getDraftKey } from '../../shared/draftStorage';
+import { DateField } from '../../components/DateField';
 import { useDraftAutosave } from '../../shared/useDraftAutosave';
 import { useShortcuts } from '../../shared/useShortcuts';
 import { AiConsultModal } from './AiConsultModal';
@@ -374,11 +375,10 @@ export function SessionNoteEditor({
       <div className="row wrap">
         <label>
           Fecha de la sesion
-          <input
-            type="date"
+          <DateField
             value={sessionDate}
-            onChange={(e) => {
-              setSessionDate(e.target.value);
+            onChange={(iso) => {
+              setSessionDate(iso);
               setIsDirty(true);
             }}
           />

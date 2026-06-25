@@ -8,6 +8,7 @@ import {
 } from '../../shared/clinicalValidation';
 import type { Patient, PatientStatus, Sex, ValidationErrors } from '../../types/clinical';
 import { getErrorMessage } from '../../shared/errors';
+import { DateField } from '../../components/DateField';
 
 interface PatientEditFormProps {
   patient: Patient | null;
@@ -147,11 +148,7 @@ export function PatientEditForm({ patient, onUpdated, onCancel }: PatientEditFor
 
       <label>
         Fecha de nacimiento
-        <input
-          type="date"
-          value={values.birth_date}
-          onChange={(e) => setField('birth_date', e.target.value)}
-        />
+        <DateField value={values.birth_date} onChange={(iso) => setField('birth_date', iso)} />
       </label>
 
       <label className="span-2">

@@ -202,7 +202,7 @@ export function EvaluationSummary({ evaluation }: EvaluationSummaryProps) {
           )}
           {conclusion.objectives_mid && <p>Objetivos mediano plazo: {conclusion.objectives_mid}</p>}
           {conclusion.objectives_long && <p>Objetivos largo plazo: {conclusion.objectives_long}</p>}
-          {conclusion.treatment_plan && <p>Plan: {conclusion.treatment_plan}</p>}
+          {conclusion.treatment_plan && <p>Plan de intervención: {conclusion.treatment_plan}</p>}
         </div>
       )}
 

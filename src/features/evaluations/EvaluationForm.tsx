@@ -6,6 +6,9 @@ import { useDraftAutosave } from '../../shared/useDraftAutosave';
 import { getErrorMessage, isOfflineError, OFFLINE_MESSAGE } from '../../shared/errors';
 import { useToast } from '../../app/ToastProvider';
 import { PatientDocuments } from '../patients/PatientDocuments';
+import { DateField } from '../../components/DateField';
+import { PromCalculator } from './PromCalculator';
+import { PROM_SCALES, getPromScale } from './promsCatalog';
 import {
   ZONE_CATALOGS,
   getZoneCatalog,
@@ -133,7 +136,7 @@ function evaluationToFormValues(ev: Evaluation): EvaluationFormValues {
 
   const zones: ZoneFormData[] = (s.zones || []).map((zone) => ({
     zone_id: zone.zone_id || '',
-    zone_label: zone.zone_id ? '' : (zone.zone || ''),
+    zone_label: zone.zone_id ? '' : zone.zone || '',
     pain_location: zone.pain?.location || '',
     pain_intensity: zone.pain?.intensity != null ? String(zone.pain.intensity) : '',
     pain_type: zone.pain?.type || '',
@@ -347,6 +350,9 @@ export function EvaluationForm({
   const [error, setError] = useState('');
   // Id del campo al que debe desplazarse la vista cuando hay un error de validación.
   const [errorAnchorId, setErrorAnchorId] = useState<string | null>(null);
+  // Calculadora PROM activa (vacío = captura manual). No se persiste: el puntaje
+  // calculado sí queda en functional_scale_score/notes.
+  const [calcScaleId, setCalcScaleId] = useState('');
   const { notify } = useToast();
 
   useDraftAutosave(draftKey, values);
@@ -376,7 +382,10 @@ export function EvaluationForm({
       ? evaluationToFormValues(editingEvaluation)
       : { ...emptyEvaluation, admission_date: values.admission_date };
     const dirty = JSON.stringify(values) !== JSON.stringify(baseline);
-    if (dirty && !window.confirm('Hay datos sin guardar en la valoración. ¿Salir de todos modos?')) {
+    if (
+      dirty &&
+      !window.confirm('Hay datos sin guardar en la valoración. ¿Salir de todos modos?')
+    ) {
       return;
     }
     onCancel?.();
@@ -584,7 +593,9 @@ export function EvaluationForm({
     <form className="card form-grid clinical-evaluation-form" onSubmit={submit}>
       <div className="form-header span-2">
         <div>
-          <p className="eyebrow">{editingEvaluation ? 'Editar valoracion' : 'Valoracion inicial'}</p>
+          <p className="eyebrow">
+            {editingEvaluation ? 'Editar valoracion' : 'Valoracion inicial'}
+          </p>
           <h2>{editingEvaluation ? 'Editar valoración clínica' : 'Nueva valoración clínica'}</h2>
         </div>
         {onCancel && (
@@ -607,11 +618,7 @@ export function EvaluationForm({
           </label>
           <label>
             Fecha de nacimiento{age ? ` (${age} años)` : ''}
-            <input
-              type="date"
-              value={values.birth_date}
-              onChange={(e) => setField('birth_date', e.target.value)}
-            />
+            <DateField value={values.birth_date} onChange={(iso) => setField('birth_date', iso)} />
           </label>
           <label>
             Sexo
@@ -625,10 +632,9 @@ export function EvaluationForm({
           </label>
           <label>
             Fecha de ingreso
-            <input
-              type="date"
+            <DateField
               value={values.admission_date}
-              onChange={(e) => setField('admission_date', e.target.value)}
+              onChange={(iso) => setField('admission_date', iso)}
             />
           </label>
           <label>
@@ -766,10 +772,9 @@ export function EvaluationForm({
           </label>
           <label>
             Fecha de inicio de los síntomas
-            <input
-              type="date"
+            <DateField
               value={values.symptom_onset_date}
-              onChange={(e) => setField('symptom_onset_date', e.target.value)}
+              onChange={(iso) => setField('symptom_onset_date', iso)}
             />
           </label>
           <label>
@@ -955,37 +960,81 @@ export function EvaluationForm({
           en sesiones posteriores.
         </p>
         <div className="form-grid">
-          <label>
-            Escala aplicada
-            <input
-              list="functional-scale-list"
-              placeholder="Ej. Oswestry, DASH, LEFS…"
-              value={values.functional_scale_name}
-              onChange={(e) => setField('functional_scale_name', e.target.value)}
-            />
-            <datalist id="functional-scale-list">
-              {FUNCTIONAL_SCALE_OPTIONS.map((o) => (
-                <option key={o} value={o} />
-              ))}
-            </datalist>
-          </label>
-          <label>
-            Puntuación inicial
-            <input
-              placeholder="Ej. 42% · 28/80"
-              value={values.functional_scale_score}
-              onChange={(e) => setField('functional_scale_score', e.target.value)}
-            />
-          </label>
           <label className="span-2">
-            Notas de la escala
-            <input
-              placeholder="Interpretación o detalles relevantes."
-              value={values.functional_scale_notes}
-              onChange={(e) => setField('functional_scale_notes', e.target.value)}
-            />
+            Calculadora integrada
+            <select
+              value={calcScaleId}
+              onChange={(e) => {
+                const id = e.target.value;
+                setCalcScaleId(id);
+                const scale = id ? getPromScale(id) : undefined;
+                if (scale) {
+                  // Al elegir una calculadora fijamos el nombre y limpiamos el
+                  // puntaje previo: lo recalcula la propia calculadora.
+                  setValues((c) => ({
+                    ...c,
+                    functional_scale_name: scale.name,
+                    functional_scale_score: '',
+                    functional_scale_notes: ''
+                  }));
+                }
+              }}
+            >
+              <option value="">— Captura manual (sin calculadora) —</option>
+              {PROM_SCALES.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
           </label>
         </div>
+
+        {calcScaleId ? (
+          <PromCalculator
+            scaleId={calcScaleId}
+            onResult={(result) => {
+              setValues((c) => ({
+                ...c,
+                functional_scale_score: result?.display ?? '',
+                functional_scale_notes: result?.interpretation ?? ''
+              }));
+            }}
+          />
+        ) : (
+          <div className="form-grid">
+            <label>
+              Escala aplicada
+              <input
+                list="functional-scale-list"
+                placeholder="Ej. Oswestry, DASH, LEFS…"
+                value={values.functional_scale_name}
+                onChange={(e) => setField('functional_scale_name', e.target.value)}
+              />
+              <datalist id="functional-scale-list">
+                {FUNCTIONAL_SCALE_OPTIONS.map((o) => (
+                  <option key={o} value={o} />
+                ))}
+              </datalist>
+            </label>
+            <label>
+              Puntuación inicial
+              <input
+                placeholder="Ej. 42% · 28/80"
+                value={values.functional_scale_score}
+                onChange={(e) => setField('functional_scale_score', e.target.value)}
+              />
+            </label>
+            <label className="span-2">
+              Notas de la escala
+              <input
+                placeholder="Interpretación o detalles relevantes."
+                value={values.functional_scale_notes}
+                onChange={(e) => setField('functional_scale_notes', e.target.value)}
+              />
+            </label>
+          </div>
+        )}
       </details>
 
       {/* 7. Conclusión y diagnóstico */}
@@ -1025,7 +1074,7 @@ export function EvaluationForm({
             />
           </label>
           <label className="span-2">
-            Plan de tratamiento sugerido
+            Plan de intervención
             <textarea
               rows={3}
               value={values.treatment_plan}

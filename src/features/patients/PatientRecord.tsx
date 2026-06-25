@@ -148,10 +148,7 @@ export const PatientRecord = memo(function PatientRecord({
   }, [record]);
 
   const timeline = useMemo(() => clinicalApi.buildTimeline(record), [record]);
-  const summary = useMemo(
-    () => buildPatientSummary({ notes, evaluations }),
-    [notes, evaluations]
-  );
+  const summary = useMemo(() => buildPatientSummary({ notes, evaluations }), [notes, evaluations]);
 
   const { data: role } = useRole();
   const isAdmin = role === 'admin';
@@ -208,11 +205,7 @@ export const PatientRecord = memo(function PatientRecord({
             disabled={!showEvaluation && !record}
             onClick={() => setShowEvaluation((value) => !value)}
           >
-            {showEvaluation
-              ? 'Cerrar valoracion'
-              : record
-                ? 'Nueva valoracion'
-                : 'Cargando datos…'}
+            {showEvaluation ? 'Cerrar valoracion' : record ? 'Nueva valoracion' : 'Cargando datos…'}
           </button>
           <button
             type="button"
@@ -413,9 +406,10 @@ export const PatientRecord = memo(function PatientRecord({
                         <span>
                           <strong>{evaluation.evaluation_date}</strong>
                         </span>
-                        {evaluation.eva_initial !== null && evaluation.eva_initial !== undefined && (
-                          <span>EVA inicial {evaluation.eva_initial}/10</span>
-                        )}
+                        {evaluation.eva_initial !== null &&
+                          evaluation.eva_initial !== undefined && (
+                            <span>EVA inicial {evaluation.eva_initial}/10</span>
+                          )}
                       </button>
                       <button
                         type="button"

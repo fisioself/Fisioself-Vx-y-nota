@@ -133,9 +133,11 @@ function buildEvaluationHtml(evaluation: Evaluation, patientName: string): strin
   ${
     g.blood_pressure || g.heart_rate || g.inspection || g.posture || g.gait
       ? `<h2>3. Valoración general</h2>
-    ${g.blood_pressure || g.heart_rate || g.respiratory_rate || g.oxygen_saturation
-      ? `<p>Signos vitales: TA ${v(g.blood_pressure)} · FC ${v(g.heart_rate)} · FR ${v(g.respiratory_rate)} · SatO₂ ${v(g.oxygen_saturation)}</p>`
-      : ''}
+    ${
+      g.blood_pressure || g.heart_rate || g.respiratory_rate || g.oxygen_saturation
+        ? `<p>Signos vitales: TA ${v(g.blood_pressure)} · FC ${v(g.heart_rate)} · FR ${v(g.respiratory_rate)} · SatO₂ ${v(g.oxygen_saturation)}</p>`
+        : ''
+    }
     ${row('Inspección', g.inspection)}
     ${row('Postura', g.posture)}
     ${row('Marcha', g.gait)}`
@@ -163,7 +165,7 @@ function buildEvaluationHtml(evaluation: Evaluation, patientName: string): strin
     ${row('Objetivos corto plazo', cl.objectives_short)}
     ${row('Objetivos mediano plazo', cl.objectives_mid)}
     ${row('Objetivos largo plazo', cl.objectives_long)}
-    ${row('Plan de tratamiento', cl.treatment_plan)}`
+    ${row('Plan de intervención', cl.treatment_plan)}`
       : ''
   }
 
