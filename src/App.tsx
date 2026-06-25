@@ -256,8 +256,15 @@ export function App() {
     );
   }
 
+  // La lista de pacientes (left-pane) solo tiene sentido en el Panel y al dar de
+  // alta un paciente. Antes, al abrir un expediente concreto seguía apareciendo
+  // debajo del expediente en móvil, duplicando la búsqueda/papelera. Ahora solo
+  // se muestra cuando NO hay un paciente seleccionado ni estamos en
+  // Finanzas/Seguimientos, y el grid colapsa a una columna en su ausencia.
+  const showPatientList = !showFinance && !showSeguimientos && !selectedPatient;
+
   return (
-    <main className={`shell app-grid${showFinance || showSeguimientos ? ' finance-mode' : ''}`}>
+    <main className={`shell app-grid${showPatientList ? '' : ' finance-mode'}`}>
       {searchOpen && (
         <GlobalSearch
           onSelectPatient={(patient) => {
@@ -416,7 +423,7 @@ export function App() {
         </button>
       </nav>
 
-      {!showFinance && !showSeguimientos && (
+      {showPatientList && (
         <aside className="left-pane">
           <button
             type="button"
