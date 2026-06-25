@@ -18,6 +18,14 @@ const cdmxTime = (iso: string): string =>
     timeZone: 'America/Mexico_City'
   });
 
+// La Edge Function de Google Calendar escribe "Paciente: X" en la descripción
+// cada vez que sincroniza, acumulando repeticiones. Si el campo solo contiene
+// ese texto auto-generado, no lo mostramos para evitar ruido visual.
+const userVisibleDesc = (desc: string | null | undefined): string => {
+  if (!desc?.trim()) return '';
+  return /^(Paciente:\s*.+?\s*)+$/i.test(desc.trim()) ? '' : desc.trim();
+};
+
 interface AppointmentListProps {
   patient: Patient;
   appointments?: Appointment[];
@@ -26,9 +34,9 @@ interface AppointmentListProps {
 
 export function AppointmentList({ patient, appointments = [], onChanged }: AppointmentListProps) {
   const [showForm, setShowForm] = useState(false);
+  const [showAll, setShowAll] = useState(false);
   const [syncing, setSyncing] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState<string | null>(null);
-  // Cita pendiente de confirmar su cancelación (null = sin diálogo abierto).
   const [confirmCancelId, setConfirmCancelId] = useState<string | null>(null);
   const { notify } = useToast();
 
@@ -74,14 +82,21 @@ export function AppointmentList({ patient, appointments = [], onChanged }: Appoi
     });
     const time = cdmxTime(appointment.starts_at);
 
-    // Formatting the phone number: remove spaces and special characters. Assuming a country code is needed,
-    // it's best if the user stores it with the country code. If not, this might need adjustment per region.
     const cleanPhone = patient.phone.replace(/\D/g, '');
     const message = `Hola ${(patient.full_name || '').split(' ')[0]}, te recordamos tu cita de Fisioterapia para el ${date} a las ${time}h. ¡Te esperamos!`;
     const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
 
     window.open(url, '_blank');
   };
+
+  // Más reciente primero; canceladas al final.
+  const sorted = [...appointments].sort((a, b) => {
+    if (a.status === 'cancelled' && b.status !== 'cancelled') return 1;
+    if (b.status === 'cancelled' && a.status !== 'cancelled') return -1;
+    return new Date(b.starts_at).getTime() - new Date(a.starts_at).getTime();
+  });
+  const visible = showAll ? sorted : sorted.slice(0, 1);
+  const hiddenCount = sorted.length - 1;
 
   return (
     <section className="card">
@@ -107,8 +122,9 @@ export function AppointmentList({ patient, appointments = [], onChanged }: Appoi
       )}
 
       <div className="list-stack">
-        {appointments.map((appointment) => {
+        {visible.map((appointment) => {
           const isCancelled = appointment.status === 'cancelled';
+          const desc = userVisibleDesc(appointment.description);
           return (
             <article
               key={appointment.id}
@@ -118,29 +134,15 @@ export function AppointmentList({ patient, appointments = [], onChanged }: Appoi
               <div className="form-header">
                 <strong>{appointment.title || 'Cita sin titulo'}</strong>
                 <div
-                  style={{
-                    display: 'flex',
-                    gap: '0.5rem',
-                    alignItems: 'center',
-                    flexWrap: 'wrap'
-                  }}
+                  style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}
                 >
                   {isCancelled ? (
                     <span className="pill cancelled">Cancelada</span>
                   ) : (
                     <>
-                      <span className="pill">
-                        {appointment.sync_status === 'synced'
-                          ? 'Sincronizada'
-                          : appointment.sync_status === 'pending'
-                            ? 'Pendiente'
-                            : appointment.sync_status === 'failed'
-                              ? 'Error'
-                              : appointment.sync_status}
-                      </span>
                       {patient?.phone && (
                         <button
-                          className="secondary btn-whatsapp"
+                          className="secondary btn-sm"
                           onClick={() => sendWhatsAppReminder(appointment)}
                           title="Recordar por WhatsApp"
                           aria-label="Enviar recordatorio por WhatsApp"
@@ -150,7 +152,7 @@ export function AppointmentList({ patient, appointments = [], onChanged }: Appoi
                       )}
                       {appointment.sync_status !== 'synced' && (
                         <button
-                          className="secondary"
+                          className="secondary btn-sm"
                           disabled={syncing === appointment.id}
                           onClick={() => syncAppointment(appointment.id)}
                         >
@@ -158,7 +160,7 @@ export function AppointmentList({ patient, appointments = [], onChanged }: Appoi
                         </button>
                       )}
                       <button
-                        className="danger"
+                        className="danger btn-sm"
                         disabled={cancelling === appointment.id}
                         onClick={() => setConfirmCancelId(appointment.id)}
                       >
@@ -169,10 +171,10 @@ export function AppointmentList({ patient, appointments = [], onChanged }: Appoi
                 </div>
               </div>
               <p className="muted">
-                {fmtDate(appointment.starts_at)}
+                {fmtDate(appointment.starts_at)} · {cdmxTime(appointment.starts_at)}
                 {appointment.ends_at && ` - ${cdmxTime(appointment.ends_at)}`}
               </p>
-              <p>{appointment.description || 'Sin notas adicionales'}</p>
+              {desc && <p style={{ marginTop: '0.25rem' }}>{desc}</p>}
             </article>
           );
         })}
@@ -180,6 +182,14 @@ export function AppointmentList({ patient, appointments = [], onChanged }: Appoi
           <p className="muted">No hay citas programadas para este paciente.</p>
         )}
       </div>
+
+      {hiddenCount > 0 && (
+        <div style={{ textAlign: 'center', marginTop: '0.75rem' }}>
+          <button type="button" className="secondary" onClick={() => setShowAll((v) => !v)}>
+            {showAll ? 'Ocultar' : `Ver todas las citas (${sorted.length})`}
+          </button>
+        </div>
+      )}
 
       {confirmCancelId && (
         <ConfirmDialog
