@@ -198,8 +198,21 @@ export const PatientRecord = memo(function PatientRecord({
           <p className="muted">{summary.diagnosis || 'Sin diagnostico fisioterapeutico'}</p>
         </div>
         <div className="hero-actions">
-          <button type="button" onClick={() => setShowEvaluation((value) => !value)}>
-            {showEvaluation ? 'Cerrar valoracion' : 'Nueva valoracion'}
+          <button
+            type="button"
+            // Esperamos a que cargue el expediente completo (record) antes de
+            // permitir abrir la valoración: así el formulario se pre-rellena con
+            // nombre, teléfono, sexo, fecha de nacimiento y ocupación del
+            // paciente (vienen del registro completo, no del objeto mínimo que
+            // llega al seleccionar desde la agenda).
+            disabled={!showEvaluation && !record}
+            onClick={() => setShowEvaluation((value) => !value)}
+          >
+            {showEvaluation
+              ? 'Cerrar valoracion'
+              : record
+                ? 'Nueva valoracion'
+                : 'Cargando datos…'}
           </button>
           <button
             type="button"

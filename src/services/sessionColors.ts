@@ -2,17 +2,17 @@
 // una cita como VALORACIÓN (primera visita). Las valoraciones se reportan aparte
 // de las sesiones cobradas y NO consumen sesión de paquete.
 //
-//   '3' = Grape (morado)  → color actual para valoraciones NUEVAS.
-//   '9' = Blueberry (azul) y '1' = Lavender → valoraciones HISTÓRICAS (antes del
-//         cambio a morado). Se siguen reconociendo para no perder su conteo.
+//   '9' = Blueberry/Índigo (azul) → color actual para valoraciones NUEVAS.
+//   '3' = Grape (morado) y '1' = Lavender → también reconocidos como valoración
+//         (se usaron antes) para no perder su conteo histórico.
 //
 // El mismo conjunto vive en SQL (finance_appt_stats, monthly_finance_report) y en
 // la edge function google-calendar-fetch (resolveSessionType). Si cambias esto,
 // cámbialo también allá para que las métricas no se desincronicen.
 export const VALORACION_COLOR_IDS = ['3', '9', '1'] as const;
 
-// colorId que se asigna a una valoración NUEVA creada desde la app (morado/Grape).
-export const VALORACION_COLOR_ID = '3';
+// colorId que se asigna a una valoración NUEVA creada desde la app (Índigo azul).
+export const VALORACION_COLOR_ID = '9';
 
 export const isValoracionColorId = (colorId?: string | null): boolean =>
   colorId != null && (VALORACION_COLOR_IDS as readonly string[]).includes(colorId);

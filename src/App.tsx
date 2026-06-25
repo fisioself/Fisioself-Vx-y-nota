@@ -481,7 +481,12 @@ export function App() {
                 patient={selectedPatient}
                 onPatientUpdated={(updatedPatient) => {
                   setSelectedPatient(updatedPatient);
+                  // Al renombrar / cambiar teléfono, refrescamos también la agenda
+                  // y seguimientos: ambos leen el nombre/telefono del paciente y
+                  // mostraban datos viejos en caché (nombre antiguo, sin WhatsApp).
                   queryClient.invalidateQueries({ queryKey: ['patients'] });
+                  queryClient.invalidateQueries({ queryKey: ['seguimientos'] });
+                  queryClient.invalidateQueries({ queryKey: ['appointments'] });
                 }}
                 onPatientDeleted={() => {
                   const backToSeg = fromSeguimientos;

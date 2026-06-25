@@ -92,7 +92,7 @@ describe('AppointmentCreateModal', () => {
           patient_id: 'patient-1',
           title: 'Ana García',
           session_type: 'Valoración',
-          color_id: '3'
+          color_id: '9'
         })
       );
     });

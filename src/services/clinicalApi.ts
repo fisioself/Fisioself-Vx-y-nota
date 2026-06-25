@@ -97,7 +97,7 @@ export const clinicalApi = {
 
   async updatePatient(id: string, payload: Partial<Patient>): Promise<Patient> {
     const db = assertSupabase();
-    return unwrap(
+    const updated = unwrap<Patient>(
       await db
         .from('patients')
         .update(payload as TablesUpdate<'patients'>)
@@ -105,6 +105,17 @@ export const clinicalApi = {
         .select('*')
         .single()
     );
+    // El título de cada cita guarda el nombre del paciente "congelado" al
+    // crearla (denormalizado para que el calendario y Google lo muestren sin un
+    // join). Si cambió el nombre, propagamos el nuevo a todas sus citas para que
+    // la agenda no siga mostrando el nombre viejo.
+    if (payload.full_name && updated.full_name) {
+      await db
+        .from('appointments')
+        .update({ title: updated.full_name } as TablesUpdate<'appointments'>)
+        .eq('patient_id', id);
+    }
+    return updated;
   },
 
   // Borrado lógico: marca deleted_at en vez de eliminar la fila. El paciente

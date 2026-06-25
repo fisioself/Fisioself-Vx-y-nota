@@ -20,7 +20,7 @@ interface AppointmentCreateModalProps {
 
 // Tipos de sesión con su color de Google Calendar (mismo convenio que usa la
 // agenda al importar): null = sesión clínica (color por defecto), Valoración =
-// morado (Grape, '3'), Domicilio = naranja, Descarga = amarillo, Cortesía = gris.
+// índigo (azul, '9'), Domicilio = naranja, Descarga = amarillo, Cortesía = gris.
 interface SessionTypeOption {
   label: string;
   colorId: string | null;

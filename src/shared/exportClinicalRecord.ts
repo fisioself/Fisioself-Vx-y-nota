@@ -6,6 +6,16 @@ export const exportToPdf = (patient: Patient | null): void => {
 };
 
 const v = (value: unknown): string => (value ? String(value) : '—');
+
+// Fecha ISO (YYYY-MM-DD) → DD/MM/AAAA (formato México). Se ancla a mediodía
+// para que no se corra un día por zona horaria.
+const fmtDateMX = (iso: string | null | undefined): string => {
+  if (!iso) return '—';
+  const d = new Date(/^\d{4}-\d{2}-\d{2}$/.test(iso) ? `${iso}T12:00:00` : iso);
+  if (Number.isNaN(d.getTime())) return String(iso);
+  return d.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
+};
+
 const row = (label: string, value: unknown) =>
   value ? `<p><strong>${label}:</strong> ${v(value)}</p>` : '';
 
@@ -92,7 +102,7 @@ function buildEvaluationHtml(evaluation: Evaluation, patientName: string): strin
   <h1>Valoración clínica inicial</h1>
   <p class="subtitle">
     ${patientName}
-    · Fecha de valoración: ${evaluation.evaluation_date || '—'}
+    · Fecha de valoración: ${fmtDateMX(evaluation.evaluation_date)}
     ${evaluation.eva_initial != null ? ` · EVA inicial: ${evaluation.eva_initial}/10` : ''}
     · Impreso el ${date}
   </p>
@@ -100,7 +110,7 @@ function buildEvaluationHtml(evaluation: Evaluation, patientName: string): strin
   <h2>1. Datos generales</h2>
   <div class="two-col">
     ${row('Nombre', id.full_name || patientName)}
-    ${row('Fecha de nacimiento', id.birth_date)}
+    ${row('Fecha de nacimiento', fmtDateMX(id.birth_date))}
     ${row('Sexo', id.sex)}
     ${row('Ocupación', id.occupation)}
     ${row('Teléfono', id.phone)}
@@ -112,7 +122,7 @@ function buildEvaluationHtml(evaluation: Evaluation, patientName: string): strin
   <h2>2. Motivo de consulta</h2>
   ${row('Motivo', c.reason)}
   ${row('Diagnóstico médico', c.medical_diagnosis)}
-  ${row('Inicio de síntomas', c.symptom_onset_date)}
+  ${row('Inicio de síntomas', fmtDateMX(c.symptom_onset_date))}
   ${row('Clasificación', c.symptom_classification)}
   ${row('Mecanismo de lesión', c.injury_mechanism)}
   ${c.clinical_history ? `<p><strong>Historia clínica:</strong><br/>${c.clinical_history}</p>` : ''}

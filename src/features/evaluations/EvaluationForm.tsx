@@ -368,6 +368,20 @@ export function EvaluationForm({
     setErrorAnchorId(null);
   };
 
+  // Cierra el formulario, pero si hay datos capturados pide confirmar para no
+  // perderlos por un toque accidental en "Cancelar". El borrador local
+  // (useDraftAutosave) igual los conserva al reabrir, salvo en modo edición.
+  const handleCancel = () => {
+    const baseline = editingEvaluation
+      ? evaluationToFormValues(editingEvaluation)
+      : { ...emptyEvaluation, admission_date: values.admission_date };
+    const dirty = JSON.stringify(values) !== JSON.stringify(baseline);
+    if (dirty && !window.confirm('Hay datos sin guardar en la valoración. ¿Salir de todos modos?')) {
+      return;
+    }
+    onCancel?.();
+  };
+
   const setField = <K extends keyof EvaluationFormValues>(
     field: K,
     value: EvaluationFormValues[K]
@@ -574,7 +588,7 @@ export function EvaluationForm({
           <h2>{editingEvaluation ? 'Editar valoración clínica' : 'Nueva valoración clínica'}</h2>
         </div>
         {onCancel && (
-          <button type="button" className="secondary" onClick={onCancel}>
+          <button type="button" className="secondary" onClick={handleCancel}>
             Cancelar
           </button>
         )}
