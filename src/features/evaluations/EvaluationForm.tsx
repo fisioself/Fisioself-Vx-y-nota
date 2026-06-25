@@ -10,6 +10,7 @@ import { DateField } from '../../components/DateField';
 import { BodyPainMap } from '../../components/BodyPainMap';
 import { PromCalculator } from './PromCalculator';
 import { PROM_SCALES, getPromScale } from './promsCatalog';
+import { aiService, isAiConfigured } from '../../services/aiService';
 import {
   ZONE_CATALOGS,
   getZoneCatalog,
@@ -377,6 +378,9 @@ export function EvaluationForm({
   // Calculadora PROM activa (vacío = captura manual). No se persiste: el puntaje
   // calculado sí queda en functional_scale_score/notes.
   const [calcScaleId, setCalcScaleId] = useState('');
+  // Generación del diagnóstico con IA (Groq vía clinical-ai).
+  const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiError, setAiError] = useState('');
   const { notify } = useToast();
 
   useDraftAutosave(draftKey, values);
@@ -466,6 +470,83 @@ export function EvaluationForm({
     }));
     clearError();
     notify({ tone: 'success', message: `Plantilla "${tpl.label}" aplicada.` });
+  };
+
+  // Arma un texto estructurado con los hallazgos marcados, para que la IA
+  // redacte el diagnóstico solo a partir de datos reales de la valoración.
+  const buildFindingsText = (): string => {
+    const lines: string[] = [];
+    if (values.consultation_reason) lines.push(`Motivo: ${values.consultation_reason}`);
+    if (values.medical_diagnosis) lines.push(`Dx médico: ${values.medical_diagnosis}`);
+    if (values.symptom_classification)
+      lines.push(`Clasificación: ${values.symptom_classification}`);
+    if (values.injury_mechanism) lines.push(`Mecanismo de lesión: ${values.injury_mechanism}`);
+    if (values.pain_mechanism) lines.push(`Mecanismo del dolor: ${values.pain_mechanism}`);
+
+    const reds = [...values.red_flags, values.red_flags_other.trim()].filter(Boolean);
+    if (reds.length) lines.push(`Banderas rojas: ${reds.join('; ')}`);
+    const yellows = [...values.yellow_flags, values.yellow_flags_other.trim()].filter(Boolean);
+    if (yellows.length) lines.push(`Banderas amarillas: ${yellows.join('; ')}`);
+
+    values.zones.forEach((z) => {
+      const catalog = getZoneCatalog(z.zone_id);
+      const label = catalog?.label || z.zone_label || 'Zona';
+      const parts: string[] = [];
+      if (z.pain_intensity !== '') parts.push(`EVA ${z.pain_intensity}/10`);
+      if (z.pain_location) parts.push(`localización ${z.pain_location}`);
+      if (z.pain_type) parts.push(`tipo ${z.pain_type}`);
+      lines.push(`— Zona ${label}: ${parts.join(', ') || 'sin dolor registrado'}`);
+
+      z.movement_ranges
+        .filter((r) => r.movement && (r.degrees || r.range))
+        .forEach((r) => {
+          const norm = catalog ? getRomNorm(catalog.id, r.movement) : undefined;
+          lines.push(
+            `   ROM ${r.movement}${r.type ? ` (${r.type})` : ''}: ${r.degrees ? `${r.degrees}°` : r.range}` +
+              `${r.degrees_healthy ? ` (sano ${r.degrees_healthy}°)` : ''}` +
+              `${norm ? ` [normal ${norm}]` : ''}${r.pain ? ` · dolor: ${r.pain}` : ''}`
+          );
+        });
+
+      z.muscle_strength
+        .filter((r) => r.muscle && r.daniels)
+        .forEach((r) => lines.push(`   Fuerza ${r.muscle}: Daniels ${r.daniels}`));
+
+      Object.entries(z.special_results)
+        .filter(([, r]) => r.result)
+        .forEach(([name, r]) => lines.push(`   Prueba ${name}: ${r.result}`));
+
+      if (z.palpation) lines.push(`   Palpación: ${z.palpation}`);
+    });
+
+    if (values.functional_scale_name || values.functional_scale_score) {
+      lines.push(
+        `Escala funcional: ${values.functional_scale_name} ${values.functional_scale_score}` +
+          (values.functional_scale_notes ? ` (${values.functional_scale_notes})` : '')
+      );
+    }
+    return lines.join('\n');
+  };
+
+  const generateDiagnosis = async () => {
+    const findings = buildFindingsText();
+    if (!findings.trim()) {
+      setAiError('Marca algunos hallazgos (zona, pruebas, ROM…) antes de generar el diagnóstico.');
+      return;
+    }
+    setAiGenerating(true);
+    setAiError('');
+    try {
+      await aiService.transform({
+        text: findings,
+        type: 'evaluation_summary',
+        onChunk: (acc) => setField('prognosis', acc)
+      });
+    } catch (err) {
+      setAiError(getErrorMessage(err, 'No se pudo generar el diagnóstico con IA.'));
+    } finally {
+      setAiGenerating(false);
+    }
   };
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
@@ -1129,12 +1210,29 @@ export function EvaluationForm({
         <summary>7. Conclusión y diagnóstico</summary>
         <div className="form-grid">
           <label className="span-2">
-            Diagnóstico fisioterapéutico
+            <span className="dx-label-row">
+              Diagnóstico fisioterapéutico
+              {isAiConfigured && (
+                <button
+                  type="button"
+                  className="secondary dx-ai-btn"
+                  onClick={generateDiagnosis}
+                  disabled={aiGenerating}
+                >
+                  {aiGenerating ? 'Generando…' : '✨ Generar con IA'}
+                </button>
+              )}
+            </span>
             <textarea
               rows={3}
               value={values.prognosis}
               onChange={(e) => setField('prognosis', e.target.value)}
             />
+            {aiError && (
+              <small className="field-error" role="alert">
+                {aiError}
+              </small>
+            )}
           </label>
           <label>
             Objetivos a corto plazo

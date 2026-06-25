@@ -8,7 +8,8 @@ const AI_TYPES = new Set([
   'clinical_analysis',
   'treatment_plan',
   'discharge_letter',
-  'informed_consent'
+  'informed_consent',
+  'evaluation_summary'
 ]);
 
 const SYSTEM_PROMPT = `Eres un asistente clinico para fisioterapia.
@@ -30,7 +31,9 @@ const prompts: Record<string, string> = {
   treatment_plan: 'Propone un plan de tratamiento fisioterapeutico razonable y progresivo.',
   discharge_letter: 'Redacta un borrador de carta de alta fisioterapeutica.',
   informed_consent:
-    'Redacta un borrador de consentimiento informado para fisioterapia. Debe explicar objetivo, beneficios esperados, riesgos razonables, alternativas, derecho a retirar consentimiento y espacio para firma. No inventes datos personales.'
+    'Redacta un borrador de consentimiento informado para fisioterapia. Debe explicar objetivo, beneficios esperados, riesgos razonables, alternativas, derecho a retirar consentimiento y espacio para firma. No inventes datos personales.',
+  evaluation_summary:
+    'Con base SOLO en los hallazgos estructurados de la valoración, redacta un DIAGNÓSTICO FISIOTERAPÉUTICO breve (3-5 frases) en prosa clínica. Integra: motivo, mecanismo del dolor, pruebas especiales positivas y su sospecha asociada, déficits de ROM y fuerza, banderas (rojas/amarillas) y el resultado de la escala funcional. Si hay banderas rojas, menciónalas con prudencia y sugiere derivación. No inventes datos ausentes. No incluyas plan de tratamiento ni objetivos, solo el diagnóstico funcional.'
 };
 
 const WINDOW_MS = 60_000;

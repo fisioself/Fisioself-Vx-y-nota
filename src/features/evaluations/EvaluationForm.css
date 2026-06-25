@@ -329,3 +329,16 @@ details.form-section[open] > summary {
 .test-star {
   margin-right: 4px;
 }
+
+/* Botón "Generar con IA" junto al diagnóstico fisioterapéutico. */
+.dx-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.dx-ai-btn {
+  min-height: 30px;
+  padding: 2px 12px;
+  font-size: 0.8rem;
+}
