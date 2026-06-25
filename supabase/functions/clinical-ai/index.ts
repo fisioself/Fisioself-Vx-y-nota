@@ -9,7 +9,8 @@ const AI_TYPES = new Set([
   'treatment_plan',
   'discharge_letter',
   'informed_consent',
-  'evaluation_summary'
+  'evaluation_summary',
+  'treatment_plan_evidence'
 ]);
 
 const SYSTEM_PROMPT = `Eres un asistente clinico para fisioterapia.
@@ -33,7 +34,9 @@ const prompts: Record<string, string> = {
   informed_consent:
     'Redacta un borrador de consentimiento informado para fisioterapia. Debe explicar objetivo, beneficios esperados, riesgos razonables, alternativas, derecho a retirar consentimiento y espacio para firma. No inventes datos personales.',
   evaluation_summary:
-    'Con base SOLO en los hallazgos estructurados de la valoración, redacta un DIAGNÓSTICO FISIOTERAPÉUTICO breve (3-5 frases) en prosa clínica. Integra: motivo, mecanismo del dolor, pruebas especiales positivas y su sospecha asociada, déficits de ROM y fuerza, banderas (rojas/amarillas) y el resultado de la escala funcional. Si hay banderas rojas, menciónalas con prudencia y sugiere derivación. No inventes datos ausentes. No incluyas plan de tratamiento ni objetivos, solo el diagnóstico funcional.'
+    'Con base SOLO en los hallazgos estructurados de la valoración, redacta un DIAGNÓSTICO FISIOTERAPÉUTICO breve (3-5 frases) en prosa clínica. Integra: motivo, mecanismo del dolor, pruebas especiales positivas y su sospecha asociada, déficits de ROM y fuerza, banderas (rojas/amarillas) y el resultado de la escala funcional. Si hay banderas rojas, menciónalas con prudencia y sugiere derivación. No inventes datos ausentes. No incluyas plan de tratamiento ni objetivos, solo el diagnóstico funcional.',
+  treatment_plan_evidence:
+    'Con base en los hallazgos clínicos proporcionados, elabora un PLAN DE INTERVENCIÓN FISIOTERAPÉUTICO basado en evidencia científica de alta calidad (guías clínicas, revisiones Cochrane, metaanálisis 2018-2024). Estructura la respuesta en 4 secciones: 1) Terapia manual (técnicas específicas, dosis, evidencia). 2) Ejercicio terapéutico (tipo, parámetros, progresión, nivel de evidencia). 3) Agentes físicos (si aplica, con justificación basada en evidencia). 4) Educación del paciente (neurofisiología del dolor, autocuidado, retorno gradual a actividad). Para cada intervención indica: técnica o abordaje concreto, dosificación/frecuencia sugerida y referencia al nivel de evidencia o fuente (NICE, WCPT, Cochrane, GPC específica). Si hay banderas rojas o amarillas, incorpóralas como precauciones o criterios de derivación. No inventes hallazgos. Sé clínico, conciso y aplicable.'
 };
 
 const WINDOW_MS = 60_000;

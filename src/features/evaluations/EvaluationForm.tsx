@@ -381,6 +381,9 @@ export function EvaluationForm({
   // Generación del diagnóstico con IA (Groq vía clinical-ai).
   const [aiGenerating, setAiGenerating] = useState(false);
   const [aiError, setAiError] = useState('');
+  // Plan de intervención con evidencia científica.
+  const [aiPlanGenerating, setAiPlanGenerating] = useState(false);
+  const [aiPlanError, setAiPlanError] = useState('');
   const { notify } = useToast();
 
   useDraftAutosave(draftKey, values);
@@ -546,6 +549,30 @@ export function EvaluationForm({
       setAiError(getErrorMessage(err, 'No se pudo generar el diagnóstico con IA.'));
     } finally {
       setAiGenerating(false);
+    }
+  };
+
+  const generateTreatmentPlan = async () => {
+    const findings = buildFindingsText();
+    const diagnosisCtx = values.prognosis.trim()
+      ? `\nDx fisioterapéutico: ${values.prognosis}`
+      : '';
+    if (!findings.trim()) {
+      setAiPlanError('Marca algunos hallazgos (zona, pruebas, ROM…) antes de generar el plan.');
+      return;
+    }
+    setAiPlanGenerating(true);
+    setAiPlanError('');
+    try {
+      await aiService.transform({
+        text: findings + diagnosisCtx,
+        type: 'treatment_plan_evidence',
+        onChunk: (acc) => setField('treatment_plan', acc)
+      });
+    } catch (err) {
+      setAiPlanError(getErrorMessage(err, 'No se pudo generar el plan con IA.'));
+    } finally {
+      setAiPlanGenerating(false);
     }
   };
 
@@ -1259,12 +1286,29 @@ export function EvaluationForm({
             />
           </label>
           <label className="span-2">
-            Plan de intervención
+            <span className="dx-label-row">
+              Plan de intervención
+              {isAiConfigured && (
+                <button
+                  type="button"
+                  className="secondary dx-ai-btn"
+                  onClick={generateTreatmentPlan}
+                  disabled={aiPlanGenerating}
+                >
+                  {aiPlanGenerating ? 'Generando…' : '✨ Plan con evidencia'}
+                </button>
+              )}
+            </span>
             <textarea
               rows={3}
               value={values.treatment_plan}
               onChange={(e) => setField('treatment_plan', e.target.value)}
             />
+            {aiPlanError && (
+              <small className="field-error" role="alert">
+                {aiPlanError}
+              </small>
+            )}
           </label>
         </div>
       </details>

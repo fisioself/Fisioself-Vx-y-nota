@@ -1127,7 +1127,8 @@ export const INJURY_MECHANISM = [
   'Insidioso',
   'Traumático',
   'Movimiento repetitivo',
-  'Postural / sobrecarga'
+  'Postural / sobrecarga',
+  'Idiopático'
 ] as const;
 export const PAIN_TYPE_OPTIONS = [
   'Punzante',

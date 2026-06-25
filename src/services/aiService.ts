@@ -13,7 +13,8 @@ export const AI_TYPES: AiType[] = [
   { id: 'treatment_plan', label: 'Plan de tratamiento', traceable: true },
   { id: 'discharge_letter', label: 'Carta de alta', traceable: true },
   { id: 'informed_consent', label: 'Consentimiento informado', traceable: true },
-  { id: 'evaluation_summary', label: 'Diagnóstico de valoración', traceable: false }
+  { id: 'evaluation_summary', label: 'Diagnóstico de valoración', traceable: false },
+  { id: 'treatment_plan_evidence', label: 'Plan de intervención con evidencia', traceable: false }
 ];
 
 export const isAiConfigured = Boolean(proxyUrl);

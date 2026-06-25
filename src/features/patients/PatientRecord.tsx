@@ -1,4 +1,4 @@
-import { useMemo, useState, memo } from 'react';
+import { useMemo, useState, useEffect, memo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { clinicalApi } from '../../services/clinicalApi';
 import type { Patient, SessionNote, Evaluation, ClinicalRecord } from '../../types/clinical';
@@ -104,10 +104,26 @@ export const PatientRecord = memo(function PatientRecord({
   const [deleteError, setDeleteError] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
-  const [showEvaluation, setShowEvaluation] = useState(false);
+  const [showEvaluation, setShowEvaluation] = useState(() => {
+    const pid = patient?.id;
+    if (!pid) return false;
+    return sessionStorage.getItem(`fisioself_eval_open_${pid}`) === '1';
+  });
   const [showSessionNote, setShowSessionNote] = useState(false);
   const [openEvaluationId, setOpenEvaluationId] = useState<string | null>(null);
   const [editingEvaluation, setEditingEvaluation] = useState<Evaluation | null>(null);
+
+  // Persiste si la valoración estaba abierta para que volver de otra pestaña
+  // la restaure sin perder el borrador (que ya vive en localStorage).
+  useEffect(() => {
+    const pid = patient?.id;
+    if (!pid) return;
+    if (showEvaluation) {
+      sessionStorage.setItem(`fisioself_eval_open_${pid}`, '1');
+    } else {
+      sessionStorage.removeItem(`fisioself_eval_open_${pid}`);
+    }
+  }, [showEvaluation, patient?.id]);
 
   const {
     data: record,
