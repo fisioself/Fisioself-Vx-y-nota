@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { TimelineEntry } from '../../types/clinical';
 import './ClinicalTimeline.css';
 
@@ -23,9 +23,34 @@ interface ClinicalTimelineProps {
 
 export function ClinicalTimeline({ items = [] }: ClinicalTimelineProps) {
   const [expanded, setExpanded] = useState(false);
+  const [openIds, setOpenIds] = useState<Set<string>>(new Set());
 
-  const visibleItems = expanded ? items : items.slice(0, 2);
-  const hasMore = items.length > 2;
+  // Group items that share the same calendar date into a single row
+  const groups = useMemo(() => {
+    const map = new Map<
+      string,
+      { dateKey: string; displayDate: string; entries: TimelineEntry[] }
+    >();
+    for (const item of items) {
+      const key = item.date ? item.date.slice(0, 10) : 'sin-fecha';
+      if (!map.has(key)) {
+        map.set(key, { dateKey: key, displayDate: item.date || '', entries: [] });
+      }
+      map.get(key)!.entries.push(item);
+    }
+    return Array.from(map.values());
+  }, [items]);
+
+  const visibleGroups = expanded ? groups : groups.slice(0, 2);
+  const hasMore = groups.length > 2;
+
+  const toggleDesc = (id: string) =>
+    setOpenIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
   return (
     <section className="card">
@@ -38,16 +63,45 @@ export function ClinicalTimeline({ items = [] }: ClinicalTimelineProps) {
       </div>
 
       <div className="timeline">
-        {visibleItems.map((item) => (
-          <article key={`${item.type}-${item.id}`} className="timeline-item">
+        {visibleGroups.map((group) => (
+          <article key={group.dateKey} className="timeline-item">
             <div className="timeline-dot" aria-hidden="true" />
-            <div>
-              <div className="form-header">
-                <strong>{item.label}</strong>
-                <span className="timeline-type">{typeLabels[item.type] || item.type}</span>
-              </div>
-              <p className="muted">{item.date ? fmtDate(item.date) : 'Sin fecha'}</p>
-              <p>{item.description}</p>
+            <div style={{ flex: 1 }}>
+              <p className="muted" style={{ marginBottom: '0.35rem', fontSize: '0.82rem' }}>
+                {group.displayDate ? fmtDate(group.displayDate) : 'Sin fecha'}
+              </p>
+              {group.entries.map((item) => {
+                const entryId = `${item.type}-${item.id}`;
+                const isOpen = openIds.has(entryId);
+                return (
+                  <div key={entryId} style={{ marginBottom: '0.4rem' }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        flexWrap: 'wrap'
+                      }}
+                    >
+                      <strong style={{ fontSize: '0.9rem' }}>{item.label}</strong>
+                      <span className="timeline-type">{typeLabels[item.type] || item.type}</span>
+                      {item.description && (
+                        <button
+                          type="button"
+                          className="secondary"
+                          style={{ minHeight: 22, padding: '1px 7px', fontSize: '0.72rem' }}
+                          onClick={() => toggleDesc(entryId)}
+                        >
+                          {isOpen ? 'Ocultar' : 'Ver más'}
+                        </button>
+                      )}
+                    </div>
+                    {isOpen && (
+                      <p style={{ marginTop: '0.2rem', fontSize: '0.85rem' }}>{item.description}</p>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </article>
         ))}

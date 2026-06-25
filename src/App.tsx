@@ -409,6 +409,9 @@ export function App() {
             setShowNewPatient(false);
           }}
         >
+          <span className="tab-cal-icon" aria-hidden="true">
+            {new Date().getDate()}
+          </span>
           Seguimientos
         </button>
       </nav>

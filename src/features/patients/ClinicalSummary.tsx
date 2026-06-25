@@ -10,7 +10,6 @@ interface SummaryData {
   latestEva: number | null;
   evaChange: number | null;
   evaHistory: EvaPoint[];
-  diagnosis: string | null;
   latestNotePreview: string | null;
 }
 
@@ -96,10 +95,6 @@ export const ClinicalSummary = memo(function ClinicalSummary({
           <EvaSparkline data={summary.evaHistory} />
         </div>
       </div>
-      <p>
-        <strong>Diagnostico fisioterapeutico:</strong>{' '}
-        {summary.diagnosis || 'Pendiente de registrar en valoracion.'}
-      </p>
       <p className="muted">
         {summary.latestNotePreview
           ? `Ultima nota: ${summary.latestNotePreview}`

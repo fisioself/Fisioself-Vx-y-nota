@@ -451,6 +451,10 @@ textarea {
 a.btn-sm {
   text-decoration: none;
 }
+/* Only visible inside the mobile bottom tab bar (styled inside @media). */
+.tab-cal-icon {
+  display: none;
+}
 .record-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -739,7 +743,27 @@ button:not(:disabled):active {
     content: '💳';
   }
   .main-tabs button:nth-child(3)::before {
-    content: '📅';
+    content: none;
+  }
+  .tab-cal-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.6rem;
+    height: 1.3rem;
+    border-radius: 4px;
+    background: var(--primary);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: 0;
+  }
+  .main-tabs button.secondary .tab-cal-icon {
+    background: transparent;
+    color: var(--muted);
+    border: 1.5px solid var(--muted);
+    opacity: 0.55;
   }
   /* Pestaña inactiva */
   .main-tabs button.secondary {

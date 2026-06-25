@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, memo } from 'react';
+import { useMemo, useState, useEffect, useRef, memo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { clinicalApi } from '../../services/clinicalApi';
 import type { Patient, SessionNote, Evaluation, ClinicalRecord } from '../../types/clinical';
@@ -110,12 +110,21 @@ export const PatientRecord = memo(function PatientRecord({
   const [showSessionNote, setShowSessionNote] = useState(false);
   const [openEvaluationId, setOpenEvaluationId] = useState<string | null>(null);
   const [editingEvaluation, setEditingEvaluation] = useState<Evaluation | null>(null);
+  const sessionNoteRef = useRef<HTMLDivElement>(null);
 
   // Persiste si la valoración estaba abierta para que volver de otra pestaña
   // la restaure sin perder el borrador (que ya vive en localStorage).
   useEffect(() => {
     setEvaluationOpen(patient?.id, showEvaluation);
   }, [showEvaluation, patient?.id]);
+
+  // Cuando se abre el editor de nota, hace scroll hasta él para que el usuario
+  // llegue directamente al formulario sin tener que bajar manualmente.
+  useEffect(() => {
+    if (showSessionNote && sessionNoteRef.current) {
+      sessionNoteRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [showSessionNote]);
 
   const {
     data: record,
@@ -366,27 +375,29 @@ export const PatientRecord = memo(function PatientRecord({
           <ClinicalSummary summary={summary} nextSession={nextSession} />
 
           {showSessionNote && (
-            <SessionNoteEditor
-              patientId={current.id}
-              sessionNumber={nextSession}
-              onCancel={() => setShowSessionNote(false)}
-              onSaved={(saved) => {
-                setShowSessionNote(false);
-                // Instantly insert the saved note into the cache so the list
-                // updates without waiting for the full record refetch.
-                queryClient.setQueryData<ClinicalRecord>(['patient', patient.id], (old) => {
-                  if (!old) return old;
-                  const exists = (old.session_notes ?? []).some((n) => n.id === saved.id);
-                  return {
-                    ...old,
-                    session_notes: exists
-                      ? (old.session_notes ?? []).map((n) => (n.id === saved.id ? saved : n))
-                      : [...(old.session_notes ?? []), saved]
-                  };
-                });
-                refreshRecord();
-              }}
-            />
+            <div ref={sessionNoteRef}>
+              <SessionNoteEditor
+                patientId={current.id}
+                sessionNumber={nextSession}
+                onCancel={() => setShowSessionNote(false)}
+                onSaved={(saved) => {
+                  setShowSessionNote(false);
+                  // Instantly insert the saved note into the cache so the list
+                  // updates without waiting for the full record refetch.
+                  queryClient.setQueryData<ClinicalRecord>(['patient', patient.id], (old) => {
+                    if (!old) return old;
+                    const exists = (old.session_notes ?? []).some((n) => n.id === saved.id);
+                    return {
+                      ...old,
+                      session_notes: exists
+                        ? (old.session_notes ?? []).map((n) => (n.id === saved.id ? saved : n))
+                        : [...(old.session_notes ?? []), saved]
+                    };
+                  });
+                  refreshRecord();
+                }}
+              />
+            </div>
           )}
 
           {evaluations.length >= 2 && <EvaluationComparison evaluations={evaluations} />}
