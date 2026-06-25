@@ -201,7 +201,6 @@ export const PatientRecord = memo(function PatientRecord({
         <div className="record-header-info">
           <p className="eyebrow">Expediente clinico</p>
           <h2>{current.full_name}</h2>
-          <p className="muted">{summary.diagnosis || 'Sin diagnostico fisioterapeutico'}</p>
           {/* Acciones secundarias (menos frecuentes): se quedan dentro de la
               tarjeta y hacen scroll con el contenido, en formato compacto. */}
           <div className="record-secondary-actions">
@@ -337,10 +336,6 @@ export const PatientRecord = memo(function PatientRecord({
         <section className="card compact-card">
           <p className="eyebrow">Contacto</p>
           <p>{current.phone || 'Sin telefono'}</p>
-        </section>
-        <section className="card compact-card">
-          <p className="eyebrow">Diagnostico fisioterapeutico (desde valoracion)</p>
-          <p>{summary.diagnosis || 'Sin diagnostico fisioterapeutico'}</p>
         </section>
       </div>
 
@@ -478,30 +473,33 @@ export const PatientRecord = memo(function PatientRecord({
             onChanged={refreshRecord}
           />
 
-          <section className="card">
-            <div className="form-header">
-              <div>
-                <p className="eyebrow">IA trazable</p>
-                <h2>Consultas IA</h2>
+          {aiConsults.length > 0 && (
+            <section className="card">
+              <div className="form-header">
+                <div>
+                  <p className="eyebrow">Registro de auditoria IA</p>
+                  <h2>Consultas IA trazables</h2>
+                </div>
+                <span className="pill">{aiConsults.length}</span>
               </div>
-              <span className="pill">{aiConsults.length}</span>
-            </div>
-            <div className="list-stack">
-              {aiConsults.map((consult) => (
-                <article key={consult.id} className="note-row">
-                  <div className="form-header">
-                    <strong>{consult.type}</strong>
-                    <span>
-                      {consult.created_at ? new Date(consult.created_at).toLocaleDateString() : ''}
-                    </span>
-                  </div>
-                  <p className="muted">Validada: {consult.validated ? 'si' : 'pendiente'}</p>
-                  <pre>{consult.output_text}</pre>
-                </article>
-              ))}
-              {!aiConsults.length && <p className="muted">Aun no hay consultas IA trazables.</p>}
-            </div>
-          </section>
+              <div className="list-stack">
+                {aiConsults.map((consult) => (
+                  <article key={consult.id} className="note-row">
+                    <div className="form-header">
+                      <strong>{consult.type}</strong>
+                      <span>
+                        {consult.created_at
+                          ? new Date(consult.created_at).toLocaleDateString('es-MX')
+                          : ''}
+                      </span>
+                    </div>
+                    <p className="muted">Validada: {consult.validated ? 'si' : 'pendiente'}</p>
+                    <pre>{consult.output_text}</pre>
+                  </article>
+                ))}
+              </div>
+            </section>
+          )}
         </>
       )}
     </section>
