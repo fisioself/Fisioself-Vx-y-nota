@@ -9,7 +9,7 @@ export interface SpecialTestDef {
   group: string; // subtítulo por tejido/objetivo, ej. "Ligamentos Cruzados"
   // Opciones de resultado. Si se omite, usa DEFAULT_TEST_OPTIONS (Pos/Neg/No valorado).
   options?: string[];
-  // Nota clínica de apoyo (las que el fisio escribió en cursiva). Opcional.
+  // Guía clínica de apoyo: técnica breve → qué significa un resultado positivo.
   note?: string;
   // Tipo de captura del resultado: selector (default), segundos o texto libre.
   input?: TestInputKind;
@@ -61,75 +61,91 @@ const TOBILLO_PIE: ZoneCatalog = {
     {
       group: 'Reglas de decisión clínica (descarte de fracturas)',
       name: 'Reglas de Ottawa para tobillo y pie',
-      options: ['Cumple criterios (requiere Rx)', 'No cumple (seguro para carga)', 'No valorado']
+      options: ['Cumple criterios (requiere Rx)', 'No cumple (seguro para carga)', 'No valorado'],
+      note: 'Dolor en maléolos, base del 5.º metatarsiano o navicular + incapacidad de dar 4 pasos = solicitar Rx.'
     },
     {
       group: 'Ligamentos laterales y mediales (esguinces)',
-      name: 'Cajón anterior (lig. talofibular anterior)'
+      name: 'Cajón anterior (lig. talofibular anterior)',
+      note: 'Estabiliza la tibia y tracciona el talón hacia adelante; deslizamiento aumentado sin tope = lesión del LTFA.'
     },
     {
       group: 'Ligamentos laterales y mediales (esguinces)',
-      name: 'Inclinación astragalina / Talar Tilt (cara lateral)'
+      name: 'Inclinación astragalina / Talar Tilt (cara lateral)',
+      note: 'Inversión pasiva del retropié; bostezo lateral aumentado = lesión talofibular y calcáneofibular.'
     },
     {
       group: 'Ligamentos laterales y mediales (esguinces)',
-      name: 'Eversión forzada / Bostezo medial (lig. deltoideo)'
+      name: 'Eversión forzada / Bostezo medial (lig. deltoideo)',
+      note: 'Eversión pasiva del retropié; dolor o bostezo medial = lesión del ligamento deltoideo.'
     },
     {
       group: 'Sindesmosis (esguince alto de tobillo)',
-      name: 'Compresión / Squeeze Test'
+      name: 'Compresión / Squeeze Test',
+      note: 'Comprime tibia y peroné en la pantorrilla; dolor distal en la sindesmosis = esguince alto.'
     },
     {
       group: 'Sindesmosis (esguince alto de tobillo)',
-      name: 'Rotación externa / Kleiger Test'
+      name: 'Rotación externa / Kleiger Test',
+      note: 'Rotación externa del pie con rodilla a 90°; dolor anterolateral = sindesmosis, medial = deltoideo.'
     },
     {
       group: 'Sindesmosis (esguince alto de tobillo)',
-      name: 'Traslación peronea'
+      name: 'Traslación peronea',
+      note: 'Moviliza el peroné distal en sentido anteroposterior; dolor o laxitud = lesión sindesmal.'
     },
     {
       group: 'Tendón de Aquiles',
-      name: 'Thompson (ruptura completa)'
+      name: 'Thompson (ruptura completa)',
+      note: 'Comprime la pantorrilla en prono; ausencia de flexión plantar = ruptura completa del Aquiles.'
     },
     {
       group: 'Tendón de Aquiles',
-      name: 'Royal London Hospital (tendinopatía aquílea)'
+      name: 'Royal London Hospital (tendinopatía aquílea)',
+      note: 'Dolor a la palpación que disminuye con dorsiflexión máxima del tobillo = tendinopatía aquílea.'
     },
     {
       group: 'Tendón de Aquiles',
       name: 'Signo del arco / Arc Sign',
-      note: 'Diferenciación tendinopatía vs paratendinitis'
+      note: 'Engrosamiento doloroso que se desplaza con la dorsi-plantiflexión = tendinopatía (vs paratendinitis, que no se mueve).'
     },
     {
       group: 'Fascia plantar y atrapamiento nervioso',
-      name: 'Molinete / Windlass Test (fascitis plantar)'
+      name: 'Molinete / Windlass Test (fascitis plantar)',
+      note: 'Extensión pasiva del hallux en carga; dolor en la planta del talón = fascitis plantar.'
     },
     {
       group: 'Fascia plantar y atrapamiento nervioso',
-      name: 'Signo de Tinel (síndrome del túnel tarsiano)'
+      name: 'Signo de Tinel (síndrome del túnel tarsiano)',
+      note: 'Percute detrás del maléolo medial; parestesias plantares = atrapamiento del túnel tarsiano.'
     },
     {
       group: 'Antepié',
-      name: 'Compresión de Mulder (neuroma de Morton / metatarsalgias)'
+      name: 'Compresión de Mulder (neuroma de Morton / metatarsalgias)',
+      note: 'Comprime los metatarsianos lateralmente; clic doloroso entre cabezas = neuroma de Morton.'
     },
     {
       group: 'Alineación biomecánica y estructura',
       name: 'Caída del navicular / Navicular Drop Test',
-      options: ['> 10mm (hiperpronación)', 'Normal', 'No valorado']
+      options: ['> 10mm (hiperpronación)', 'Normal', 'No valorado'],
+      note: 'Mide el descenso del navicular de sedestación a bipedestación; > 10 mm = hiperpronación.'
     },
     {
       group: 'Alineación biomecánica y estructura',
-      name: 'Jack / Extensión de hallux (arco longitudinal)'
+      name: 'Jack / Extensión de hallux (arco longitudinal)',
+      note: 'Extiende el hallux en bipedestación; si no se forma el arco longitudinal = disfunción del arco.'
     },
     {
       group: 'Valoración funcional y propiocepción',
       name: 'Apoyo monopodal (Single Leg Stance)',
-      options: ['Logrado', 'Con inestabilidad', 'No logrado']
+      options: ['Logrado', 'Con inestabilidad', 'No logrado'],
+      note: 'Equilibrio en una pierna (ojos abiertos/cerrados); oscilación o apoyo = déficit propioceptivo.'
     },
     {
       group: 'Valoración funcional y propiocepción',
       name: 'Equilibrio en Y (Y-Balance Test)',
-      options: ['Simétrico', 'Asimétrico', 'No valorado']
+      options: ['Simétrico', 'Asimétrico', 'No valorado'],
+      note: 'Alcance máximo en 3 direcciones sobre apoyo monopodal; asimetría > 4 cm = riesgo de lesión.'
     }
   ]
 };
@@ -151,67 +167,105 @@ const RODILLA: ZoneCatalog = {
       group: 'Reglas de decisión clínica (descarte de fracturas)',
       name: 'Reglas de Ottawa para rodilla',
       options: ['Cumple criterios (requiere Rx)', 'No cumple (seguro para carga)', 'No valorado'],
-      note: 'Esencial post-traumatismo, antes de pruebas de estrés ligamentario.'
+      note: 'Edad ≥55, dolor en rótula/cabeza del peroné, no flexiona 90° o no da 4 pasos = solicitar Rx.'
     },
     {
       group: 'Ligamentos cruzados (LCA y LCP)',
       name: 'Lachman (LCA)',
-      note: 'Mayor sensibilidad para ruptura aguda.'
+      note: 'Rodilla a 20-30°, traslación tibial anterior; aumento sin tope firme = lesión del LCA (mayor sensibilidad en agudo).'
     },
-    { group: 'Ligamentos cruzados (LCA y LCP)', name: 'Cajón anterior (LCA)' },
-    { group: 'Ligamentos cruzados (LCA y LCP)', name: 'Cajón posterior (LCP)' },
-    { group: 'Ligamentos cruzados (LCA y LCP)', name: 'Pivot Shift (inestabilidad rotatoria LCA)' },
-    { group: 'Ligamentos cruzados (LCA y LCP)', name: 'Signo del hundimiento / Sag Sign (LCP)' },
+    {
+      group: 'Ligamentos cruzados (LCA y LCP)',
+      name: 'Cajón anterior (LCA)',
+      note: 'Rodilla a 90°, tracción tibial anterior; desplazamiento aumentado = lesión del LCA.'
+    },
+    {
+      group: 'Ligamentos cruzados (LCA y LCP)',
+      name: 'Cajón posterior (LCP)',
+      note: 'Rodilla a 90°, empuje tibial posterior; desplazamiento aumentado = lesión del LCP.'
+    },
+    {
+      group: 'Ligamentos cruzados (LCA y LCP)',
+      name: 'Pivot Shift (inestabilidad rotatoria LCA)',
+      note: 'Valgo + rotación interna de extensión a flexión; resalte/subluxación = inestabilidad anterolateral del LCA.'
+    },
+    {
+      group: 'Ligamentos cruzados (LCA y LCP)',
+      name: 'Signo del hundimiento / Sag Sign (LCP)',
+      note: 'Caderas y rodillas a 90° en supino; hundimiento posterior de la tibia = insuficiencia del LCP.'
+    },
     {
       group: 'Ligamentos colaterales (LCM y LCL)',
       name: 'Valgo forzado / Bostezo medial (LCM)',
-      note: 'Evaluar a 0° y a 30° de flexión.'
+      note: 'Estrés en valgo a 0° y a 30° de flexión; bostezo o dolor medial = lesión del LCM.'
     },
     {
       group: 'Ligamentos colaterales (LCM y LCL)',
       name: 'Varo forzado / Bostezo lateral (LCL)',
-      note: 'Evaluar a 0° y a 30° de flexión.'
+      note: 'Estrés en varo a 0° y a 30° de flexión; bostezo o dolor lateral = lesión del LCL.'
     },
     {
       group: 'Meniscos',
       name: 'Thessaly (Apley en carga)',
-      note: 'Alta precisión diagnóstica.'
+      note: 'Rotación del cuerpo sobre la rodilla en carga a 20° de flexión; dolor o bloqueo = lesión meniscal (alta precisión).'
     },
-    { group: 'Meniscos', name: 'McMurray' },
-    { group: 'Meniscos', name: 'Apley (compresión y distracción)' },
+    {
+      group: 'Meniscos',
+      name: 'McMurray',
+      note: 'Flexión máxima + rotación con extensión progresiva; clic doloroso = lesión meniscal.'
+    },
+    {
+      group: 'Meniscos',
+      name: 'Apley (compresión y distracción)',
+      note: 'En prono: compresión con rotación = menisco; distracción con rotación = ligamento.'
+    },
     {
       group: 'Meniscos',
       name: 'Palpación de la interlínea articular',
-      options: ['Doloroso', 'Sin dolor', 'No valorado']
+      options: ['Doloroso', 'Sin dolor', 'No valorado'],
+      note: 'Dolor localizado a la palpación de la interlínea = sospecha de lesión meniscal.'
     },
-    { group: 'Patelofemoral', name: 'Aprehensión patelar (inestabilidad / luxación)' },
-    { group: 'Patelofemoral', name: 'Clarke / Roce patelar (condromalacia)' },
+    {
+      group: 'Patelofemoral',
+      name: 'Aprehensión patelar (inestabilidad / luxación)',
+      note: 'Desliza la rótula lateralmente con la rodilla relajada; aprehensión del paciente = inestabilidad patelar.'
+    },
+    {
+      group: 'Patelofemoral',
+      name: 'Clarke / Roce patelar (condromalacia)',
+      note: 'Comprime la rótula y pide contracción del cuádriceps; dolor retropatelar = condromalacia (baja especificidad).'
+    },
     {
       group: 'Patelofemoral',
       name: 'Inclinación patelar / Patellar Tilt Test',
-      note: 'Retracción del retináculo lateral.'
+      note: 'Intenta elevar el borde lateral de la rótula; si no se eleva = retináculo lateral retraído.'
     },
     {
       group: 'Síndromes friccionales y tendinopatías',
-      name: 'Compresión de Noble (cintilla iliotibial)'
+      name: 'Compresión de Noble (cintilla iliotibial)',
+      note: 'Presiona el cóndilo femoral lateral a ~30° de flexión; dolor = síndrome de la cintilla iliotibial.'
     },
     {
       group: 'Síndromes friccionales y tendinopatías',
-      name: 'Renne (cintilla iliotibial en carga)'
+      name: 'Renne (cintilla iliotibial en carga)',
+      note: 'Apoyo monopodal con flexión a 30-40°; dolor en el cóndilo lateral = cintilla iliotibial.'
     },
     {
       group: 'Síndromes friccionales y tendinopatías',
-      name: 'Palpación del polo inferior de la rótula (tendinopatía patelar)'
+      name: 'Palpación del polo inferior de la rótula (tendinopatía patelar)',
+      note: 'Dolor a la palpación del polo inferior con la rodilla en extensión = tendinopatía patelar.'
     },
     {
       group: 'Valoración funcional y biomecánica',
       name: 'Sentadilla a una pierna / Single Leg Squat',
-      options: ['Adecuado', 'Valgo dinámico', 'No logrado']
+      options: ['Adecuado', 'Valgo dinámico', 'No logrado'],
+      note: 'Sentadilla controlada en una pierna; valgo dinámico = déficit de control de cadera/rodilla.'
     },
     {
       group: 'Valoración funcional y biomecánica',
       name: 'Salto / Hop Test',
-      options: ['Asimetría <10%', 'Asimetría >10%', 'No valorado']
+      options: ['Asimetría <10%', 'Asimetría >10%', 'No valorado'],
+      note: 'Salto a una pierna comparado con el lado sano; asimetría > 10% = déficit funcional (criterio de retorno).'
     }
   ]
 };
@@ -241,75 +295,85 @@ const CADERA_PELVIS: ZoneCatalog = {
     {
       group: 'Reglas de decisión clínica (descarte de fracturas)',
       name: 'FABER / Patrick (patología coxofemoral y sacroilíaca)',
-      options: ['Positivo coxofemoral', 'Positivo sacroilíaco', 'Negativo', 'No valorado']
+      options: ['Positivo coxofemoral', 'Positivo sacroilíaco', 'Negativo', 'No valorado'],
+      note: 'Flexión-abducción-rotación externa (figura de 4); dolor inguinal = coxofemoral, dolor posterior = sacroilíaca.'
     },
     {
       group: 'Intraarticular / Labrum (pinzamiento femoroacetabular)',
       name: 'FADIR (flexión + aducción + rotación interna)',
-      note: 'Prueba de elección para FAI y lesión de labrum acetabular.'
+      note: 'Prueba de elección para FAI y lesión de labrum acetabular; dolor inguinal = positivo.'
     },
     {
       group: 'Intraarticular / Labrum (pinzamiento femoroacetabular)',
       name: 'Scour / Cuadrante de la cadera',
       options: ['Dolor articular', 'Crepitación', 'Negativo', 'No valorado'],
-      note: 'Compresión axial con circunducción: detecta degeneración intraarticular.'
+      note: 'Compresión axial con circunducción del fémur: dolor o crepitación = degeneración intraarticular.'
     },
     {
       group: 'Intraarticular / Labrum (pinzamiento femoroacetabular)',
       name: 'Log Roll (rotación pasiva en decúbito)',
-      note: 'Localiza dolor puramente intraarticular sin tensión de tejidos blandos.'
+      note: 'Rotación pasiva del muslo en supino; dolor sin tensión de tejidos blandos = origen puramente intraarticular.'
     },
     {
       group: 'Sacroilíaca — Cluster Laslett',
-      name: 'Distracción sacroilíaca'
+      name: 'Distracción sacroilíaca',
+      note: 'Presión posterolateral sobre ambas EIAS en supino; dolor = provocación sacroilíaca.'
     },
     {
       group: 'Sacroilíaca — Cluster Laslett',
-      name: 'Compresión sacroilíaca'
+      name: 'Compresión sacroilíaca',
+      note: 'Compresión medial sobre las crestas ilíacas en decúbito lateral; dolor = provocación sacroilíaca.'
     },
     {
       group: 'Sacroilíaca — Cluster Laslett',
       name: 'Thrust posterior (P4 / Thigh Thrust)',
-      note: '≥3 pruebas positivas del Cluster Laslett = alta probabilidad de disfunción sacroilíaca.'
+      note: 'Empuje posterior por el fémur con cadera a 90°; dolor glúteo. ≥3 pruebas del cluster = alta probabilidad sacroilíaca.'
     },
     {
       group: 'Sacroilíaca — Cluster Laslett',
-      name: 'Gaenslen (bilateral: L5 vs S1-S2)'
+      name: 'Gaenslen (bilateral: L5 vs S1-S2)',
+      note: 'Una cadera en hiperextensión fuera de la camilla y la otra flexionada al pecho; dolor = sacroilíaca o L5.'
     },
     {
       group: 'Muscular / Bursitis / Trocánter',
       name: 'Signo de Trendelenburg',
       options: ['Positivo (caída pélvica)', 'Negativo', 'No valorado'],
-      note: 'Debilidad de glúteo medio ipsilateral o lesión de raíz L5.'
+      note: 'Apoyo monopodal: caída de la pelvis contralateral = debilidad del glúteo medio ipsilateral o lesión de L5.'
     },
     {
       group: 'Muscular / Bursitis / Trocánter',
-      name: 'Ober (retracción del TFL / cintilla iliotibial)'
+      name: 'Ober (retracción del TFL / cintilla iliotibial)',
+      note: 'En decúbito lateral, abduce y extiende el muslo y suéltalo; si no cae a la aducción = TFL/cintilla retraída.'
     },
     {
       group: 'Muscular / Bursitis / Trocánter',
       name: 'Thomas (retracción del psoas)',
-      options: ['Positivo (caída del muslo > 0°)', 'Negativo', 'No valorado']
+      options: ['Positivo (caída del muslo > 0°)', 'Negativo', 'No valorado'],
+      note: 'Lleva una rodilla al pecho en supino; si el muslo contralateral se eleva de la camilla = acortamiento del psoas.'
     },
     {
       group: 'Muscular / Bursitis / Trocánter',
       name: 'Palpación trocánter mayor (bursitis trocantérea)',
-      options: ['Doloroso', 'Sin dolor', 'No valorado']
+      options: ['Doloroso', 'Sin dolor', 'No valorado'],
+      note: 'Dolor a la palpación directa del trocánter mayor = bursitis trocantérea o tendinopatía glútea.'
     },
     {
       group: 'Neurológico / Funcional',
       name: 'SLR / Lasègue (diferenciación lumbar vs cadera)',
-      options: ['Positivo <45° (neural)', 'Positivo 45-70°', 'Negativo', 'No valorado']
+      options: ['Positivo <45° (neural)', 'Positivo 45-70°', 'Negativo', 'No valorado'],
+      note: 'Elevación pasiva de la pierna recta; dolor radicular entre 30-70° = tensión neural (no dolor inguinal de cadera).'
     },
     {
       group: 'Neurológico / Funcional',
       name: 'Single Leg Stance (estabilidad pélvica monopodal)',
-      options: ['Logrado >10 s', 'Con inestabilidad', 'No logrado']
+      options: ['Logrado >10 s', 'Con inestabilidad', 'No logrado'],
+      note: 'Mantener apoyo monopodal > 10 s; caída pélvica o inestabilidad = déficit de control del glúteo medio.'
     },
     {
       group: 'Neurológico / Funcional',
       name: 'Sentadilla monopodal (valgo dinámico de cadera)',
-      options: ['Adecuado', 'Valgo dinámico', 'No logrado']
+      options: ['Adecuado', 'Valgo dinámico', 'No logrado'],
+      note: 'Sentadilla en una pierna; colapso en valgo/rotación interna = déficit de control neuromuscular.'
     }
   ]
 };
@@ -370,7 +434,8 @@ const COLUMNA_LUMBAR: ZoneCatalog = {
     {
       group: 'Discal / McKenzie',
       name: 'Flexión repetida en carga (McKenzie)',
-      options: ['Centralización', 'Periferización', 'Sin cambio', 'No valorado']
+      options: ['Centralización', 'Periferización', 'Sin cambio', 'No valorado'],
+      note: 'Movimiento repetido en flexión; periferización de los síntomas = patrón de mal pronóstico discal.'
     },
     {
       group: 'Facetaria / Degenerativa',
@@ -380,7 +445,8 @@ const COLUMNA_LUMBAR: ZoneCatalog = {
     {
       group: 'Facetaria / Degenerativa',
       name: 'Compresión axial en bipedestación',
-      options: ['Dolor local', 'Dolor referido', 'Negativo', 'No valorado']
+      options: ['Dolor local', 'Dolor referido', 'Negativo', 'No valorado'],
+      note: 'Carga axial sobre los hombros; dolor local = facetaria/discal, dolor referido a la pierna = componente radicular.'
     },
     {
       group: 'Inestabilidad lumbar',
@@ -391,7 +457,8 @@ const COLUMNA_LUMBAR: ZoneCatalog = {
     {
       group: 'Inestabilidad lumbar',
       name: 'Signo del arco de Gowers (patrón aberrante de movimiento)',
-      options: ['Presente', 'Ausente', 'No valorado']
+      options: ['Presente', 'Ausente', 'No valorado'],
+      note: 'Al reincorporarse de la flexión "trepa" apoyando las manos en los muslos = patrón aberrante por inestabilidad.'
     },
     {
       group: 'Funcional / Pronóstico',
@@ -454,7 +521,8 @@ const COLUMNA_CERVICAL: ZoneCatalog = {
     {
       group: 'Radicular — Cluster Wainner',
       name: 'Rotación cervical ipsilateral < 60°',
-      options: ['Sí (< 60°)', 'No (≥ 60°)', 'No valorado']
+      options: ['Sí (< 60°)', 'No (≥ 60°)', 'No valorado'],
+      note: 'Goniometría de rotación activa; < 60° hacia el lado sintomático = componente del cluster de radiculopatía.'
     },
     {
       group: 'Radicular — Cluster Wainner',
@@ -464,7 +532,8 @@ const COLUMNA_CERVICAL: ZoneCatalog = {
         'Positivo sin diferenciación',
         'Negativo',
         'No valorado'
-      ]
+      ],
+      note: 'Tensión progresiva del nervio mediano; reproducción de síntomas que cambian con diferenciación estructural = componente neural.'
     },
     {
       group: 'Facetaria cervical',
@@ -474,7 +543,8 @@ const COLUMNA_CERVICAL: ZoneCatalog = {
     {
       group: 'Facetaria cervical',
       name: 'Compresión axial en bipedestación',
-      options: ['Dolor local', 'Dolor referido', 'Negativo', 'No valorado']
+      options: ['Dolor local', 'Dolor referido', 'Negativo', 'No valorado'],
+      note: 'Carga axial sobre la cabeza; dolor local = facetaria, dolor referido al brazo = componente radicular.'
     },
     {
       group: 'Funcional / Latigazo / Estabilidad profunda',
@@ -584,17 +654,20 @@ const HOMBRO: ZoneCatalog = {
         'Dolor sin aprehensión (pinzamiento)',
         'Negativo',
         'No valorado'
-      ]
+      ],
+      note: 'Aprehensión en abducción + rotación externa que cede con presión posterior del húmero = inestabilidad anterior.'
     },
     {
       group: 'Inestabilidad glenohumeral',
       name: 'Cajón anterior / posterior (Load and Shift)',
-      options: ['Grado I (< 25%)', 'Grado II (25-50%)', 'Grado III (> 50%)', 'Negativo']
+      options: ['Grado I (< 25%)', 'Grado II (25-50%)', 'Grado III (> 50%)', 'Negativo'],
+      note: 'Centra la cabeza humeral y traslada anteroposterior; gradúa según el % de desplazamiento sobre la glenoides.'
     },
     {
       group: 'Inestabilidad glenohumeral',
       name: 'Sulcus Sign (inestabilidad inferior / multidireccional)',
-      options: ['Grado I (< 1 cm)', 'Grado II (1-2 cm)', 'Grado III (> 2 cm)', 'Negativo']
+      options: ['Grado I (< 1 cm)', 'Grado II (1-2 cm)', 'Grado III (> 2 cm)', 'Negativo'],
+      note: 'Tracción caudal del brazo; surco visible bajo el acromion = inestabilidad inferior/multidireccional.'
     },
     {
       group: 'Articulación acromioclavicular (AC)',
@@ -609,12 +682,14 @@ const HOMBRO: ZoneCatalog = {
     {
       group: 'Escapulotorácica',
       name: 'Kibler Lateral Slide Test (asimetría escapular)',
-      options: ['Asimetría > 1.5 cm', 'Simétrico', 'No valorado']
+      options: ['Asimetría > 1.5 cm', 'Simétrico', 'No valorado'],
+      note: 'Mide la distancia ángulo inferior escapular-columna en 3 posiciones; asimetría > 1.5 cm = disquinesia.'
     },
     {
       group: 'Escapulotorácica',
       name: 'Pec Minor Length (longitud del pectoral menor)',
-      options: ['Acortado (coracoide < 2.5 cm del plano)', 'Normal', 'No valorado']
+      options: ['Acortado (coracoide < 2.5 cm del plano)', 'Normal', 'No valorado'],
+      note: 'En supino mide la distancia coracoides-camilla; acortamiento = báscula anterior de la escápula.'
     }
   ]
 };
@@ -640,7 +715,8 @@ const CODO_ANTEBRAZO: ZoneCatalog = {
     },
     {
       group: 'Epicondilalgia lateral (codo de tenista)',
-      name: 'Mills (extensión pasiva de codo con pronosupinación y flexión de muñeca)'
+      name: 'Mills (extensión pasiva de codo con pronosupinación y flexión de muñeca)',
+      note: 'Estira pasivamente los extensores; dolor en el epicóndilo lateral = epicondilalgia lateral.'
     },
     {
       group: 'Epicondilalgia lateral (codo de tenista)',
@@ -671,7 +747,8 @@ const CODO_ANTEBRAZO: ZoneCatalog = {
     {
       group: 'Inestabilidad ligamentaria del codo',
       name: 'Lateral Pivot Shift (inestabilidad rotatoria posterolateral — LCL)',
-      options: ['Positivo (aprehensión / luxación)', 'Negativo', 'No valorado']
+      options: ['Positivo (aprehensión / luxación)', 'Negativo', 'No valorado'],
+      note: 'Supinación + valgo + carga axial en extensión; aprehensión o resalte = inestabilidad posterolateral.'
     },
     {
       group: 'Neurológico (atrapamientos)',
@@ -692,7 +769,8 @@ const CODO_ANTEBRAZO: ZoneCatalog = {
     {
       group: 'Ruptura tendinosa',
       name: 'Popeye Sign (ruptura distal del bíceps)',
-      options: ['Presente (retracción del vientre)', 'Ausente', 'No valorado']
+      options: ['Presente (retracción del vientre)', 'Ausente', 'No valorado'],
+      note: 'Abultamiento por retracción del vientre del bíceps = ruptura tendinosa.'
     },
     {
       group: 'Ruptura tendinosa',
@@ -753,7 +831,8 @@ const MANO_MUNECA: ZoneCatalog = {
     {
       group: 'Neurológico — Canal de Guyón (nervio cubital)',
       name: 'Signo de Froment (rama profunda cubital / abductor del pulgar)',
-      options: ['Positivo (flexión del pulgar al sujetar papel)', 'Negativo', 'No valorado']
+      options: ['Positivo (flexión del pulgar al sujetar papel)', 'Negativo', 'No valorado'],
+      note: 'Sujeta un papel entre pulgar e índice; flexión compensatoria del pulgar = debilidad del aductor (cubital).'
     },
     {
       group: 'Tendinosa — Estiloides radial / De Quervain',
@@ -780,7 +859,8 @@ const MANO_MUNECA: ZoneCatalog = {
     {
       group: 'Ligamentaria / TFCC (fibrocartílago triangular)',
       name: 'Piano Key Sign (articulación radiocubital distal)',
-      options: ['Positivo (inestabilidad DRUJ)', 'Negativo', 'No valorado']
+      options: ['Positivo (inestabilidad DRUJ)', 'Negativo', 'No valorado'],
+      note: 'Presiona el cúbito distal como una tecla de piano; rebote elástico = inestabilidad de la radiocubital distal.'
     },
     {
       group: 'Ligamentaria / TFCC (fibrocartílago triangular)',
@@ -796,7 +876,8 @@ const MANO_MUNECA: ZoneCatalog = {
     {
       group: 'Artrosis / Articular',
       name: 'Bostezo de colateral interfalángico (estabilidad ligamentaria de dedos)',
-      options: ['Inestable', 'Estable', 'No valorado']
+      options: ['Inestable', 'Estable', 'No valorado'],
+      note: 'Estrés en varo/valgo de la articulación interfalángica; bostezo = lesión del ligamento colateral.'
     },
     {
       group: 'Vascular',
@@ -877,4 +958,11 @@ export const INJURY_MECHANISM = [
   'Movimiento repetitivo',
   'Postural / sobrecarga'
 ] as const;
-export const PAIN_TYPE_OPTIONS = ['Punzante', 'Sordo', 'Urente', 'Irradiado', 'Opresivo'] as const;
+export const PAIN_TYPE_OPTIONS = [
+  'Punzante',
+  'Sordo',
+  'Urente',
+  'Irradiado',
+  'Opresivo',
+  'Idiopático'
+] as const;
