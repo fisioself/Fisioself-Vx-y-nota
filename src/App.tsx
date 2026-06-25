@@ -289,13 +289,9 @@ export function App() {
       )}
 
       <header className="hero app-hero">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <AppLogo size={56} />
-          <div>
-            <p className="eyebrow">FISIOSELF App Notas VX</p>
-            <h1>Expediente clinico</h1>
-            <p>Pacientes, notas, dictado por voz e IA trazable con Supabase.</p>
-          </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <AppLogo size={44} />
+          <h1 style={{ margin: 0 }}>Fisioself</h1>
         </div>
         <div className="hero-actions">
           <span className="pill">{session.user?.email}</span>
@@ -382,6 +378,7 @@ export function App() {
               : 'secondary'
           }
           onClick={() => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
             setShowDashboard(true);
             setShowFinance(false);
             setShowSeguimientos(false);
@@ -396,6 +393,7 @@ export function App() {
           type="button"
           className={showFinance ? '' : 'secondary'}
           onClick={() => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
             setShowFinance(true);
             setShowDashboard(false);
             setShowSeguimientos(false);
@@ -409,6 +407,7 @@ export function App() {
           type="button"
           className={showSeguimientos ? '' : 'secondary'}
           onClick={() => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
             setShowSeguimientos(true);
             setShowFinance(false);
             setShowDashboard(false);
