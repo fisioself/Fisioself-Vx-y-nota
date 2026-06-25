@@ -1,4 +1,5 @@
 import type { Evaluation, EvaluationZone } from '../../types/clinical';
+import { BodyPainMap } from '../../components/BodyPainMap';
 
 interface JointRow {
   joint?: string;
@@ -37,6 +38,7 @@ export function EvaluationSummary({ evaluation }: EvaluationSummaryProps) {
   const functional = sections?.functional_scales || {};
   const conclusion = sections?.conclusion || {};
   const zones = sections?.zones || [];
+  const painPoints = sections?.pain_map?.points || [];
   const exam = sections?.physical_exam || {};
 
   // ¿Tiene la estructura nueva (zonas/conclusión) o es una valoración antigua?
@@ -125,6 +127,13 @@ export function EvaluationSummary({ evaluation }: EvaluationSummaryProps) {
           {general.inspection && <p>Inspección: {general.inspection}</p>}
           {general.posture && <p>Postura: {general.posture}</p>}
           {general.gait && <p>Marcha: {general.gait}</p>}
+        </div>
+      )}
+
+      {painPoints.length > 0 && (
+        <div>
+          <p className="eyebrow">Mapa corporal de dolor</p>
+          <BodyPainMap value={painPoints} readOnly />
         </div>
       )}
 

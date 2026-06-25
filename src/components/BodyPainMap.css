@@ -1,0 +1,48 @@
+.bpm-wrapper {
+  margin-top: 6px;
+}
+.bpm-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  font-size: 0.85rem;
+}
+.bpm-views {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+.bpm-view {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.bpm-view-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+.bpm-svg {
+  width: 130px;
+  height: 260px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-card, #fff);
+  cursor: crosshair;
+  touch-action: manipulation;
+}
+.bpm-svg.bpm-readonly {
+  cursor: default;
+}
+.bpm-point {
+  fill: rgba(220, 38, 38, 0.75);
+  stroke: #991b1b;
+  stroke-width: 0.8;
+  cursor: pointer;
+}
+.bpm-svg.bpm-readonly .bpm-point {
+  cursor: default;
+}

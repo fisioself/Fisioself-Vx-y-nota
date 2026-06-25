@@ -69,6 +69,14 @@ export interface EvaluationZone {
   palpation?: string | null;
 }
 
+// Punto marcado en el mapa corporal de dolor. x/y son porcentajes (0-100)
+// relativos al lienzo de la vista (frontal o posterior).
+export interface PainPoint {
+  view: 'front' | 'back';
+  x: number;
+  y: number;
+}
+
 export interface EvaluationSections {
   patient_identity?: Record<string, unknown> | null;
   history?: Record<string, unknown> | null;
@@ -113,6 +121,10 @@ export interface EvaluationSections {
     name?: string | null;
     score?: string | null;
     notes?: string | null;
+  } | null;
+  // Mapa corporal de dolor: puntos marcados sobre la silueta (frontal/posterior).
+  pain_map?: {
+    points?: PainPoint[];
   } | null;
   physical_exam?: Record<string, unknown> | null; // legado (tablas planas globales)
   // Valoración por zonas específicas (estructura nueva).

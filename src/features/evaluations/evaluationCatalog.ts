@@ -968,6 +968,9 @@ export interface EvaluationTemplate {
   symptom_classification?: string;
   injury_mechanism?: string;
   pain_mechanism?: string;
+  // Pruebas especiales más usadas para este cuadro (nombres exactos del catálogo
+  // de la zona). Se resaltan como "sugeridas" al aplicar la plantilla.
+  keyTests?: string[];
 }
 
 export const EVALUATION_TEMPLATES: EvaluationTemplate[] = [
@@ -977,7 +980,13 @@ export const EVALUATION_TEMPLATES: EvaluationTemplate[] = [
     zoneId: 'tobillo_pie',
     symptom_classification: 'Agudo',
     injury_mechanism: 'Traumático',
-    pain_mechanism: 'Nociceptivo'
+    pain_mechanism: 'Nociceptivo',
+    keyTests: [
+      'Reglas de Ottawa para tobillo y pie',
+      'Cajón anterior (lig. talofibular anterior)',
+      'Inclinación astragalina / Talar Tilt (cara lateral)',
+      'Compresión / Squeeze Test'
+    ]
   },
   {
     id: 'lumbalgia',
@@ -985,47 +994,88 @@ export const EVALUATION_TEMPLATES: EvaluationTemplate[] = [
     zoneId: 'columna_lumbar',
     symptom_classification: 'Subagudo',
     injury_mechanism: 'Postural / sobrecarga',
-    pain_mechanism: 'Nociceptivo'
+    pain_mechanism: 'Nociceptivo',
+    keyTests: [
+      'SLR / Lasègue',
+      'Slump Test',
+      'Extensión en prono (Press-up McKenzie)',
+      'Prone Instability Test'
+    ]
   },
   {
     id: 'cervicalgia',
     label: 'Cervicalgia / cuello',
     zoneId: 'columna_cervical',
     injury_mechanism: 'Postural / sobrecarga',
-    pain_mechanism: 'Nociceptivo'
+    pain_mechanism: 'Nociceptivo',
+    keyTests: [
+      'Prueba de la arteria vertebral (VBI / SVBI)',
+      'Spurling (compresión foraminal)',
+      'Distracción manual cervical',
+      'Cranio-Cervical Flexion Test (CCFT — 5 etapas)'
+    ]
   },
   {
     id: 'hombro_doloroso',
     label: 'Hombro doloroso / manguito',
     zoneId: 'hombro',
     injury_mechanism: 'Movimiento repetitivo',
-    pain_mechanism: 'Nociceptivo'
+    pain_mechanism: 'Nociceptivo',
+    keyTests: [
+      'Jobe / Empty Can (supraespinoso)',
+      'Hawkins-Kennedy',
+      'Neer',
+      'Lift-off (subescapular)'
+    ]
   },
   {
     id: 'gonalgia',
     label: 'Gonalgia / rodilla',
     zoneId: 'rodilla',
-    pain_mechanism: 'Nociceptivo'
+    pain_mechanism: 'Nociceptivo',
+    keyTests: [
+      'Lachman (LCA)',
+      'McMurray',
+      'Thessaly (Apley en carga)',
+      'Valgo forzado / Bostezo medial (LCM)'
+    ]
   },
   {
     id: 'cadera_sacroiliaca',
     label: 'Cadera / sacroilíaca',
     zoneId: 'cadera_pelvis',
-    pain_mechanism: 'Nociceptivo'
+    pain_mechanism: 'Nociceptivo',
+    keyTests: [
+      'FABER / Patrick (patología coxofemoral y sacroilíaca)',
+      'FADIR (flexión + aducción + rotación interna)',
+      'Thrust posterior (P4 / Thigh Thrust)',
+      'Signo de Trendelenburg'
+    ]
   },
   {
     id: 'epicondalgia',
     label: 'Epicondalgia (codo)',
     zoneId: 'codo_antebrazo',
     injury_mechanism: 'Movimiento repetitivo',
-    pain_mechanism: 'Nociceptivo'
+    pain_mechanism: 'Nociceptivo',
+    keyTests: [
+      'Cozen (extensión de muñeca con resistencia)',
+      'Mills (extensión pasiva de codo con pronosupinación y flexión de muñeca)',
+      'Maudsley / Middle Finger Test (extensor del dedo medio)'
+    ]
   },
   {
     id: 'tunel_carpiano',
     label: 'Túnel carpiano / muñeca',
     zoneId: 'mano_muneca',
     injury_mechanism: 'Movimiento repetitivo',
-    pain_mechanism: 'Neuropático'
+    pain_mechanism: 'Neuropático',
+    keyTests: [
+      'Phalen (flexión mantenida de muñecas 60 s)',
+      'Tinel en muñeca (nervio mediano)',
+      'Durkan / Compresión carpal directa',
+      'Signo de Froment (rama profunda cubital / abductor del pulgar)'
+    ]
   }
 ];
 

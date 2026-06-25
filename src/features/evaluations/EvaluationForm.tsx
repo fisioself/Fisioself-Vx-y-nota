@@ -7,6 +7,7 @@ import { getErrorMessage, isOfflineError, OFFLINE_MESSAGE } from '../../shared/e
 import { useToast } from '../../app/ToastProvider';
 import { PatientDocuments } from '../patients/PatientDocuments';
 import { DateField } from '../../components/DateField';
+import { BodyPainMap } from '../../components/BodyPainMap';
 import { PromCalculator } from './PromCalculator';
 import { PROM_SCALES, getPromScale } from './promsCatalog';
 import {
@@ -25,7 +26,13 @@ import {
   PAIN_MECHANISM_OPTIONS,
   EVALUATION_TEMPLATES
 } from './evaluationCatalog';
-import type { Patient, Evaluation, EvaluationSections, EvaluationZone } from '../../types/clinical';
+import type {
+  Patient,
+  Evaluation,
+  EvaluationSections,
+  EvaluationZone,
+  PainPoint
+} from '../../types/clinical';
 import './EvaluationForm.css';
 
 interface RomRow {
@@ -60,6 +67,8 @@ interface ZoneFormData {
   movement_ranges: RomRow[];
   muscle_strength: StrengthRow[];
   special_results: Record<string, TestResult>;
+  // Pruebas clave sugeridas por la plantilla del motivo (solo UI, no se guarda).
+  suggested_tests: string[];
   palpation: string;
 }
 
@@ -106,6 +115,8 @@ interface EvaluationFormValues {
   gait: string;
   // Zonas
   zones: ZoneFormData[];
+  // Mapa corporal de dolor
+  pain_points: PainPoint[];
   // Cuestionarios funcionales (PROMs)
   functional_scale_name: string;
   functional_scale_score: string;
@@ -172,6 +183,7 @@ function evaluationToFormValues(ev: Evaluation): EvaluationFormValues {
         { result: t.result || '', notes: t.notes || '' }
       ])
     ),
+    suggested_tests: [],
     palpation: zone.palpation || ''
   }));
 
@@ -211,6 +223,7 @@ function evaluationToFormValues(ev: Evaluation): EvaluationFormValues {
     posture: g.posture || '',
     gait: g.gait || '',
     zones,
+    pain_points: s.pain_map?.points || [],
     functional_scale_name: fs.name || '',
     functional_scale_score: fs.score || '',
     functional_scale_notes: fs.notes || '',
@@ -246,6 +259,7 @@ const newZone = (): ZoneFormData => ({
   movement_ranges: [{ ...emptyRomRow }],
   muscle_strength: [{ ...emptyStrengthRow }],
   special_results: {},
+  suggested_tests: [],
   palpation: ''
 });
 
@@ -285,6 +299,7 @@ const emptyEvaluation: EvaluationFormValues = {
   posture: '',
   gait: '',
   zones: [],
+  pain_points: [],
   functional_scale_name: '',
   functional_scale_score: '',
   functional_scale_notes: '',
@@ -441,7 +456,7 @@ export function EvaluationForm({
   const applyTemplate = (templateId: string) => {
     const tpl = EVALUATION_TEMPLATES.find((t) => t.id === templateId);
     if (!tpl) return;
-    const zone = { ...newZone(), zone_id: tpl.zoneId };
+    const zone = { ...newZone(), zone_id: tpl.zoneId, suggested_tests: tpl.keyTests || [] };
     setValues((current) => ({
       ...current,
       zones: [...current.zones, zone],
@@ -560,6 +575,7 @@ export function EvaluationForm({
           other: toNullable(values.yellow_flags_other)
         },
         zones,
+        pain_map: { points: values.pain_points },
         functional_scales: {
           name: toNullable(values.functional_scale_name),
           score: toNullable(values.functional_scale_score),
@@ -995,6 +1011,14 @@ export function EvaluationForm({
       {/* 5. Valoración por zonas */}
       <details className="form-section span-2">
         <summary>5. Valoración por zonas específicas</summary>
+        <p className="zone-subtitle">Mapa corporal de dolor</p>
+        <BodyPainMap
+          value={values.pain_points}
+          onChange={(points) => setField('pain_points', points)}
+        />
+        <p className="zone-subtitle" style={{ marginTop: 18 }}>
+          Zonas a evaluar
+        </p>
         {values.zones.length === 0 && (
           <p className="muted" style={{ margin: '4px 0 12px' }}>
             Agrega una o más zonas a evaluar. Cada zona despliega su dolor, rangos, fuerza y batería
@@ -1487,16 +1511,28 @@ function ZoneEditor({ zone, index, onChange, onRemove }: ZoneEditorProps) {
 
           {/* D. Pruebas especiales (catálogo de la zona) */}
           <p className="zone-subtitle">D. Pruebas especiales / ortopédicas</p>
+          {zone.suggested_tests.length > 0 && (
+            <p className="suggested-banner">
+              ⭐ Pruebas sugeridas para este motivo: {zone.suggested_tests.join(' · ')}
+            </p>
+          )}
           {groupedTests.map((g) => (
             <div className="test-group" key={g.group}>
               <p className="test-group-title">{g.group}</p>
               {g.tests.map((t) => {
                 const r = zone.special_results[t.name] ?? { result: '', notes: '' };
                 const options = t.options ?? [...DEFAULT_TEST_OPTIONS];
+                const isSuggested = zone.suggested_tests.includes(t.name);
                 return (
-                  <div className="test-row" key={t.name}>
+                  <div
+                    className={`test-row${isSuggested ? ' test-row--suggested' : ''}`}
+                    key={t.name}
+                  >
                     <div className="test-info">
-                      <span className="test-name">{t.name}</span>
+                      <span className="test-name">
+                        {isSuggested && <span className="test-star">⭐</span>}
+                        {t.name}
+                      </span>
                       {t.note && <span className="test-note">{t.note}</span>}
                     </div>
                     <div className="test-inputs">

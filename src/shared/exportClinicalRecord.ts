@@ -19,6 +19,26 @@ const fmtDateMX = (iso: string | null | undefined): string => {
 const row = (label: string, value: unknown) =>
   value ? `<p><strong>${label}:</strong> ${v(value)}</p>` : '';
 
+// Silueta SVG con los puntos de dolor de una vista (frontal/posterior).
+const bodySvg = (
+  points: { view: 'front' | 'back'; x: number; y: number }[],
+  view: 'front' | 'back'
+): string => {
+  const body =
+    '<circle cx="50" cy="14" r="10"/><rect x="46" y="23" width="8" height="6" rx="2"/>' +
+    '<rect x="33" y="28" width="34" height="58" rx="12"/><rect x="20" y="30" width="11" height="48" rx="5"/>' +
+    '<rect x="69" y="30" width="11" height="48" rx="5"/><rect x="36" y="82" width="12" height="84" rx="5"/>' +
+    '<rect x="52" y="82" width="12" height="84" rx="5"/>';
+  const dots = points
+    .filter((p) => p.view === view)
+    .map(
+      (p) =>
+        `<circle cx="${p.x}" cy="${p.y}" r="3.2" fill="rgba(220,38,38,.75)" stroke="#991b1b" stroke-width="0.8"/>`
+    )
+    .join('');
+  return `<svg viewBox="0 0 100 200" width="110" height="220"><g fill="#cbd5e1" stroke="#94a3b8" stroke-width="0.8">${body}</g>${dots}</svg>`;
+};
+
 function buildZoneHtml(zone: EvaluationZone): string {
   const pain = zone.pain;
   const roms = (zone.movement_ranges || []).filter((r) => r.movement || r.range);
@@ -64,6 +84,7 @@ function buildEvaluationHtml(evaluation: Evaluation, patientName: string): strin
   const fs = s.functional_scales || {};
   const cl = s.conclusion || {};
   const zones = s.zones || [];
+  const painPoints = s.pain_map?.points || [];
 
   const redList = [...(rf.items ?? []), rf.other].filter(Boolean).join('; ');
   const yfList = [...(yf.items ?? []), yf.other].filter(Boolean).join('; ');
@@ -150,22 +171,32 @@ function buildEvaluationHtml(evaluation: Evaluation, patientName: string): strin
   }
 
   ${
+    painPoints.length
+      ? `<h2>4. Mapa corporal de dolor</h2>
+    <div style="display:flex;gap:24px">
+      <div style="text-align:center"><div style="font-size:11px;color:#52606d">Frontal</div>${bodySvg(painPoints, 'front')}</div>
+      <div style="text-align:center"><div style="font-size:11px;color:#52606d">Posterior</div>${bodySvg(painPoints, 'back')}</div>
+    </div>`
+      : ''
+  }
+
+  ${
     zones.length
-      ? `<h2>4. Valoración por zonas</h2>
+      ? `<h2>5. Valoración por zonas</h2>
     ${zones.map(buildZoneHtml).join('')}`
       : ''
   }
 
   ${
     fs.name || fs.score
-      ? `<h2>5. Cuestionario funcional (PROMs)</h2>
+      ? `<h2>6. Cuestionario funcional (PROMs)</h2>
     <p>${v(fs.name)}${fs.score ? ` · ${fs.score}` : ''}${fs.notes ? ` — ${fs.notes}` : ''}</p>`
       : ''
   }
 
   ${
     cl.diagnosis || cl.objectives_short || cl.treatment_plan
-      ? `<h2>6. Conclusión y diagnóstico</h2>
+      ? `<h2>7. Conclusión y diagnóstico</h2>
     ${row('Dx fisioterapéutico', cl.diagnosis)}
     ${row('Objetivos corto plazo', cl.objectives_short)}
     ${row('Objetivos mediano plazo', cl.objectives_mid)}
