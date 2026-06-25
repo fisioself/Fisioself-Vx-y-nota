@@ -22,7 +22,8 @@ import {
   SYMPTOM_CLASSIFICATION,
   INJURY_MECHANISM,
   PAIN_TYPE_OPTIONS,
-  PAIN_MECHANISM_OPTIONS
+  PAIN_MECHANISM_OPTIONS,
+  EVALUATION_TEMPLATES
 } from './evaluationCatalog';
 import type { Patient, Evaluation, EvaluationSections, EvaluationZone } from '../../types/clinical';
 import './EvaluationForm.css';
@@ -435,6 +436,23 @@ export function EvaluationForm({
       values.zones.filter((_, i) => i !== index)
     );
 
+  // Plantilla por motivo: agrega la zona (con su batería de pruebas) y rellena
+  // los campos típicos del cuadro que estén vacíos, sin pisar lo ya capturado.
+  const applyTemplate = (templateId: string) => {
+    const tpl = EVALUATION_TEMPLATES.find((t) => t.id === templateId);
+    if (!tpl) return;
+    const zone = { ...newZone(), zone_id: tpl.zoneId };
+    setValues((current) => ({
+      ...current,
+      zones: [...current.zones, zone],
+      symptom_classification: current.symptom_classification || tpl.symptom_classification || '',
+      injury_mechanism: current.injury_mechanism || tpl.injury_mechanism || '',
+      pain_mechanism: current.pain_mechanism || tpl.pain_mechanism || ''
+    }));
+    clearError();
+    notify({ tone: 'success', message: `Plantilla "${tpl.label}" aplicada.` });
+  };
+
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!resolvedPatientId) {
@@ -613,6 +631,28 @@ export function EvaluationForm({
           </button>
         )}
       </div>
+
+      {/* Plantilla rápida por motivo: arranca la valoración en segundos. */}
+      {!editingEvaluation && (
+        <div className="template-bar span-2">
+          <label>
+            ⚡ Plantilla rápida por motivo
+            <select
+              value=""
+              onChange={(e) => {
+                if (e.target.value) applyTemplate(e.target.value);
+              }}
+            >
+              <option value="">— Elige un motivo para pre-cargar zona y pruebas —</option>
+              {EVALUATION_TEMPLATES.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      )}
 
       {/* 1. Datos generales */}
       <details className="form-section span-2" open>

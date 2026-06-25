@@ -297,3 +297,15 @@ details.form-section[open] > summary {
     gap: 4px;
   }
 }
+
+/* Barra de plantilla rápida por motivo (inicio acelerado de la valoración). */
+.template-bar {
+  background: var(--surface-2, #f0f4f8);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 14px;
+}
+.template-bar label {
+  font-weight: 700;
+  color: var(--primary);
+}

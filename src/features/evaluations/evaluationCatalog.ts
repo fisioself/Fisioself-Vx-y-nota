@@ -959,6 +959,76 @@ export const ROM_NORMS: Record<string, string> = {
 export const getRomNorm = (zoneId: string, movement: string): string | undefined =>
   ROM_NORMS[`${zoneId}:${movement}`];
 
+// Plantillas por motivo de consulta: aceleran la valoración pre-cargando la zona
+// (con toda su batería de pruebas) y rellenando los campos típicos del cuadro.
+export interface EvaluationTemplate {
+  id: string;
+  label: string;
+  zoneId: string;
+  symptom_classification?: string;
+  injury_mechanism?: string;
+  pain_mechanism?: string;
+}
+
+export const EVALUATION_TEMPLATES: EvaluationTemplate[] = [
+  {
+    id: 'esguince_tobillo',
+    label: 'Esguince de tobillo',
+    zoneId: 'tobillo_pie',
+    symptom_classification: 'Agudo',
+    injury_mechanism: 'Traumático',
+    pain_mechanism: 'Nociceptivo'
+  },
+  {
+    id: 'lumbalgia',
+    label: 'Lumbalgia mecánica',
+    zoneId: 'columna_lumbar',
+    symptom_classification: 'Subagudo',
+    injury_mechanism: 'Postural / sobrecarga',
+    pain_mechanism: 'Nociceptivo'
+  },
+  {
+    id: 'cervicalgia',
+    label: 'Cervicalgia / cuello',
+    zoneId: 'columna_cervical',
+    injury_mechanism: 'Postural / sobrecarga',
+    pain_mechanism: 'Nociceptivo'
+  },
+  {
+    id: 'hombro_doloroso',
+    label: 'Hombro doloroso / manguito',
+    zoneId: 'hombro',
+    injury_mechanism: 'Movimiento repetitivo',
+    pain_mechanism: 'Nociceptivo'
+  },
+  {
+    id: 'gonalgia',
+    label: 'Gonalgia / rodilla',
+    zoneId: 'rodilla',
+    pain_mechanism: 'Nociceptivo'
+  },
+  {
+    id: 'cadera_sacroiliaca',
+    label: 'Cadera / sacroilíaca',
+    zoneId: 'cadera_pelvis',
+    pain_mechanism: 'Nociceptivo'
+  },
+  {
+    id: 'epicondalgia',
+    label: 'Epicondalgia (codo)',
+    zoneId: 'codo_antebrazo',
+    injury_mechanism: 'Movimiento repetitivo',
+    pain_mechanism: 'Nociceptivo'
+  },
+  {
+    id: 'tunel_carpiano',
+    label: 'Túnel carpiano / muñeca',
+    zoneId: 'mano_muneca',
+    injury_mechanism: 'Movimiento repetitivo',
+    pain_mechanism: 'Neuropático'
+  }
+];
+
 // Banderas rojas más relevantes en fisioterapia (checklist). "Otras" va aparte.
 export const RED_FLAG_OPTIONS = [
   'Fiebre / escalofríos',

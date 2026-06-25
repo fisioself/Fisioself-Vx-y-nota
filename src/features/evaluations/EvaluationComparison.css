@@ -1,0 +1,31 @@
+.eval-comparison-body {
+  margin-top: 12px;
+}
+.cmp-row {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr 1fr;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.88rem;
+  align-items: baseline;
+}
+.cmp-head {
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  font-size: 0.74rem;
+  letter-spacing: 0.03em;
+}
+.cmp-row em {
+  font-style: normal;
+  font-weight: 700;
+  margin-left: 4px;
+  color: var(--primary);
+}
+.cmp-section-title {
+  font-weight: 800;
+  color: var(--primary);
+  font-size: 0.85rem;
+  margin: 12px 0 4px;
+}

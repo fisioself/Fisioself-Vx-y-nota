@@ -13,6 +13,7 @@ import { ConfirmDeleteModal } from './ConfirmDeleteModal';
 import { ClinicalSummary } from './ClinicalSummary';
 import { useRole } from '../../shared/useRole';
 import { EvaluationSummary } from '../evaluations/EvaluationSummary';
+import { EvaluationComparison } from '../evaluations/EvaluationComparison';
 import { SkeletonList } from '../../components/Skeleton';
 
 const buildPatientWhatsAppUrl = (patient: Patient | Partial<Patient>): string => {
@@ -379,6 +380,8 @@ export const PatientRecord = memo(function PatientRecord({
               }}
             />
           )}
+
+          {evaluations.length >= 2 && <EvaluationComparison evaluations={evaluations} />}
 
           <section className="card">
             <div className="form-header">

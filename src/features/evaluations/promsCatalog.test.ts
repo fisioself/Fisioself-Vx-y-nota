@@ -2,10 +2,48 @@ import { describe, expect, it } from 'vitest';
 import { getPromScale, PROM_SCALES } from './promsCatalog';
 
 describe('promsCatalog', () => {
-  it('expone las 4 escalas con id único', () => {
+  it('expone las 9 escalas con id único', () => {
     const ids = PROM_SCALES.map((s) => s.id);
     expect(new Set(ids).size).toBe(ids.length);
-    expect(ids).toEqual(expect.arrayContaining(['sppb', 'odi', 'quickdash', 'womac']));
+    expect(ids).toEqual(
+      expect.arrayContaining([
+        'sppb',
+        'odi',
+        'ndi',
+        'quickdash',
+        'womac',
+        'koos12',
+        'lefs',
+        'spadi',
+        'tsk11'
+      ])
+    );
+  });
+
+  it('LEFS suma 0–80 (mayor = mejor) y exige 20 ítems', () => {
+    const lefs = getPromScale('lefs')!;
+    expect(lefs.score(Array(19).fill(4).concat([null]))).toBeNull();
+    expect(lefs.score(Array(20).fill(4))?.display).toBe('80/80 · 100%');
+    expect(lefs.score(Array(20).fill(0))?.interpretation).toContain('severa');
+  });
+
+  it('KOOS-12 transforma 100 - media*25 (mayor = mejor)', () => {
+    const koos = getPromScale('koos12')!;
+    expect(koos.score(Array(12).fill(0))?.display).toBe('100/100');
+    expect(koos.score(Array(12).fill(4))?.display).toBe('0/100');
+  });
+
+  it('TSK-11 suma 11–44 e interpreta kinesiofobia alta', () => {
+    const tsk = getPromScale('tsk11')!;
+    expect(tsk.score(Array(11).fill(4))?.display).toBe('44/44');
+    expect(tsk.score(Array(11).fill(4))?.interpretation).toContain('alta');
+    expect(tsk.score(Array(11).fill(2))?.display).toBe('22/44');
+  });
+
+  it('SPADI promedia dolor y discapacidad en %', () => {
+    const spadi = getPromScale('spadi')!;
+    expect(spadi.score(Array(13).fill(10))?.display).toContain('100%');
+    expect(spadi.score(Array(13).fill(0))?.display).toContain('0%');
   });
 
   it('SPPB suma los 3 componentes (0–12) e interpreta el riesgo', () => {
