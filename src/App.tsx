@@ -296,10 +296,66 @@ export function App() {
       )}
 
       <header className="app-topbar">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div className="topbar-brand">
           <AppLogo size={44} />
           <h1 style={{ margin: 0 }}>Fisioself</h1>
         </div>
+
+        <nav className="main-tabs">
+          <button
+            type="button"
+            className={
+              showDashboard ||
+              showNewPatient ||
+              (!showFinance && !showSeguimientos && selectedPatient)
+                ? ''
+                : 'secondary'
+            }
+            onClick={() => {
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+              setShowDashboard(true);
+              setShowFinance(false);
+              setShowSeguimientos(false);
+              setFromSeguimientos(false);
+              setSelectedPatient(null);
+              setShowNewPatient(false);
+            }}
+          >
+            Panel
+          </button>
+          <button
+            type="button"
+            className={showFinance ? '' : 'secondary'}
+            onClick={() => {
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+              setShowFinance(true);
+              setShowDashboard(false);
+              setShowSeguimientos(false);
+              setSelectedPatient(null);
+              setShowNewPatient(false);
+            }}
+          >
+            Finanzas
+          </button>
+          <button
+            type="button"
+            className={showSeguimientos ? '' : 'secondary'}
+            onClick={() => {
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+              setShowSeguimientos(true);
+              setShowFinance(false);
+              setShowDashboard(false);
+              setSelectedPatient(null);
+              setShowNewPatient(false);
+            }}
+          >
+            <span className="tab-cal-icon" aria-hidden="true">
+              {new Date().getDate()}
+            </span>
+            Seguimientos
+          </button>
+        </nav>
+
         <div className="hero-actions">
           {session.user?.id && <PushNotificationButton userId={session.user.id} />}
           <button
@@ -373,61 +429,6 @@ export function App() {
           </div>
         </div>
       )}
-
-      <nav className="main-tabs">
-        <button
-          type="button"
-          className={
-            showDashboard ||
-            showNewPatient ||
-            (!showFinance && !showSeguimientos && selectedPatient)
-              ? ''
-              : 'secondary'
-          }
-          onClick={() => {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-            setShowDashboard(true);
-            setShowFinance(false);
-            setShowSeguimientos(false);
-            setFromSeguimientos(false);
-            setSelectedPatient(null);
-            setShowNewPatient(false);
-          }}
-        >
-          Panel
-        </button>
-        <button
-          type="button"
-          className={showFinance ? '' : 'secondary'}
-          onClick={() => {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-            setShowFinance(true);
-            setShowDashboard(false);
-            setShowSeguimientos(false);
-            setSelectedPatient(null);
-            setShowNewPatient(false);
-          }}
-        >
-          Finanzas
-        </button>
-        <button
-          type="button"
-          className={showSeguimientos ? '' : 'secondary'}
-          onClick={() => {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-            setShowSeguimientos(true);
-            setShowFinance(false);
-            setShowDashboard(false);
-            setSelectedPatient(null);
-            setShowNewPatient(false);
-          }}
-        >
-          <span className="tab-cal-icon" aria-hidden="true">
-            {new Date().getDate()}
-          </span>
-          Seguimientos
-        </button>
-      </nav>
 
       {showPatientList && (
         <aside className="left-pane">

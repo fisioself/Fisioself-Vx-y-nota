@@ -267,15 +267,23 @@ details:focus-visible summary {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 20px;
-  padding: 10px 20px;
+  gap: 16px;
+  padding: 8px 16px 8px 20px;
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 20px;
-  min-height: 60px;
+  min-height: 64px;
+  margin-bottom: var(--s-5);
 }
 .app-topbar > div {
   min-width: 0;
+}
+/* Marca (logo + nombre) a la izquierda de la barra superior. */
+.topbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
 }
 .app-topbar h1 {
   font-size: 1.1rem;
@@ -317,27 +325,33 @@ details:focus-visible summary {
 }
 .stat-card {
   display: grid;
-  gap: var(--s-1);
-  padding: var(--s-4);
+  gap: var(--s-2);
+  padding: var(--s-5);
   border-radius: var(--radius-inner);
   background: var(--bg-card);
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  border: none;
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.04),
+    0 12px 32px rgba(0, 0, 0, 0.06);
 }
 .stat-card--sunken {
   background: var(--bg-sunken);
+  box-shadow: none;
 }
+/* Tipografía premium para las métricas: etiqueta pequeña y aireada en gris
+   suave; número refinado (no en negrita tosca). */
 .stat-label {
-  color: var(--muted);
-  font-size: 0.78rem;
-  font-weight: 800;
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.08em;
 }
 .stat-value {
-  font-size: 1.75rem;
-  font-weight: 800;
+  font-size: 1.5rem;
+  font-weight: 600;
   line-height: 1.1;
+  letter-spacing: -0.01em;
   font-feature-settings: 'tnum';
 }
 @media (max-width: 900px) {
@@ -406,29 +420,26 @@ body {
 .app-grid > * {
   min-width: 0;
 }
-/* Barra de pestañas principal (Panel / Finanzas / Seguimientos) a todo lo ancho.
-   En escritorio: pill container con selector activo sunken.
-   En móvil (≤700px): se sobreescribe a barra fija en la parte inferior. */
+/* Pestañas principales (Panel / Finanzas / Seguimientos). En escritorio viven
+   DENTRO de la barra superior: grupo inline transparente, sin contenedor propio.
+   En móvil (≤900px) se sobreescriben a barra fija en la parte inferior. */
 .main-tabs {
-  grid-column: 1 / -1;
   display: flex;
-  gap: 2px;
-  padding: 4px;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 18px;
+  gap: 4px;
+  align-items: center;
 }
 .main-tabs button,
 .main-tabs button.secondary {
-  flex: 1;
-  min-height: 42px;
+  min-height: 38px;
+  padding: 8px 16px;
   background: transparent;
   color: var(--text-secondary);
   font-weight: 600;
   font-size: 0.9rem;
-  border-radius: 14px;
+  border-radius: 12px;
   border: none;
   box-shadow: none;
+  white-space: nowrap;
   transition:
     background 0.15s,
     color 0.15s;
@@ -437,17 +448,10 @@ body {
   background: var(--bg-sunken);
   color: var(--text-main);
   font-weight: 700;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
 }
 .main-tabs button.secondary:hover {
   background: var(--bg-sunken);
   color: var(--text-main);
-}
-/* Respiro vertical entre la navegación y el contenido principal: la cuadrícula
-   de tarjetas no debe sentirse pegada a la barra de pestañas. (En móvil la barra
-   es fija al pie, así que este margen solo aplica en escritorio.) */
-.main-tabs {
-  margin-bottom: var(--s-5);
 }
 /* En modo Finanzas la barra lateral se oculta y el panel derecho ocupa todo. */
 .app-grid.finance-mode {
@@ -884,6 +888,12 @@ button:not(:disabled):active {
   .app-grid {
     grid-template-columns: 1fr;
   }
+  /* La barra de pestañas es fija al pie a partir de aquí: reservamos espacio
+     para que el contenido no quede oculto detrás de ella. (≤700px lo amplía
+     más para la barra flotante de acciones del expediente.) */
+  .shell {
+    padding-bottom: max(calc(var(--bottom-nav-h) + env(safe-area-inset-bottom) + 24px), 96px);
+  }
   /* En móvil el contenido principal (Panel/Finanzas/expediente) va primero y la
      lista de pacientes se manda al final, para no tener que pasar por toda la
      lista al entrar a Finanzas. */
@@ -902,20 +912,10 @@ button:not(:disabled):active {
   .clinical-table-row {
     grid-template-columns: 1fr;
   }
-}
 
-@media (max-width: 700px) {
-  /* Shell: bottom padding = nav bar + safe area + barra flotante (1 fila). */
-  .shell {
-    width: min(100% - 20px, 1280px);
-    padding-bottom: max(calc(var(--bottom-nav-h) + env(safe-area-inset-bottom) + 96px), 168px);
-  }
-  .card {
-    border-radius: 16px;
-    padding: 16px;
-  }
-
-  /* ── Barra de navegación principal → fixed bottom tab bar ──────────────── */
+  /* ── Barra de navegación principal → fixed bottom tab bar ──────────────────
+     A ≤900px (donde el grid colapsa a una columna y la barra superior queda
+     justa) las pestañas salen de la topbar y se fijan al pie, patrón móvil. */
   .main-tabs {
     position: fixed;
     bottom: 0;
@@ -932,7 +932,9 @@ button:not(:disabled):active {
     border-radius: 0;
     box-shadow: 0 -2px 20px rgba(0, 0, 0, 0.07);
   }
-  .main-tabs button {
+  .main-tabs button,
+  .main-tabs button.secondary {
+    flex: 1;
     border-radius: 0;
     min-height: var(--bottom-nav-h);
     padding: 6px 4px;
@@ -1005,6 +1007,18 @@ button:not(:disabled):active {
     height: 3px;
     background: var(--primary);
     border-radius: 0 0 4px 4px;
+  }
+}
+
+@media (max-width: 700px) {
+  /* Shell: bottom padding = nav bar + safe area + barra flotante (1 fila). */
+  .shell {
+    width: min(100% - 20px, 1280px);
+    padding-bottom: max(calc(var(--bottom-nav-h) + env(safe-area-inset-bottom) + 96px), 168px);
+  }
+  .card {
+    border-radius: 16px;
+    padding: 16px;
   }
 
   /* ── Acciones primarias del expediente → barra flotante compacta ───────── */
