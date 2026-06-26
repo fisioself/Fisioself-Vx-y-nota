@@ -48,11 +48,11 @@ export function ClinicDashboard({ onPatientSelect }: ClinicDashboardProps) {
   return (
     <div className="record-stack">
       {/* Franja de título compacta */}
-      <header className="hero dashboard-hero">
-        <p className="eyebrow" style={{ color: 'rgba(255,255,255,0.7)' }}>
-          Agenda y Control
-        </p>
-        <h1 style={{ color: 'white', margin: 0 }}>Visión General</h1>
+      <header className="hero section-hero">
+        <div>
+          <p className="eyebrow">Agenda y Control</p>
+          <h1>Visión General</h1>
+        </div>
       </header>
 
       {/* Estadísticas clave — primera vista tras el título */}

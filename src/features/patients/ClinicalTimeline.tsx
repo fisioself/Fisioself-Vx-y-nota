@@ -67,19 +67,19 @@ export function ClinicalTimeline({ items = [] }: ClinicalTimelineProps) {
           <article key={group.dateKey} className="timeline-item">
             <div className="timeline-dot" aria-hidden="true" />
             <div style={{ flex: 1 }}>
-              <p className="muted" style={{ marginBottom: '0.35rem', fontSize: '0.82rem' }}>
+              <p className="muted" style={{ marginBottom: 6, fontSize: '0.82rem' }}>
                 {group.displayDate ? fmtDate(group.displayDate) : 'Sin fecha'}
               </p>
               {group.entries.map((item) => {
                 const entryId = `${item.type}-${item.id}`;
                 const isOpen = openIds.has(entryId);
                 return (
-                  <div key={entryId} style={{ marginBottom: '0.4rem' }}>
+                  <div key={entryId} style={{ marginBottom: 8 }}>
                     <div
                       style={{
                         display: 'flex',
                         alignItems: 'center',
-                        gap: 6,
+                        gap: 8,
                         flexWrap: 'wrap'
                       }}
                     >
@@ -88,8 +88,7 @@ export function ClinicalTimeline({ items = [] }: ClinicalTimelineProps) {
                       {item.description && (
                         <button
                           type="button"
-                          className="secondary"
-                          style={{ minHeight: 22, padding: '1px 7px', fontSize: '0.72rem' }}
+                          className="secondary btn-sm"
                           onClick={() => toggleDesc(entryId)}
                         >
                           {isOpen ? 'Ocultar' : 'Ver más'}
@@ -97,7 +96,7 @@ export function ClinicalTimeline({ items = [] }: ClinicalTimelineProps) {
                       )}
                     </div>
                     {isOpen && (
-                      <p style={{ marginTop: '0.2rem', fontSize: '0.85rem' }}>{item.description}</p>
+                      <p style={{ marginTop: 4, fontSize: '0.85rem' }}>{item.description}</p>
                     )}
                   </div>
                 );
@@ -131,14 +130,14 @@ export function ClinicalTimeline({ items = [] }: ClinicalTimelineProps) {
       </div>
 
       {!expanded && hasMore && (
-        <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
+        <div style={{ textAlign: 'center', marginTop: 16 }}>
           <button type="button" className="secondary" onClick={() => setExpanded(true)}>
             Ver historial completo ({items.length} eventos)
           </button>
         </div>
       )}
       {expanded && hasMore && (
-        <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
+        <div style={{ textAlign: 'center', marginTop: 16 }}>
           <button type="button" className="secondary" onClick={() => setExpanded(false)}>
             Ocultar historial
           </button>

@@ -91,7 +91,7 @@ export function EvaluationSummary({ evaluation }: EvaluationSummaryProps) {
       )}
 
       {yellowFlagList.length > 0 && (
-        <p style={{ margin: '4px 0', color: '#b45309' }}>
+        <p style={{ margin: '4px 0', color: 'var(--warning-text)' }}>
           <strong>Banderas amarillas:</strong> {yellowFlagList.join('; ')}
         </p>
       )}
