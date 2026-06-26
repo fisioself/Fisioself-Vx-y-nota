@@ -24,7 +24,8 @@ import {
   SYMPTOM_CLASSIFICATION,
   INJURY_MECHANISM,
   PAIN_TYPE_OPTIONS,
-  PAIN_MECHANISM_OPTIONS
+  PAIN_MECHANISM_OPTIONS,
+  PAIN_MECHANISM_DESCRIPTIONS
 } from './evaluationCatalog';
 import type {
   Patient,
@@ -121,9 +122,7 @@ interface EvaluationFormValues {
   functional_scale_notes: string;
   // Conclusión
   prognosis: string;
-  objectives_short: string;
-  objectives_mid: string;
-  objectives_long: string;
+  objectives: string;
   treatment_plan: string;
 }
 
@@ -225,9 +224,17 @@ function evaluationToFormValues(ev: Evaluation): EvaluationFormValues {
     functional_scale_score: fs.score || '',
     functional_scale_notes: fs.notes || '',
     prognosis: cl.diagnosis || ev.prognosis || '',
-    objectives_short: cl.objectives_short || '',
-    objectives_mid: cl.objectives_mid || '',
-    objectives_long: cl.objectives_long || '',
+    // Objetivos unificados: si la valoración trae el campo nuevo lo usamos; si
+    // es antigua, fusionamos corto/mediano/largo en un solo texto etiquetado.
+    objectives:
+      cl.objectives ||
+      [
+        cl.objectives_short ? `Corto plazo: ${cl.objectives_short}` : '',
+        cl.objectives_mid ? `Mediano plazo: ${cl.objectives_mid}` : '',
+        cl.objectives_long ? `Largo plazo: ${cl.objectives_long}` : ''
+      ]
+        .filter(Boolean)
+        .join('\n'),
     treatment_plan: cl.treatment_plan || ''
   };
 }
@@ -300,9 +307,7 @@ const emptyEvaluation: EvaluationFormValues = {
   functional_scale_score: '',
   functional_scale_notes: '',
   prognosis: '',
-  objectives_short: '',
-  objectives_mid: '',
-  objectives_long: '',
+  objectives: '',
   treatment_plan: ''
 };
 
@@ -379,6 +384,9 @@ export function EvaluationForm({
   // Plan de intervención con evidencia científica.
   const [aiPlanGenerating, setAiPlanGenerating] = useState(false);
   const [aiPlanError, setAiPlanError] = useState('');
+  // Objetivos del tratamiento generados con IA.
+  const [aiObjGenerating, setAiObjGenerating] = useState(false);
+  const [aiObjError, setAiObjError] = useState('');
   const { notify } = useToast();
 
   useDraftAutosave(draftKey, values);
@@ -554,6 +562,32 @@ export function EvaluationForm({
     }
   };
 
+  const generateObjectives = async () => {
+    const findings = buildFindingsText();
+    const diagnosisCtx = values.prognosis.trim()
+      ? `\nDx fisioterapéutico: ${values.prognosis}`
+      : '';
+    if (!findings.trim()) {
+      setAiObjError(
+        'Marca algunos hallazgos (zona, pruebas, ROM…) antes de generar los objetivos.'
+      );
+      return;
+    }
+    setAiObjGenerating(true);
+    setAiObjError('');
+    try {
+      await aiService.transform({
+        text: findings + diagnosisCtx,
+        type: 'treatment_objectives',
+        onChunk: (acc) => setField('objectives', acc)
+      });
+    } catch (err) {
+      setAiObjError(getErrorMessage(err, 'No se pudo generar los objetivos con IA.'));
+    } finally {
+      setAiObjGenerating(false);
+    }
+  };
+
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!resolvedPatientId) {
@@ -669,9 +703,11 @@ export function EvaluationForm({
         },
         conclusion: {
           diagnosis: toNullable(values.prognosis),
-          objectives_short: toNullable(values.objectives_short),
-          objectives_mid: toNullable(values.objectives_mid),
-          objectives_long: toNullable(values.objectives_long),
+          // Objetivos unificados; los campos antiguos quedan en null al guardar.
+          objectives: toNullable(values.objectives),
+          objectives_short: null,
+          objectives_mid: null,
+          objectives_long: null,
           treatment_plan: toNullable(values.treatment_plan)
         }
       };
@@ -947,6 +983,11 @@ export function EvaluationForm({
                 </option>
               ))}
             </select>
+            {values.pain_mechanism && PAIN_MECHANISM_DESCRIPTIONS[values.pain_mechanism] && (
+              <small className="field-hint">
+                {PAIN_MECHANISM_DESCRIPTIONS[values.pain_mechanism]}
+              </small>
+            )}
           </label>
           <label className="span-2">
             Historia clínica / Evolución del padecimiento
@@ -1014,6 +1055,7 @@ export function EvaluationForm({
               value={values.blood_pressure}
               onChange={(e) => setField('blood_pressure', e.target.value)}
             />
+            <small className="field-hint">Ref. ~120/80 mmHg</small>
           </label>
           <label>
             Frecuencia cardíaca
@@ -1023,6 +1065,7 @@ export function EvaluationForm({
               value={values.heart_rate}
               onChange={(e) => setField('heart_rate', e.target.value)}
             />
+            <small className="field-hint">Ref. 60–100 lpm</small>
           </label>
           <label>
             Frecuencia respiratoria
@@ -1032,6 +1075,7 @@ export function EvaluationForm({
               value={values.respiratory_rate}
               onChange={(e) => setField('respiratory_rate', e.target.value)}
             />
+            <small className="field-hint">Ref. 12–20 rpm</small>
           </label>
           <label>
             Saturación O₂
@@ -1041,6 +1085,7 @@ export function EvaluationForm({
               value={values.oxygen_saturation}
               onChange={(e) => setField('oxygen_saturation', e.target.value)}
             />
+            <small className="field-hint">Ref. 95–100 %</small>
           </label>
           <label className="span-2">
             Inspección general
@@ -1192,6 +1237,11 @@ export function EvaluationForm({
       <details className="form-section span-2">
         <summary>7. Conclusión y diagnóstico</summary>
         <div className="form-grid">
+          {values.medical_diagnosis && (
+            <p className="dx-medical-ref span-2">
+              <strong>Diagnóstico médico:</strong> {values.medical_diagnosis}
+            </p>
+          )}
           <label className="span-2">
             <span className="dx-label-row">
               Diagnóstico fisioterapéutico
@@ -1217,29 +1267,31 @@ export function EvaluationForm({
               </small>
             )}
           </label>
-          <label>
-            Objetivos a corto plazo
+          <label className="span-2">
+            <span className="dx-label-row">
+              Objetivos del tratamiento
+              {isAiConfigured && (
+                <button
+                  type="button"
+                  className="secondary dx-ai-btn"
+                  onClick={generateObjectives}
+                  disabled={aiObjGenerating}
+                >
+                  {aiObjGenerating ? 'Generando…' : '✨ Generar con IA'}
+                </button>
+              )}
+            </span>
             <textarea
-              rows={2}
-              value={values.objectives_short}
-              onChange={(e) => setField('objectives_short', e.target.value)}
+              rows={4}
+              placeholder="Objetivos a corto, mediano y largo plazo (función, dolor, ROM, fuerza, reintegro a actividades)."
+              value={values.objectives}
+              onChange={(e) => setField('objectives', e.target.value)}
             />
-          </label>
-          <label>
-            Objetivos a mediano plazo
-            <textarea
-              rows={2}
-              value={values.objectives_mid}
-              onChange={(e) => setField('objectives_mid', e.target.value)}
-            />
-          </label>
-          <label>
-            Objetivos a largo plazo
-            <textarea
-              rows={2}
-              value={values.objectives_long}
-              onChange={(e) => setField('objectives_long', e.target.value)}
-            />
+            {aiObjError && (
+              <small className="field-error" role="alert">
+                {aiObjError}
+              </small>
+            )}
           </label>
           <label className="span-2">
             <span className="dx-label-row">

@@ -46,6 +46,8 @@ const displayToIso = (display: string): string => {
 
 // Campo de fecha que SIEMPRE muestra DD/MM/AAAA, sin depender del idioma del
 // navegador (a diferencia de <input type="date">). Internamente trabaja con ISO.
+const isIso = (v: string): boolean => /^\d{4}-\d{2}-\d{2}$/.test(v);
+
 export function DateField({
   value,
   onChange,
@@ -59,6 +61,9 @@ export function DateField({
   // Evita pisar lo que el usuario escribe: solo re-sincroniza desde la prop
   // cuando el ISO externo cambia respecto a lo que el campo ya representa.
   const lastIso = useRef(value);
+  // Input nativo type=date oculto: solo sirve para abrir el calendario visual
+  // del sistema (showPicker) sin renunciar al display fijo DD/MM/AAAA.
+  const nativeRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (value !== lastIso.current) {
@@ -81,19 +86,66 @@ export function DateField({
     }
   };
 
+  // Selección desde el calendario nativo (ya entrega ISO YYYY-MM-DD o '').
+  const handleNativePick = (iso: string) => {
+    lastIso.current = iso;
+    setText(isoToDisplay(iso));
+    onChange(iso);
+  };
+
+  const openCalendar = () => {
+    const el = nativeRef.current;
+    if (!el || disabled) return;
+    const withPicker = el as HTMLInputElement & { showPicker?: () => void };
+    if (typeof withPicker.showPicker === 'function') {
+      try {
+        withPicker.showPicker();
+        return;
+      } catch {
+        // Algunos navegadores lanzan si el input no es interactivo: usamos el
+        // fallback de foco/clic.
+      }
+    }
+    el.focus();
+    el.click();
+  };
+
   return (
-    <input
-      id={id}
-      type="text"
-      inputMode="numeric"
-      placeholder="DD/MM/AAAA"
-      maxLength={10}
-      value={text}
-      onChange={(e) => handleChange(e.target.value)}
-      required={required}
-      disabled={disabled}
-      aria-label={ariaLabel}
-      aria-invalid={ariaInvalid}
-    />
+    <span className="date-field">
+      <input
+        id={id}
+        className="date-field-text"
+        type="text"
+        inputMode="numeric"
+        placeholder="DD/MM/AAAA"
+        maxLength={10}
+        value={text}
+        onChange={(e) => handleChange(e.target.value)}
+        required={required}
+        disabled={disabled}
+        aria-label={ariaLabel}
+        aria-invalid={ariaInvalid}
+      />
+      <button
+        type="button"
+        className="date-field-cal"
+        onClick={openCalendar}
+        disabled={disabled}
+        tabIndex={-1}
+        aria-label="Abrir calendario"
+        title="Abrir calendario"
+      >
+        <span aria-hidden="true">📅</span>
+      </button>
+      <input
+        ref={nativeRef}
+        className="date-field-native"
+        type="date"
+        value={isIso(value) ? value : ''}
+        onChange={(e) => handleNativePick(e.target.value)}
+        tabIndex={-1}
+        aria-hidden="true"
+      />
+    </span>
   );
 }

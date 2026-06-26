@@ -310,3 +310,27 @@ details.form-section[open] > summary {
   padding: 2px 12px;
   font-size: 0.8rem;
 }
+
+/* Texto de apoyo bajo un campo: descripciones de mecanismo del dolor, rangos de
+   referencia de signos vitales, etc. */
+.field-hint {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+/* Diagnóstico médico mostrado como referencia dentro de la conclusión. */
+.dx-medical-ref {
+  margin: 0 0 4px;
+  padding: 10px 12px;
+  background: var(--bg-sunken);
+  border-radius: 12px;
+  font-size: 0.9rem;
+  color: var(--text-main);
+}
+.dx-medical-ref strong {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
