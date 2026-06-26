@@ -31,6 +31,42 @@ export function PatientTrash() {
     }
   };
 
+  // Borrado PERMANENTE de un paciente de la papelera (irreversible).
+  const purge = async (id: string, name: string) => {
+    if (
+      !window.confirm(
+        `Eliminar definitivamente a "${name}" y todo su expediente. Esta acción NO se puede deshacer. ¿Continuar?`
+      )
+    ) {
+      return;
+    }
+    try {
+      await clinicalApi.purgePatient(id);
+      queryClient.invalidateQueries({ queryKey: ['patients', 'deleted'] });
+      notify({ tone: 'success', message: `"${name}" eliminado definitivamente.` });
+    } catch {
+      notify({ tone: 'error', message: 'No se pudo eliminar el paciente.' });
+    }
+  };
+
+  // Vacía la papelera: borra de forma permanente todos los pacientes borrados.
+  const emptyTrash = async () => {
+    if (
+      !window.confirm(
+        `Vaciar la papelera elimina definitivamente ${deleted.length} expediente(s). Esta acción NO se puede deshacer. ¿Continuar?`
+      )
+    ) {
+      return;
+    }
+    try {
+      await Promise.all(deleted.map((p) => clinicalApi.purgePatient(p.id)));
+      queryClient.invalidateQueries({ queryKey: ['patients', 'deleted'] });
+      notify({ tone: 'success', message: 'Papelera vaciada.' });
+    } catch {
+      notify({ tone: 'error', message: 'No se pudieron eliminar todos los pacientes.' });
+    }
+  };
+
   // No-admins no ven la papelera en absoluto.
   if (!isAdmin) return null;
 
@@ -70,15 +106,37 @@ export function PatientTrash() {
                   Borrado: {patient.deleted_at ? patient.deleted_at.slice(0, 10) : '—'}
                 </span>
               </div>
-              <button
-                type="button"
-                onClick={() => restore(patient.id, patient.full_name ?? 'Paciente')}
-                title="Restaurar paciente"
-              >
-                Restaurar
-              </button>
+              <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                <button
+                  type="button"
+                  className="btn-sm"
+                  onClick={() => restore(patient.id, patient.full_name ?? 'Paciente')}
+                  title="Restaurar paciente"
+                >
+                  Restaurar
+                </button>
+                <button
+                  type="button"
+                  className="secondary btn-sm trash-purge-btn"
+                  onClick={() => purge(patient.id, patient.full_name ?? 'Paciente')}
+                  title="Eliminar definitivamente"
+                >
+                  Eliminar
+                </button>
+              </div>
             </div>
           ))}
+
+          {!isLoading && deleted.length > 0 && (
+            <button
+              type="button"
+              className="secondary btn-sm trash-purge-btn"
+              onClick={emptyTrash}
+              style={{ marginTop: 4 }}
+            >
+              Vaciar papelera ({deleted.length})
+            </button>
+          )}
         </div>
       )}
     </div>

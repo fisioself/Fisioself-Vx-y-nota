@@ -333,6 +333,8 @@ const importConnection = async (
     )
     .map((a: { id: string }) => a.id);
 
+  // El borrado de la cita dispara el trigger `appointments_cleanup_empty_patient`
+  // en la BD, que elimina el expediente si quedó completamente vacío (no-show).
   if (toDelete.length > 0) {
     await supabase.from('appointments').delete().in('id', toDelete);
   }
