@@ -121,7 +121,11 @@ interface EvaluationFormValues {
   functional_scale_score: string;
   functional_scale_notes: string;
   // Conclusión
+  // OJO: `prognosis` aquí guarda el DIAGNÓSTICO fisioterapéutico (nombre legado,
+  // mapeado a conclusion.diagnosis y a la columna prognosis). El pronóstico real
+  // (expectativa de recuperación) vive en `recovery_prognosis`.
   prognosis: string;
+  recovery_prognosis: string;
   objectives: string;
   treatment_plan: string;
 }
@@ -224,6 +228,7 @@ function evaluationToFormValues(ev: Evaluation): EvaluationFormValues {
     functional_scale_score: fs.score || '',
     functional_scale_notes: fs.notes || '',
     prognosis: cl.diagnosis || ev.prognosis || '',
+    recovery_prognosis: cl.prognosis || '',
     // Objetivos unificados: si la valoración trae el campo nuevo lo usamos; si
     // es antigua, fusionamos corto/mediano/largo en un solo texto etiquetado.
     objectives:
@@ -307,6 +312,7 @@ const emptyEvaluation: EvaluationFormValues = {
   functional_scale_score: '',
   functional_scale_notes: '',
   prognosis: '',
+  recovery_prognosis: '',
   objectives: '',
   treatment_plan: ''
 };
@@ -387,6 +393,12 @@ export function EvaluationForm({
   // Objetivos del tratamiento generados con IA.
   const [aiObjGenerating, setAiObjGenerating] = useState(false);
   const [aiObjError, setAiObjError] = useState('');
+  // Pronóstico fisioterapéutico generado con IA.
+  const [aiPrognosisGenerating, setAiPrognosisGenerating] = useState(false);
+  const [aiPrognosisError, setAiPrognosisError] = useState('');
+  // Impresión diagnóstica médica sugerida con IA.
+  const [aiMedDxGenerating, setAiMedDxGenerating] = useState(false);
+  const [aiMedDxError, setAiMedDxError] = useState('');
   const { notify } = useToast();
 
   useDraftAutosave(draftKey, values);
@@ -588,6 +600,55 @@ export function EvaluationForm({
     }
   };
 
+  const generatePrognosis = async () => {
+    const findings = buildFindingsText();
+    const diagnosisCtx = values.prognosis.trim()
+      ? `\nDx fisioterapéutico: ${values.prognosis}`
+      : '';
+    if (!findings.trim()) {
+      setAiPrognosisError(
+        'Marca algunos hallazgos (zona, pruebas, ROM…) antes de generar el pronóstico.'
+      );
+      return;
+    }
+    setAiPrognosisGenerating(true);
+    setAiPrognosisError('');
+    try {
+      await aiService.transform({
+        text: findings + diagnosisCtx,
+        type: 'prognosis',
+        onChunk: (acc) => setField('recovery_prognosis', acc)
+      });
+    } catch (err) {
+      setAiPrognosisError(getErrorMessage(err, 'No se pudo generar el pronóstico con IA.'));
+    } finally {
+      setAiPrognosisGenerating(false);
+    }
+  };
+
+  const generateMedicalDiagnosis = async () => {
+    const findings = buildFindingsText();
+    if (!findings.trim()) {
+      setAiMedDxError(
+        'Captura el motivo y algunos hallazgos antes de sugerir el diagnóstico médico.'
+      );
+      return;
+    }
+    setAiMedDxGenerating(true);
+    setAiMedDxError('');
+    try {
+      await aiService.transform({
+        text: findings,
+        type: 'medical_diagnosis_suggestion',
+        onChunk: (acc) => setField('medical_diagnosis', acc)
+      });
+    } catch (err) {
+      setAiMedDxError(getErrorMessage(err, 'No se pudo sugerir el diagnóstico médico con IA.'));
+    } finally {
+      setAiMedDxGenerating(false);
+    }
+  };
+
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!resolvedPatientId) {
@@ -703,6 +764,7 @@ export function EvaluationForm({
         },
         conclusion: {
           diagnosis: toNullable(values.prognosis),
+          prognosis: toNullable(values.recovery_prognosis),
           // Objetivos unificados; los campos antiguos quedan en null al guardar.
           objectives: toNullable(values.objectives),
           objectives_short: null,
@@ -929,11 +991,29 @@ export function EvaluationForm({
             />
           </label>
           <label>
-            Diagnóstico médico
-            <input
+            <span className="dx-label-row">
+              Diagnóstico médico
+              {isAiConfigured && (
+                <button
+                  type="button"
+                  className="secondary dx-ai-btn"
+                  onClick={generateMedicalDiagnosis}
+                  disabled={aiMedDxGenerating}
+                >
+                  {aiMedDxGenerating ? 'Generando…' : '✨ Sugerir con IA'}
+                </button>
+              )}
+            </span>
+            <textarea
+              rows={2}
               value={values.medical_diagnosis}
               onChange={(e) => setField('medical_diagnosis', e.target.value)}
             />
+            {aiMedDxError && (
+              <small className="field-error" role="alert">
+                {aiMedDxError}
+              </small>
+            )}
           </label>
           <label>
             Fecha de inicio de los síntomas
@@ -1290,6 +1370,32 @@ export function EvaluationForm({
             {aiObjError && (
               <small className="field-error" role="alert">
                 {aiObjError}
+              </small>
+            )}
+          </label>
+          <label className="span-2">
+            <span className="dx-label-row">
+              Pronóstico
+              {isAiConfigured && (
+                <button
+                  type="button"
+                  className="secondary dx-ai-btn"
+                  onClick={generatePrognosis}
+                  disabled={aiPrognosisGenerating}
+                >
+                  {aiPrognosisGenerating ? 'Generando…' : '✨ Generar con IA'}
+                </button>
+              )}
+            </span>
+            <textarea
+              rows={3}
+              placeholder="Expectativa y tiempo estimado de recuperación; factores favorables y desfavorables."
+              value={values.recovery_prognosis}
+              onChange={(e) => setField('recovery_prognosis', e.target.value)}
+            />
+            {aiPrognosisError && (
+              <small className="field-error" role="alert">
+                {aiPrognosisError}
               </small>
             )}
           </label>

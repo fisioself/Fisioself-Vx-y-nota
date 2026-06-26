@@ -196,6 +196,7 @@ function buildEvaluationHtml(evaluation: Evaluation, patientName: string): strin
 
   ${
     cl.diagnosis ||
+    cl.prognosis ||
     cl.objectives ||
     cl.objectives_short ||
     cl.objectives_mid ||
@@ -203,6 +204,7 @@ function buildEvaluationHtml(evaluation: Evaluation, patientName: string): strin
     cl.treatment_plan
       ? `<h2>7. Conclusión y diagnóstico</h2>
     ${row('Dx fisioterapéutico', cl.diagnosis)}
+    ${cl.prognosis ? `<p><strong>Pronóstico:</strong><br>${String(cl.prognosis).replace(/\n/g, '<br>')}</p>` : ''}
     ${
       cl.objectives
         ? `<p><strong>Objetivos:</strong><br>${String(cl.objectives).replace(/\n/g, '<br>')}</p>`

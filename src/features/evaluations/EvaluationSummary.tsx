@@ -201,6 +201,7 @@ export function EvaluationSummary({ evaluation }: EvaluationSummaryProps) {
 
       {/* Conclusión (estructura nueva) */}
       {(conclusion.diagnosis ||
+        conclusion.prognosis ||
         conclusion.objectives ||
         conclusion.objectives_short ||
         conclusion.objectives_mid ||
@@ -209,6 +210,9 @@ export function EvaluationSummary({ evaluation }: EvaluationSummaryProps) {
         <div>
           <p className="eyebrow">Conclusión</p>
           {conclusion.diagnosis && <p>Dx fisioterapéutico: {conclusion.diagnosis}</p>}
+          {conclusion.prognosis && (
+            <p style={{ whiteSpace: 'pre-line' }}>Pronóstico: {conclusion.prognosis}</p>
+          )}
           {conclusion.objectives ? (
             <p style={{ whiteSpace: 'pre-line' }}>Objetivos: {conclusion.objectives}</p>
           ) : (
