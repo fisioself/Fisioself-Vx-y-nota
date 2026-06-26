@@ -56,7 +56,7 @@ export function FinanceView(_props: FinanceViewProps) {
 
   return (
     <div className="record-stack">
-      <header className="hero section-hero">
+      <header className="section-hero">
         <div>
           <p className="eyebrow">Control financiero y métricas</p>
           <h1>Finanzas y métricas</h1>

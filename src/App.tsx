@@ -295,7 +295,7 @@ export function App() {
         />
       )}
 
-      <header className="hero app-hero">
+      <header className="app-topbar">
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <AppLogo size={44} />
           <h1 style={{ margin: 0 }}>Fisioself</h1>

@@ -202,7 +202,7 @@ export function SeguimientosView({ onPatientSelect }: SeguimientosViewProps) {
 
   return (
     <div className="record-stack">
-      <header className="hero section-hero">
+      <header className="section-hero">
         <div>
           <p className="eyebrow">Seguimiento activo</p>
           <h1>Seguimientos</h1>

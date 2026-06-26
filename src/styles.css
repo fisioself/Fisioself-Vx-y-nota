@@ -240,39 +240,47 @@ details:focus-visible summary {
   font-size: clamp(32px, 5vw, 56px);
 }
 
-/* Hero de sección unificado: franja de título coherente en Panel, Finanzas y
-   Seguimientos. Antes cada vista definía su propio padding/tamaño inline y el
-   título de Seguimientos crecía hasta 56px rompiendo la armonía. */
+/* Hero de sección — franja de título neutral para Panel, Finanzas y
+   Seguimientos. Sin fondo de color: el acento visual lo pone la topbar. */
 .section-hero {
-  padding: var(--s-5) var(--s-6);
-  border-radius: var(--radius-card);
+  padding: var(--s-3) 0 var(--s-2);
   margin-bottom: 0;
   display: flex;
   align-items: center;
   gap: var(--gap);
+  background: transparent;
 }
 .section-hero h1 {
   font-size: clamp(22px, 3vw, 30px);
   margin: 2px 0 0;
-  color: #fff;
+  color: var(--text-main);
 }
 .section-hero .eyebrow {
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--text-secondary);
 }
 
-.app-hero {
+/* Barra superior limpia — reemplaza el bloque verde pesado. Fondo blanco,
+   borde ultra-fino: toda la jerarquía visual viene del contenido, no del color. */
+.app-topbar {
   grid-column: 1 / -1;
   display: flex;
   justify-content: space-between;
-  gap: 20px;
   align-items: center;
+  gap: 20px;
+  padding: 10px 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  min-height: 60px;
 }
-/* Permite que el bloque de título (logo + textos) se encoja y haga wrap en
-   lugar de empujar el hero más ancho que la pantalla en celular. */
-.app-hero > div {
+.app-topbar > div {
   min-width: 0;
 }
-.app-hero h1 {
+.app-topbar h1 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin: 0;
   overflow-wrap: anywhere;
 }
 .hero-actions {
@@ -397,16 +405,42 @@ body {
 .app-grid > * {
   min-width: 0;
 }
-/* Barra de pestañas principal (Panel / Finanzas / Seguimientos) a todo lo ancho. */
+/* Barra de pestañas principal (Panel / Finanzas / Seguimientos) a todo lo ancho.
+   En escritorio: pill container con selector activo sunken.
+   En móvil (≤700px): se sobreescribe a barra fija en la parte inferior. */
 .main-tabs {
   grid-column: 1 / -1;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--gap-tight);
+  display: flex;
+  gap: 2px;
+  padding: 4px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
 }
-.main-tabs button {
-  width: 100%;
-  min-height: 46px;
+.main-tabs button,
+.main-tabs button.secondary {
+  flex: 1;
+  min-height: 42px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 0.9rem;
+  border-radius: 14px;
+  border: none;
+  box-shadow: none;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+.main-tabs button:not(.secondary) {
+  background: var(--bg-sunken);
+  color: var(--text-main);
+  font-weight: 700;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+.main-tabs button.secondary:hover {
+  background: var(--bg-sunken);
+  color: var(--text-main);
 }
 /* En modo Finanzas la barra lateral se oculta y el panel derecho ocupa todo. */
 .app-grid.finance-mode {
@@ -852,7 +886,6 @@ button:not(:disabled):active {
   .left-pane {
     order: 2;
   }
-  .app-hero,
   .record-header {
     flex-direction: column;
   }
@@ -1011,61 +1044,49 @@ button:not(:disabled):active {
     min-height: 38px;
   }
 
-  /* ── Encabezado principal de la app → barra compacta horizontal ─────────── */
-  .hero.app-hero {
-    flex-direction: row !important;
-    align-items: center;
-    padding: 10px 14px;
+  /* ── Barra superior (app-topbar) → compacta horizontal en móvil ─────────── */
+  .app-topbar {
+    padding: 8px 12px;
     border-radius: 14px;
     gap: 10px;
-    margin-bottom: 8px;
+    margin-bottom: 0;
+    min-height: unset;
   }
-  .app-hero > div:first-child {
+  .app-topbar > div:first-child {
     flex: 1;
     min-width: 0;
   }
-  /* El div de textos (anidado junto al logo) también necesita min-width:0 para
-     que el h1 trunque con ellipsis en vez de pasar por debajo de los iconos. */
-  .app-hero > div:first-child > div {
+  .app-topbar > div:first-child > div {
     min-width: 0;
   }
-  /* Ocultar eyebrow y subtítulo de descripción en móvil (el h1 basta). */
-  .app-hero .eyebrow,
-  .app-hero h1 ~ p {
-    display: none;
-  }
-  .app-hero h1 {
-    font-size: 1rem !important;
-    margin: 0;
+  .app-topbar h1 {
+    font-size: 0.95rem !important;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  /* Logo más pequeño en el header compacto */
-  .app-hero > div:first-child img {
-    width: 36px !important;
-    height: 36px !important;
-    border-radius: 9px !important;
+  .app-topbar > div:first-child img {
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: 8px !important;
   }
-  /* Acciones del header: solo iconos (el texto se oculta) para que los 4
-     botones quepan sin desbordar el margen. El email (pill) también se oculta. */
-  .app-hero .hero-actions {
+  .app-topbar .hero-actions {
     flex-wrap: nowrap;
     gap: 6px;
     justify-content: flex-end;
     flex-shrink: 0;
   }
-  .app-hero .hero-actions .pill {
+  .app-topbar .hero-actions .pill {
     display: none;
   }
-  .app-hero .hero-actions .btn-label {
+  .app-topbar .hero-actions .btn-label {
     display: none;
   }
-  .app-hero .hero-actions button {
-    min-height: 38px;
-    min-width: 38px;
+  .app-topbar .hero-actions button {
+    min-height: 36px;
+    min-width: 36px;
     padding: 5px;
-    font-size: 1.05rem;
+    font-size: 1rem;
     line-height: 1;
     display: inline-flex;
     align-items: center;
@@ -1374,9 +1395,9 @@ html[data-theme='dark'] .charge-commission-info {
   transform: translateY(-2px);
 }
 
-/* El hero no debe "saltar" ni reanimarse al cambiar de pestaña. */
+/* La topbar y el hero no deben "saltar" ni reanimarse al cambiar de pestaña. */
 .hero.card,
-.app-hero {
+.app-topbar {
   animation: none;
 }
 

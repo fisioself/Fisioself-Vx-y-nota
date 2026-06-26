@@ -47,15 +47,7 @@ export function ClinicDashboard({ onPatientSelect }: ClinicDashboardProps) {
 
   return (
     <div className="record-stack">
-      {/* Franja de título compacta */}
-      <header className="hero section-hero">
-        <div>
-          <p className="eyebrow">Agenda y Control</p>
-          <h1>Visión General</h1>
-        </div>
-      </header>
-
-      {/* Estadísticas clave — primera vista tras el título */}
+      {/* Estadísticas clave */}
       <div className="dashboard-stats">
         <div className="stat-card">
           <span className="stat-label">Pacientes totales</span>
