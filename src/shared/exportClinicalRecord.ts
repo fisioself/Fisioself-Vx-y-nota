@@ -7,6 +7,16 @@ export const exportToPdf = (patient: Patient | null): void => {
 
 const v = (value: unknown): string => (value ? String(value) : '—');
 
+// Escapa HTML para insertar texto libre (notas, texto de IA) sin romper el documento.
+const esc = (value: unknown): string =>
+  String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
+// Texto multilínea (p. ej. salida de IA con viñetas) → HTML con saltos de línea.
+const multiline = (value: unknown): string => esc(value).replace(/\n/g, '<br/>');
+
 // Fecha ISO (YYYY-MM-DD) → DD/MM/AAAA (formato México). Se ancla a mediodía
 // para que no se corra un día por zona horaria.
 const fmtDateMX = (iso: string | null | undefined): string => {
@@ -16,8 +26,16 @@ const fmtDateMX = (iso: string | null | undefined): string => {
   return d.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
 };
 
-const row = (label: string, value: unknown) =>
-  value ? `<p><strong>${label}:</strong> ${v(value)}</p>` : '';
+// Fila corta etiqueta:valor. Devuelve '' si el valor está vacío → no se imprime.
+const row = (label: string, value: unknown): string =>
+  value ? `<p class="row"><span class="row-label">${label}</span> ${esc(value)}</p>` : '';
+
+// Bloque destacado para texto largo (diagnóstico, pronóstico, objetivos, plan).
+// Conserva los saltos de línea y se ve como una tarjeta. '' si está vacío.
+const block = (label: string, value: unknown): string =>
+  value
+    ? `<div class="block"><div class="block-label">${label}</div><div class="block-body">${multiline(value)}</div></div>`
+    : '';
 
 // Silueta SVG con los puntos de dolor de una vista (frontal/posterior).
 const bodySvg = (
@@ -33,22 +51,53 @@ const bodySvg = (
     .filter((p) => p.view === view)
     .map(
       (p) =>
-        `<circle cx="${p.x}" cy="${p.y}" r="3.2" fill="rgba(220,38,38,.75)" stroke="#991b1b" stroke-width="0.8"/>`
+        `<circle cx="${p.x}" cy="${p.y}" r="3.2" fill="rgba(220,38,38,.78)" stroke="#991b1b" stroke-width="0.8"/>`
     )
     .join('');
-  return `<svg viewBox="0 0 100 200" width="110" height="220"><g fill="#cbd5e1" stroke="#94a3b8" stroke-width="0.8">${body}</g>${dots}</svg>`;
+  return `<svg viewBox="0 0 100 200" width="104" height="208"><g fill="#e2e8f0" stroke="#94a3b8" stroke-width="0.8">${body}</g>${dots}</svg>`;
+};
+
+// ¿Una zona tiene algo que mostrar? (si no, se omite por completo del PDF)
+const zoneHasContent = (zone: EvaluationZone): boolean => {
+  const p = zone.pain;
+  const hasPain = !!(
+    p &&
+    (p.location || p.intensity != null || p.type || p.aggravating_factors || p.easing_factors)
+  );
+  const roms = (zone.movement_ranges || []).filter((r) => r.movement || r.range || r.degrees);
+  const strengths = (zone.muscle_strength || []).filter((r) => r.muscle || r.daniels);
+  const tests = (zone.special_tests || []).filter((r) => r.result);
+  return hasPain || roms.length > 0 || strengths.length > 0 || tests.length > 0 || !!zone.palpation;
 };
 
 function buildZoneHtml(zone: EvaluationZone): string {
   const pain = zone.pain;
-  const roms = (zone.movement_ranges || []).filter((r) => r.movement || r.range);
-  const strengths = (zone.muscle_strength || []).filter((r) => r.muscle);
+  const hasPain = !!(
+    pain &&
+    (pain.location ||
+      pain.intensity != null ||
+      pain.type ||
+      pain.aggravating_factors ||
+      pain.easing_factors)
+  );
+  const roms = (zone.movement_ranges || []).filter((r) => r.movement || r.range || r.degrees);
+  const strengths = (zone.muscle_strength || []).filter((r) => r.muscle || r.daniels);
   const tests = (zone.special_tests || []).filter((r) => r.result);
+
+  const painBits = hasPain
+    ? [
+        pain?.location ? esc(pain.location) : '',
+        pain?.intensity != null ? `EVA ${pain.intensity}/10` : '',
+        pain?.type ? esc(pain.type) : '',
+        pain?.aggravating_factors ? `agrava: ${esc(pain.aggravating_factors)}` : '',
+        pain?.easing_factors ? `alivia: ${esc(pain.easing_factors)}` : ''
+      ].filter(Boolean)
+    : [];
 
   return `
   <div class="zone">
-    <h3>${v(zone.zone)}</h3>
-    ${pain ? `<p>Dolor: ${v(pain.location)}${pain.intensity != null ? ` · EVA ${pain.intensity}/10` : ''}${pain.type ? ` · ${pain.type}` : ''}</p>` : ''}
+    <h3>${esc(zone.zone)}</h3>
+    ${painBits.length ? `<p class="zone-pain"><span class="row-label">Dolor</span> ${painBits.join(' · ')}</p>` : ''}
     ${
       roms.length
         ? `<table><thead><tr><th>Movimiento</th><th>Tipo</th><th>Rango</th><th>Afectado</th><th>Sano</th><th>Dolor</th><th>Notas</th></tr></thead><tbody>
@@ -70,7 +119,7 @@ function buildZoneHtml(zone: EvaluationZone): string {
     </tbody></table>`
         : ''
     }
-    ${zone.palpation ? `<p>Palpación: ${zone.palpation}</p>` : ''}
+    ${zone.palpation ? `<p class="zone-pain"><span class="row-label">Palpación</span> ${esc(zone.palpation)}</p>` : ''}
   </div>`;
 }
 
@@ -83,7 +132,7 @@ function buildEvaluationHtml(evaluation: Evaluation, patientName: string): strin
   const yf = s.yellow_flags || {};
   const fs = s.functional_scales || {};
   const cl = s.conclusion || {};
-  const zones = s.zones || [];
+  const zones = (s.zones || []).filter(zoneHasContent);
   const painPoints = s.pain_map?.points || [];
 
   const redList = [...(rf.items ?? []), rf.other].filter(Boolean).join('; ');
@@ -95,139 +144,228 @@ function buildEvaluationHtml(evaluation: Evaluation, patientName: string): strin
     year: 'numeric'
   }).format(new Date());
 
+  // Cada sección se arma por separado y solo entra si tiene contenido. Así el
+  // PDF muestra ÚNICAMENTE lo que se registró, sin secciones ni campos vacíos.
+  const sections: { title: string; body: string }[] = [];
+  const add = (title: string, body: string) => {
+    if (body && body.replace(/\s/g, '')) sections.push({ title, body });
+  };
+
+  // 1. Datos generales
+  add(
+    'Datos generales',
+    `<div class="two-col">
+      ${row('Nombre', id.full_name || patientName)}
+      ${row('Fecha de nacimiento', id.birth_date ? fmtDateMX(id.birth_date) : '')}
+      ${row('Sexo', id.sex)}
+      ${row('Ocupación', id.occupation)}
+      ${row('Teléfono', id.phone)}
+      ${row('Contacto de emergencia', id.emergency_contact)}
+      ${row('Referido por', id.referred_by)}
+      ${row('Fisioterapeuta', id.therapist_name)}
+    </div>`
+  );
+
+  // 2. Motivo de consulta
+  add(
+    'Motivo de consulta e historia',
+    `${row('Motivo', c.reason)}
+     ${row('Diagnóstico médico', c.medical_diagnosis)}
+     ${row('Inicio de síntomas', c.symptom_onset_date ? fmtDateMX(c.symptom_onset_date) : '')}
+     ${row('Clasificación', c.symptom_classification)}
+     ${row('Mecanismo de lesión', c.injury_mechanism)}
+     ${row('Mecanismo del dolor', c.pain_mechanism)}
+     ${c.clinical_history ? block('Historia clínica', c.clinical_history) : ''}
+     ${redList ? `<p class="flag flag-red">🚩 Banderas rojas: ${esc(redList)}</p>` : ''}
+     ${yfList ? `<p class="flag flag-amber">⚠ Banderas amarillas: ${esc(yfList)}</p>` : ''}`
+  );
+
+  // 3. Valoración general
+  const vitals =
+    g.blood_pressure || g.heart_rate || g.respiratory_rate || g.oxygen_saturation
+      ? `<p class="row"><span class="row-label">Signos vitales</span> TA ${v(g.blood_pressure)} · FC ${v(g.heart_rate)} · FR ${v(g.respiratory_rate)} · SatO₂ ${v(g.oxygen_saturation)}</p>`
+      : '';
+  add(
+    'Valoración general',
+    `${vitals}
+     ${row('Inspección', g.inspection)}
+     ${row('Postura', g.posture)}
+     ${row('Marcha', g.gait)}`
+  );
+
+  // 4. Mapa corporal de dolor
+  if (painPoints.length) {
+    add(
+      'Mapa corporal de dolor',
+      `<div class="body-maps">
+        <figure><figcaption>Frontal</figcaption>${bodySvg(painPoints, 'front')}</figure>
+        <figure><figcaption>Posterior</figcaption>${bodySvg(painPoints, 'back')}</figure>
+      </div>`
+    );
+  }
+
+  // 5. Valoración por zonas
+  if (zones.length) {
+    add('Valoración por zonas', zones.map(buildZoneHtml).join(''));
+  }
+
+  // 6. Cuestionario funcional (PROMs)
+  if (fs.name || fs.score) {
+    add(
+      'Cuestionario funcional (PROMs)',
+      `<p class="row">${esc(fs.name)}${fs.score ? ` · <strong>${esc(fs.score)}</strong>` : ''}${fs.notes ? ` — ${esc(fs.notes)}` : ''}</p>`
+    );
+  }
+
+  // 7. Conclusión y diagnóstico
+  const objectivesBlock = cl.objectives
+    ? block('Objetivos del tratamiento', cl.objectives)
+    : `${block('Objetivos a corto plazo', cl.objectives_short)}${block('Objetivos a mediano plazo', cl.objectives_mid)}${block('Objetivos a largo plazo', cl.objectives_long)}`;
+  add(
+    'Conclusión y diagnóstico',
+    `${block('Diagnóstico fisioterapéutico', cl.diagnosis)}
+     ${block('Pronóstico', cl.prognosis)}
+     ${objectivesBlock}
+     ${block('Plan de intervención', cl.treatment_plan)}`
+  );
+
+  const sectionsHtml = sections
+    .map(
+      (sec, i) =>
+        `<section class="section"><h2><span class="num">${i + 1}</span>${sec.title}</h2>${sec.body}</section>`
+    )
+    .join('');
+
   return `<!doctype html>
 <html lang="es">
 <head>
   <meta charset="utf-8"/>
-  <title>Valoración – ${patientName}</title>
+  <title>Valoración – ${esc(patientName)}</title>
   <style>
+    :root{
+      --brand:#0f3d2e; --brand-soft:#e8f0ec; --ink:#1e293b; --muted:#64748b;
+      --line:#e2e8f0; --bg-soft:#f8fafc;
+    }
     *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:system-ui,Arial,sans-serif;color:#1f2933;font-size:13px;padding:28px 36px;max-width:840px;margin:0 auto}
-    h1{font-size:20px;margin-bottom:2px}
-    h2{font-size:14px;margin:18px 0 6px;border-bottom:2px solid #12372a;padding-bottom:3px;color:#12372a;text-transform:uppercase;letter-spacing:.04em}
-    h3{font-size:13px;font-weight:700;margin:10px 0 4px;color:#12372a}
-    .subtitle{color:#52606d;font-size:12px;margin-bottom:18px}
-    p{margin:2px 0;line-height:1.5}
-    .two-col{display:grid;grid-template-columns:1fr 1fr;gap:0 24px}
-    .red{color:#c0392b;font-weight:700}
-    .amber{color:#b45309;font-weight:700}
-    .zone{border:1px solid #e4e7eb;border-radius:6px;padding:10px 14px;margin:8px 0}
-    table{width:100%;border-collapse:collapse;font-size:11px;margin:6px 0}
-    th{background:#f0f4f8;text-align:left;padding:4px 8px;font-size:10px;color:#52606d;font-weight:600;text-transform:uppercase}
-    td{padding:4px 8px;border-bottom:1px solid #f0f4f8}
-    .signature{display:flex;justify-content:space-around;gap:40px;margin-top:48px}
-    .sign-line{flex:1;text-align:center;border-top:1px solid #1f2933;padding-top:6px;max-width:260px}
-    .sign-line span{display:block;font-weight:600}
-    .sign-line small{color:#52606d;font-size:10px}
-    .footer{margin-top:24px;font-size:10px;color:#9aa5b1;border-top:1px solid #e4e7eb;padding-top:8px}
-    @media print{body{padding:0}@page{margin:1.5cm}}
+    body{
+      font-family:'Segoe UI',system-ui,-apple-system,Arial,sans-serif;
+      color:var(--ink);font-size:13px;line-height:1.55;
+      padding:0;max-width:860px;margin:0 auto;-webkit-print-color-adjust:exact;print-color-adjust:exact;
+    }
+
+    /* Encabezado */
+    .report-head{
+      display:flex;justify-content:space-between;align-items:flex-start;gap:24px;
+      background:var(--brand);color:#fff;padding:24px 32px;border-radius:0 0 16px 16px;
+    }
+    .brand{display:flex;align-items:center;gap:12px}
+    .brand-mark{
+      width:40px;height:40px;border-radius:11px;background:rgba(255,255,255,.16);
+      display:flex;align-items:center;justify-content:center;font-weight:800;font-size:20px;
+    }
+    .brand-name{font-weight:800;font-size:18px;letter-spacing:.01em}
+    .brand-sub{font-size:11px;opacity:.8;text-transform:uppercase;letter-spacing:.14em}
+    .head-meta{text-align:right;font-size:11.5px;opacity:.92}
+    .head-meta .patient-name{font-size:16px;font-weight:700;opacity:1;margin-bottom:2px}
+    .head-eva{
+      display:inline-block;margin-top:4px;background:rgba(255,255,255,.16);
+      padding:2px 10px;border-radius:999px;font-weight:700
+    }
+
+    .wrap{padding:8px 32px 32px}
+
+    /* Secciones */
+    .section{margin-top:18px;page-break-inside:avoid}
+    h2{
+      font-size:13px;color:var(--brand);text-transform:uppercase;letter-spacing:.05em;
+      font-weight:800;display:flex;align-items:center;gap:9px;
+      padding-bottom:6px;margin-bottom:9px;border-bottom:2px solid var(--brand-soft);
+    }
+    h2 .num{
+      width:20px;height:20px;border-radius:6px;background:var(--brand);color:#fff;
+      font-size:11px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;
+    }
+    h3{font-size:12.5px;font-weight:700;color:var(--brand);margin:0 0 4px}
+
+    .two-col{display:grid;grid-template-columns:1fr 1fr;gap:0 28px}
+    p.row{margin:3px 0}
+    .row-label{color:var(--muted);font-weight:600}
+
+    /* Bloques de texto largo (diagnóstico, plan, objetivos, pronóstico) */
+    .block{
+      background:var(--bg-soft);border:1px solid var(--line);border-left:3px solid var(--brand);
+      border-radius:10px;padding:11px 14px;margin:8px 0;page-break-inside:avoid
+    }
+    .block-label{
+      font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;
+      color:var(--brand);margin-bottom:5px
+    }
+    .block-body{font-size:12.5px;line-height:1.6;color:var(--ink)}
+
+    /* Banderas */
+    .flag{margin-top:8px;padding:7px 12px;border-radius:8px;font-weight:600;font-size:12px}
+    .flag-red{background:#fdecea;color:#b42318;border:1px solid #f6c9c3}
+    .flag-amber{background:#fef6e7;color:#b45309;border:1px solid #f5dca3}
+
+    /* Zonas */
+    .zone{border:1px solid var(--line);border-radius:10px;padding:11px 14px;margin:9px 0;page-break-inside:avoid}
+    .zone-pain{margin:4px 0;font-size:12px}
+    table{width:100%;border-collapse:collapse;font-size:11px;margin:7px 0}
+    th{background:var(--brand-soft);text-align:left;padding:5px 9px;font-size:9.5px;color:var(--brand);font-weight:700;text-transform:uppercase;letter-spacing:.03em}
+    td{padding:5px 9px;border-bottom:1px solid var(--line)}
+    tbody tr:nth-child(even){background:var(--bg-soft)}
+
+    /* Mapa corporal */
+    .body-maps{display:flex;gap:28px;justify-content:center;padding:6px 0}
+    .body-maps figure{text-align:center}
+    .body-maps figcaption{font-size:10.5px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em}
+
+    /* Firmas y pie */
+    .signature{display:flex;justify-content:space-around;gap:40px;margin-top:46px;page-break-inside:avoid}
+    .sign-line{flex:1;text-align:center;border-top:1px solid var(--ink);padding-top:6px;max-width:260px}
+    .sign-line span{display:block;font-weight:700}
+    .sign-line small{color:var(--muted);font-size:10px}
+    .footer{margin-top:22px;font-size:10px;color:#94a3b8;border-top:1px solid var(--line);padding-top:8px;text-align:center}
+
+    @media print{
+      @page{margin:1.2cm}
+      .report-head{border-radius:0}
+    }
   </style>
 </head>
 <body>
-  <h1>Valoración clínica inicial</h1>
-  <p class="subtitle">
-    ${patientName}
-    · Fecha de valoración: ${fmtDateMX(evaluation.evaluation_date)}
-    ${evaluation.eva_initial != null ? ` · EVA inicial: ${evaluation.eva_initial}/10` : ''}
-    · Impreso el ${date}
-  </p>
-
-  <h2>1. Datos generales</h2>
-  <div class="two-col">
-    ${row('Nombre', id.full_name || patientName)}
-    ${row('Fecha de nacimiento', fmtDateMX(id.birth_date))}
-    ${row('Sexo', id.sex)}
-    ${row('Ocupación', id.occupation)}
-    ${row('Teléfono', id.phone)}
-    ${row('Contacto de emergencia', id.emergency_contact)}
-    ${row('Referido por', id.referred_by)}
-    ${row('Fisioterapeuta', id.therapist_name)}
-  </div>
-
-  <h2>2. Motivo de consulta</h2>
-  ${row('Motivo', c.reason)}
-  ${row('Diagnóstico médico', c.medical_diagnosis)}
-  ${row('Inicio de síntomas', fmtDateMX(c.symptom_onset_date))}
-  ${row('Clasificación', c.symptom_classification)}
-  ${row('Mecanismo de lesión', c.injury_mechanism)}
-  ${row('Mecanismo del dolor', c.pain_mechanism)}
-  ${c.clinical_history ? `<p><strong>Historia clínica:</strong><br/>${c.clinical_history}</p>` : ''}
-
-  ${redList ? `<p class="red" style="margin-top:8px">🚩 Banderas rojas: ${redList}</p>` : ''}
-  ${yfList ? `<p class="amber" style="margin-top:4px">⚠ Banderas amarillas: ${yfList}</p>` : ''}
-
-  ${
-    g.blood_pressure || g.heart_rate || g.inspection || g.posture || g.gait
-      ? `<h2>3. Valoración general</h2>
-    ${
-      g.blood_pressure || g.heart_rate || g.respiratory_rate || g.oxygen_saturation
-        ? `<p>Signos vitales: TA ${v(g.blood_pressure)} · FC ${v(g.heart_rate)} · FR ${v(g.respiratory_rate)} · SatO₂ ${v(g.oxygen_saturation)}</p>`
-        : ''
-    }
-    ${row('Inspección', g.inspection)}
-    ${row('Postura', g.posture)}
-    ${row('Marcha', g.gait)}`
-      : ''
-  }
-
-  ${
-    painPoints.length
-      ? `<h2>4. Mapa corporal de dolor</h2>
-    <div style="display:flex;gap:24px">
-      <div style="text-align:center"><div style="font-size:11px;color:#52606d">Frontal</div>${bodySvg(painPoints, 'front')}</div>
-      <div style="text-align:center"><div style="font-size:11px;color:#52606d">Posterior</div>${bodySvg(painPoints, 'back')}</div>
-    </div>`
-      : ''
-  }
-
-  ${
-    zones.length
-      ? `<h2>5. Valoración por zonas</h2>
-    ${zones.map(buildZoneHtml).join('')}`
-      : ''
-  }
-
-  ${
-    fs.name || fs.score
-      ? `<h2>6. Cuestionario funcional (PROMs)</h2>
-    <p>${v(fs.name)}${fs.score ? ` · ${fs.score}` : ''}${fs.notes ? ` — ${fs.notes}` : ''}</p>`
-      : ''
-  }
-
-  ${
-    cl.diagnosis ||
-    cl.prognosis ||
-    cl.objectives ||
-    cl.objectives_short ||
-    cl.objectives_mid ||
-    cl.objectives_long ||
-    cl.treatment_plan
-      ? `<h2>7. Conclusión y diagnóstico</h2>
-    ${row('Dx fisioterapéutico', cl.diagnosis)}
-    ${cl.prognosis ? `<p><strong>Pronóstico:</strong><br>${String(cl.prognosis).replace(/\n/g, '<br>')}</p>` : ''}
-    ${
-      cl.objectives
-        ? `<p><strong>Objetivos:</strong><br>${String(cl.objectives).replace(/\n/g, '<br>')}</p>`
-        : `${row('Objetivos corto plazo', cl.objectives_short)}
-    ${row('Objetivos mediano plazo', cl.objectives_mid)}
-    ${row('Objetivos largo plazo', cl.objectives_long)}`
-    }
-    ${row('Plan de intervención', cl.treatment_plan)}`
-      : ''
-  }
-
-  <div class="signature">
-    <div class="sign-line">
-      <span>${v(id.therapist_name)}</span>
-      <small>Fisioterapeuta a cargo</small>
+  <header class="report-head">
+    <div class="brand">
+      <div class="brand-mark">F</div>
+      <div>
+        <div class="brand-name">Fisioself</div>
+        <div class="brand-sub">Valoración clínica</div>
+      </div>
     </div>
-    <div class="sign-line">
-      <span>${fmtDateMX(evaluation.evaluation_date)}</span>
-      <small>Fecha de valoración</small>
+    <div class="head-meta">
+      <div class="patient-name">${esc(patientName)}</div>
+      <div>Valoración: ${fmtDateMX(evaluation.evaluation_date)}</div>
+      <div>Impreso: ${date}</div>
+      ${evaluation.eva_initial != null ? `<div class="head-eva">EVA inicial ${evaluation.eva_initial}/10</div>` : ''}
     </div>
-  </div>
+  </header>
 
-  <p class="footer">Valoración generada por Fisioself — documento clínico confidencial.</p>
+  <div class="wrap">
+    ${sectionsHtml}
+
+    <div class="signature">
+      <div class="sign-line">
+        <span>${v(id.therapist_name)}</span>
+        <small>Fisioterapeuta a cargo</small>
+      </div>
+      <div class="sign-line">
+        <span>${fmtDateMX(evaluation.evaluation_date)}</span>
+        <small>Fecha de valoración</small>
+      </div>
+    </div>
+
+    <p class="footer">Documento clínico confidencial · Generado por Fisioself</p>
+  </div>
 </body>
 </html>`;
 }
