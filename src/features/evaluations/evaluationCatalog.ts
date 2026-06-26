@@ -1146,3 +1146,15 @@ export const PAIN_MECHANISM_OPTIONS = [
   'Nociplástico',
   'Mixto'
 ] as const;
+
+// Descripción clínica breve de cada mecanismo del dolor, como guía de apoyo al
+// seleccionar la opción correspondiente.
+export const PAIN_MECHANISM_DESCRIPTIONS: Record<string, string> = {
+  Nociceptivo:
+    'Dolor por daño tisular real o potencial. Suele ser localizado, de tipo mecánico, proporcional al estímulo y mejora con el reposo.',
+  Neuropático:
+    'Lesión o enfermedad del sistema somatosensorial. Quemante o eléctrico, sigue un dermatoma/nervio y puede asociar hormigueo, adormecimiento o signos neurológicos.',
+  Nociplástico:
+    'Procesamiento alterado del dolor sin daño tisular evidente (sensibilización central). Difuso, desproporcionado, con hipersensibilidad y poca correlación con los hallazgos.',
+  Mixto: 'Coexisten dos o más mecanismos (p. ej. nociceptivo + neuropático).'
+};

@@ -563,6 +563,53 @@ select {
 textarea {
   resize: vertical;
 }
+
+/* Campo de fecha con calendario: input enmascarado DD/MM/AAAA + botón 📅 que
+   abre el calendario nativo. El input type=date real queda oculto y solo se usa
+   para disparar el selector visual del sistema. */
+.date-field {
+  position: relative;
+  display: block;
+  margin-top: 4px;
+}
+.date-field-text {
+  margin-top: 0;
+  padding-right: 42px;
+}
+.date-field-cal {
+  position: absolute;
+  right: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+  min-height: 0;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  color: var(--text-secondary);
+  border-radius: 9px;
+  box-shadow: none;
+  font-size: 1.05rem;
+  cursor: pointer;
+}
+.date-field-cal:hover:not(:disabled) {
+  background: var(--bg-sunken);
+}
+/* El input nativo no se ve: ancla el popup del calendario junto al botón. */
+.date-field-native {
+  position: absolute;
+  right: 8px;
+  bottom: 0;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
 .form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
