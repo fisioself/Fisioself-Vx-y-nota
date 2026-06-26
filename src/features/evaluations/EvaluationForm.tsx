@@ -991,29 +991,12 @@ export function EvaluationForm({
             />
           </label>
           <label>
-            <span className="dx-label-row">
-              Diagnóstico médico
-              {isAiConfigured && (
-                <button
-                  type="button"
-                  className="secondary dx-ai-btn"
-                  onClick={generateMedicalDiagnosis}
-                  disabled={aiMedDxGenerating}
-                >
-                  {aiMedDxGenerating ? 'Generando…' : '✨ Sugerir con IA'}
-                </button>
-              )}
-            </span>
+            Diagnóstico médico
             <textarea
               rows={2}
               value={values.medical_diagnosis}
               onChange={(e) => setField('medical_diagnosis', e.target.value)}
             />
-            {aiMedDxError && (
-              <small className="field-error" role="alert">
-                {aiMedDxError}
-              </small>
-            )}
           </label>
           <label>
             Fecha de inicio de los síntomas
@@ -1068,17 +1051,6 @@ export function EvaluationForm({
                 {PAIN_MECHANISM_DESCRIPTIONS[values.pain_mechanism]}
               </small>
             )}
-            <details className="mechanism-legend">
-              <summary>¿Qué significa cada mecanismo?</summary>
-              <dl>
-                {PAIN_MECHANISM_OPTIONS.map((o) => (
-                  <div key={o}>
-                    <dt>{o}</dt>
-                    <dd>{PAIN_MECHANISM_DESCRIPTIONS[o]}</dd>
-                  </div>
-                ))}
-              </dl>
-            </details>
           </label>
           <label className="span-2">
             Historia clínica / Evolución del padecimiento
@@ -1328,11 +1300,31 @@ export function EvaluationForm({
       <details className="form-section span-2">
         <summary>7. Conclusión y diagnóstico</summary>
         <div className="form-grid">
-          {values.medical_diagnosis && (
-            <p className="dx-medical-ref span-2">
-              <strong>Diagnóstico médico:</strong> {values.medical_diagnosis}
-            </p>
-          )}
+          <label className="span-2">
+            <span className="dx-label-row">
+              Diagnóstico médico
+              {isAiConfigured && (
+                <button
+                  type="button"
+                  className="secondary dx-ai-btn"
+                  onClick={generateMedicalDiagnosis}
+                  disabled={aiMedDxGenerating}
+                >
+                  {aiMedDxGenerating ? 'Generando…' : '✨ Sugerir con IA'}
+                </button>
+              )}
+            </span>
+            <textarea
+              rows={2}
+              value={values.medical_diagnosis}
+              onChange={(e) => setField('medical_diagnosis', e.target.value)}
+            />
+            {aiMedDxError && (
+              <small className="field-error" role="alert">
+                {aiMedDxError}
+              </small>
+            )}
+          </label>
           <label className="span-2">
             <span className="dx-label-row">
               Diagnóstico fisioterapéutico
