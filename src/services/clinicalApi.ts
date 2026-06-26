@@ -156,6 +156,17 @@ export const clinicalApi = {
     if (error) throw error;
   },
 
+  // Borrado PERMANENTE de un paciente (solo admin). A diferencia de
+  // deletePatient (borrado lógico → papelera), esto elimina la fila de verdad;
+  // la BD borra en cascada sus citas/valoraciones/notas/pagos/documentos.
+  // La política RLS «patients clinic admin delete» (is_admin + can_access_clinic)
+  // ya permite este DELETE directo, sin necesidad de RPC.
+  async purgePatient(id: string): Promise<void> {
+    const db = assertSupabase();
+    const { error } = await db.from('patients').delete().eq('id', id);
+    if (error) throw error;
+  },
+
   async getPatient(id: string): Promise<ClinicalRecord> {
     const db = assertSupabase();
     return unwrap(

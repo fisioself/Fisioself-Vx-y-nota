@@ -735,6 +735,14 @@ textarea {
   background: var(--bg-sunken);
   color: var(--text-main);
 }
+/* Acción destructiva (borrado permanente) dentro de la papelera. */
+.trash-purge-btn {
+  color: var(--danger, #b42318);
+}
+.trash-purge-btn:hover {
+  background: rgba(180, 35, 24, 0.08);
+  color: var(--danger, #b42318);
+}
 
 .record-header {
   display: flex;
