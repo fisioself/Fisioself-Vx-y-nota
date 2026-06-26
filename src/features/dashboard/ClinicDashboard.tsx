@@ -47,14 +47,8 @@ export function ClinicDashboard({ onPatientSelect }: ClinicDashboardProps) {
 
   return (
     <div className="record-stack">
-      {/* Ancla tipográfica de la página — título limpio sin fondo de color. */}
-      <header className="section-hero">
-        <div>
-          <p className="eyebrow">Agenda y Control</p>
-          <h1>Visión General</h1>
-        </div>
-      </header>
-
+      {/* Sin título flotante: la pestaña activa ya indica dónde estamos y así las
+          tarjetas de métricas arrancan en la misma línea que la tarjeta Pacientes. */}
       {/* Estadísticas clave */}
       <div className="dashboard-stats">
         <div className="stat-card">
