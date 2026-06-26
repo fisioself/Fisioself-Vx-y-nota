@@ -132,6 +132,8 @@ export interface EvaluationSections {
   // Conclusión y diagnóstico.
   conclusion?: {
     diagnosis?: string | null;
+    // Pronóstico fisioterapéutico (expectativa y tiempo de recuperación).
+    prognosis?: string | null;
     // Objetivos unificados (corto/mediano/largo en un solo texto). Los tres
     // campos previos se conservan solo para leer valoraciones antiguas.
     objectives?: string | null;
