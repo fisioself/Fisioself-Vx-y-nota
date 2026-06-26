@@ -56,15 +56,10 @@ export function FinanceView(_props: FinanceViewProps) {
 
   return (
     <div className="record-stack">
-      <header
-        className="hero"
-        style={{ padding: 24, borderRadius: 22, display: 'flex', alignItems: 'center', gap: 16 }}
-      >
+      <header className="hero section-hero">
         <div>
-          <p className="eyebrow" style={{ color: 'rgba(255,255,255,0.7)' }}>
-            Control financiero y métricas
-          </p>
-          <h1 style={{ fontSize: 30, color: 'white', margin: 0 }}>Finanzas y métricas</h1>
+          <p className="eyebrow">Control financiero y métricas</p>
+          <h1>Finanzas y métricas</h1>
         </div>
         {summary && (
           <button

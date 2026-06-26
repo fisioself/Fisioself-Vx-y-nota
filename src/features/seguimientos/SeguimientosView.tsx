@@ -202,15 +202,10 @@ export function SeguimientosView({ onPatientSelect }: SeguimientosViewProps) {
 
   return (
     <div className="record-stack">
-      <header
-        className="hero"
-        style={{ padding: 24, borderRadius: 22, display: 'flex', alignItems: 'center', gap: 16 }}
-      >
+      <header className="hero section-hero">
         <div>
-          <p className="eyebrow" style={{ color: 'rgba(255,255,255,0.7)' }}>
-            Seguimiento activo
-          </p>
-          <h1 style={{ margin: 0, color: 'white' }}>Seguimientos</h1>
+          <p className="eyebrow">Seguimiento activo</p>
+          <h1>Seguimientos</h1>
         </div>
         <div className="sg-hero-stats">
           <div className="sg-stat">

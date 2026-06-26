@@ -27,6 +27,28 @@
   --income: #1f9d57;
   --expense: #c0392b;
   --valoracion: #8e44ad;
+  /* Texto de advertencia (ámbar) — antes #b45309 hardcodeado en varios JSX. */
+  --warning-text: #b45309;
+
+  /* ── Escala de espaciado (múltiplos de 4px) ──────────────────────────
+     Da ritmo visual consistente. Reemplaza los valores sueltos
+     (6/10/14/18…) repartidos por el código. Roles:
+       --gap          separación estándar entre tarjetas y secciones
+       --gap-tight    agrupaciones internas (filas, chips)
+       --card-pad     padding interior de las tarjetas
+       --radius-*     radios coherentes para tarjetas y cajas internas */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-8: 32px;
+  --gap: 16px;
+  --gap-tight: 10px;
+  --card-pad: 20px;
+  --radius-card: 22px;
+  --radius-inner: 16px;
 
   color-scheme: light;
   font-family:
@@ -61,6 +83,7 @@ html[data-theme='dark'] {
   --income: #34d27f;
   --expense: #e8675c;
   --valoracion: #b07ad6;
+  --warning-text: #e0a458;
   color-scheme: dark;
 }
 
@@ -215,14 +238,24 @@ details:focus-visible summary {
   font-size: clamp(32px, 5vw, 56px);
 }
 
-/* Hero compacto para el dashboard: solo franja de título, sin padding exagerado */
-.dashboard-hero {
-  padding: 20px 24px;
+/* Hero de sección unificado: franja de título coherente en Panel, Finanzas y
+   Seguimientos. Antes cada vista definía su propio padding/tamaño inline y el
+   título de Seguimientos crecía hasta 56px rompiendo la armonía. */
+.section-hero {
+  padding: var(--s-5) var(--s-6);
+  border-radius: var(--radius-card);
   margin-bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--gap);
 }
-.dashboard-hero h1 {
+.section-hero h1 {
   font-size: clamp(22px, 3vw, 30px);
   margin: 2px 0 0;
+  color: #fff;
+}
+.section-hero .eyebrow {
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .app-hero {
@@ -269,13 +302,13 @@ details:focus-visible summary {
 .dashboard-stats {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
+  gap: var(--s-3);
 }
 .stat-card {
   display: grid;
-  gap: 4px;
-  padding: 14px 16px;
-  border-radius: 18px;
+  gap: var(--s-1);
+  padding: var(--s-4);
+  border-radius: var(--radius-inner);
   background: var(--bg-card);
   border: 1px solid rgba(18, 55, 42, 0.12);
   box-shadow: 0 4px 16px rgba(18, 55, 42, 0.05);
@@ -305,9 +338,9 @@ details:focus-visible summary {
 /* Búsqueda de paciente + botón Calendar en una sola fila */
 .patient-search-row {
   display: flex;
-  gap: 8px;
+  gap: var(--s-2);
   align-items: center;
-  margin-bottom: 4px;
+  margin-bottom: var(--s-1);
 }
 .patient-search-row input {
   flex: 1;
@@ -352,7 +385,7 @@ body {
 .app-grid {
   display: grid;
   grid-template-columns: minmax(280px, 380px) 1fr;
-  gap: 18px;
+  gap: var(--gap);
   align-items: start;
 }
 /* Mismo motivo: que ningún item del grid principal (hero, pestañas, paneles)
@@ -365,7 +398,7 @@ body {
   grid-column: 1 / -1;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
+  gap: var(--gap-tight);
 }
 .main-tabs button {
   width: 100%;
@@ -379,7 +412,7 @@ body {
 .right-pane,
 .record-stack {
   display: grid;
-  gap: 16px;
+  gap: var(--gap);
   min-width: 0;
 }
 /* Los items de un grid traen min-width:auto, así que su contenido (tablas,
@@ -394,8 +427,8 @@ body {
 .card {
   background: var(--bg-card);
   border: 1px solid rgba(18, 55, 42, 0.14);
-  border-radius: 22px;
-  padding: 20px;
+  border-radius: var(--radius-card);
+  padding: var(--card-pad);
   box-shadow: 0 12px 40px rgba(18, 55, 42, 0.08);
 }
 .warning {
@@ -448,7 +481,7 @@ textarea {
 .form-header {
   display: flex;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--s-3);
   align-items: flex-start;
 }
 .form-header h2,
@@ -458,7 +491,7 @@ textarea {
 .actions {
   display: flex;
   justify-content: flex-end;
-  gap: 10px;
+  gap: var(--gap-tight);
 }
 .split-actions {
   justify-content: stretch;
@@ -561,26 +594,26 @@ a.btn-sm {
 .record-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
+  gap: var(--gap);
 }
 .summary-card {
   display: grid;
-  gap: 14px;
+  gap: var(--gap);
 }
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  gap: var(--s-3);
 }
 .summary-grid div {
   display: grid;
-  gap: 4px;
+  gap: var(--s-1);
   min-height: 88px;
   align-content: center;
-  border-radius: 16px;
+  border-radius: var(--radius-inner);
   background: #edf7f0;
   border: 1px solid rgba(18, 55, 42, 0.12);
-  padding: 12px;
+  padding: var(--s-3);
 }
 .summary-grid strong {
   font-size: 22px;
@@ -623,11 +656,11 @@ a.btn-sm {
   margin-top: 0;
 }
 .ai-box {
-  border-radius: 18px;
+  border-radius: var(--radius-inner);
   background: #edf7f0;
   border: 1px solid rgba(18, 55, 42, 0.12);
-  padding: 14px;
-  margin: 14px 0;
+  padding: var(--s-4);
+  margin: var(--s-4) 0;
 }
 .ai-box p {
   margin: 0 0 10px;

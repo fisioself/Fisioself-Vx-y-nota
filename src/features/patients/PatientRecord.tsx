@@ -418,7 +418,7 @@ export const PatientRecord = memo(function PatientRecord({
                 const yellowList = [...(yellowItems ?? []), yellowOther].filter(Boolean).join('; ');
                 return (
                   <article key={evaluation.id} className="note-row">
-                    <div className="form-header" style={{ alignItems: 'flex-start', gap: 8 }}>
+                    <div className="form-header" style={{ alignItems: 'flex-start' }}>
                       <button
                         type="button"
                         className="note-toggle"
@@ -429,7 +429,7 @@ export const PatientRecord = memo(function PatientRecord({
                           <strong>{fmtDateMX(evaluation.evaluation_date)}</strong>
                           {evaluation.eva_initial !== null &&
                             evaluation.eva_initial !== undefined && (
-                              <span style={{ marginLeft: 10, fontWeight: 400 }}>
+                              <span style={{ marginLeft: 8, fontWeight: 400 }}>
                                 EVA {evaluation.eva_initial}/10
                               </span>
                             )}
@@ -437,8 +437,7 @@ export const PatientRecord = memo(function PatientRecord({
                       </button>
                       <button
                         type="button"
-                        className="secondary"
-                        style={{ minHeight: 32, padding: '2px 10px', fontSize: '0.78rem' }}
+                        className="secondary btn-sm"
                         onClick={() => {
                           setEditingEvaluation(evaluation);
                           window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -448,23 +447,28 @@ export const PatientRecord = memo(function PatientRecord({
                       </button>
                       <button
                         type="button"
-                        className="secondary"
-                        style={{ minHeight: 32, padding: '2px 10px', fontSize: '0.78rem' }}
+                        className="secondary btn-sm"
                         onClick={() => printEvaluation(evaluation, current.full_name || '')}
                       >
                         PDF
                       </button>
                     </div>
-                    <p style={{ marginTop: '0.5rem', marginBottom: '0.25rem' }}>
+                    <p style={{ marginTop: 8, marginBottom: 4 }}>
                       {evaluation.prognosis || 'Sin diagnostico fisioterapeutico registrado'}
                     </p>
                     {evaluation.red_flags && (
-                      <p className="error" style={{ marginBottom: '0.25rem', fontSize: '0.85rem' }}>
+                      <p className="error" style={{ marginBottom: 4, fontSize: '0.85rem' }}>
                         🚩 {evaluation.red_flags}
                       </p>
                     )}
                     {yellowList && (
-                      <p style={{ marginBottom: '0.25rem', fontSize: '0.85rem', color: '#b45309' }}>
+                      <p
+                        style={{
+                          marginBottom: 4,
+                          fontSize: '0.85rem',
+                          color: 'var(--warning-text)'
+                        }}
+                      >
                         ⚠ {yellowList}
                       </p>
                     )}

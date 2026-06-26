@@ -181,7 +181,7 @@ export function CajaPanel({ caja }: CajaPanelProps) {
       </div>
       <div
         className="summary-grid"
-        style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', marginTop: 12 }}
+        style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', marginTop: 12 }}
       >
         <div className="card" style={{ background: 'var(--bg-sunken)' }}>
           <span>Efectivo</span>
