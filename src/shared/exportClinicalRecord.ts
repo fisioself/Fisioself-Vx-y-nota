@@ -274,18 +274,20 @@ function buildEvaluationHtml(evaluation: Evaluation, patientName: string): strin
 
     .wrap{padding:8px 32px 32px}
 
-    /* Secciones */
-    .section{margin-top:18px;page-break-inside:avoid}
+    /* Secciones — se permite que fluyan y se partan entre páginas para no dejar
+       huecos grandes en blanco; solo evitamos cortes en lo pequeño (más abajo). */
+    .section{margin-top:16px}
     h2{
       font-size:13px;color:var(--brand);text-transform:uppercase;letter-spacing:.05em;
       font-weight:800;display:flex;align-items:center;gap:9px;
       padding-bottom:6px;margin-bottom:9px;border-bottom:2px solid var(--brand-soft);
+      page-break-after:avoid;break-after:avoid;
     }
     h2 .num{
       width:20px;height:20px;border-radius:6px;background:var(--brand);color:#fff;
       font-size:11px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;
     }
-    h3{font-size:12.5px;font-weight:700;color:var(--brand);margin:0 0 4px}
+    h3{font-size:12.5px;font-weight:700;color:var(--brand);margin:0 0 4px;page-break-after:avoid;break-after:avoid}
 
     .two-col{display:grid;grid-template-columns:1fr 1fr;gap:0 28px}
     p.row{margin:3px 0}
@@ -294,7 +296,7 @@ function buildEvaluationHtml(evaluation: Evaluation, patientName: string): strin
     /* Bloques de texto largo (diagnóstico, plan, objetivos, pronóstico) */
     .block{
       background:var(--bg-soft);border:1px solid var(--line);border-left:3px solid var(--brand);
-      border-radius:10px;padding:11px 14px;margin:8px 0;page-break-inside:avoid
+      border-radius:10px;padding:11px 14px;margin:8px 0
     }
     .block-label{
       font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;
@@ -308,9 +310,11 @@ function buildEvaluationHtml(evaluation: Evaluation, patientName: string): strin
     .flag-amber{background:#fef6e7;color:#b45309;border:1px solid #f5dca3}
 
     /* Zonas */
-    .zone{border:1px solid var(--line);border-radius:10px;padding:11px 14px;margin:9px 0;page-break-inside:avoid}
+    .zone{border:1px solid var(--line);border-radius:10px;padding:11px 14px;margin:9px 0}
     .zone-pain{margin:4px 0;font-size:12px}
     table{width:100%;border-collapse:collapse;font-size:11px;margin:7px 0}
+    thead{display:table-header-group}
+    tr{page-break-inside:avoid;break-inside:avoid}
     th{background:var(--brand-soft);text-align:left;padding:5px 9px;font-size:9.5px;color:var(--brand);font-weight:700;text-transform:uppercase;letter-spacing:.03em}
     td{padding:5px 9px;border-bottom:1px solid var(--line)}
     tbody tr:nth-child(even){background:var(--bg-soft)}
