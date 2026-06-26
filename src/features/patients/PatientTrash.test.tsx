@@ -43,14 +43,14 @@ describe('PatientTrash', () => {
     asTherapist();
     render(<PatientTrash />, { wrapper: makeWrapper() });
     expect(
-      screen.queryByRole('button', { name: /papelera de pacientes/i })
+      screen.queryByRole('button', { name: /ver papelera de pacientes/i })
     ).not.toBeInTheDocument();
   });
 
   it('admin ve el botón de la papelera (colapsada por defecto)', () => {
     asAdmin();
     render(<PatientTrash />, { wrapper: makeWrapper() });
-    expect(screen.getByRole('button', { name: /papelera de pacientes/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /ver papelera de pacientes/i })).toBeInTheDocument();
     // No carga la lista hasta abrir.
     expect(clinicalApi.listDeletedPatients).not.toHaveBeenCalled();
   });
@@ -58,7 +58,7 @@ describe('PatientTrash', () => {
   it('al abrir carga y lista los pacientes borrados', async () => {
     asAdmin();
     render(<PatientTrash />, { wrapper: makeWrapper() });
-    await userEvent.click(screen.getByRole('button', { name: /papelera de pacientes/i }));
+    await userEvent.click(screen.getByRole('button', { name: /ver papelera de pacientes/i }));
     expect(await screen.findByText('Ana Borrada')).toBeInTheDocument();
     expect(clinicalApi.listDeletedPatients).toHaveBeenCalled();
   });
@@ -66,7 +66,7 @@ describe('PatientTrash', () => {
   it('restaurar llama a restorePatient', async () => {
     asAdmin();
     render(<PatientTrash />, { wrapper: makeWrapper() });
-    await userEvent.click(screen.getByRole('button', { name: /papelera de pacientes/i }));
+    await userEvent.click(screen.getByRole('button', { name: /ver papelera de pacientes/i }));
     await userEvent.click(await screen.findByRole('button', { name: /restaurar/i }));
     await waitFor(() => {
       expect(clinicalApi.restorePatient).toHaveBeenCalledWith('p1');

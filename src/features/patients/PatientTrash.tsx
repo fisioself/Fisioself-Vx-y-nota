@@ -35,14 +35,14 @@ export function PatientTrash() {
   if (!isAdmin) return null;
 
   return (
-    <section className="card patient-trash">
+    <div className="patient-trash">
       <button
         type="button"
-        className="secondary"
+        className="trash-ghost-link"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
       >
-        {open ? 'Ocultar papelera' : '🗑️ Papelera de pacientes'}
+        {open ? 'Ocultar papelera' : '🗑️ Ver papelera de pacientes'}
       </button>
 
       {open && (
@@ -81,6 +81,6 @@ export function PatientTrash() {
           ))}
         </div>
       )}
-    </section>
+    </div>
   );
 }
