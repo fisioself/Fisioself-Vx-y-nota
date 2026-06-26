@@ -47,6 +47,14 @@ export function ClinicDashboard({ onPatientSelect }: ClinicDashboardProps) {
 
   return (
     <div className="record-stack">
+      {/* Ancla tipográfica de la página — título limpio sin fondo de color. */}
+      <header className="section-hero">
+        <div>
+          <p className="eyebrow">Agenda y Control</p>
+          <h1>Visión General</h1>
+        </div>
+      </header>
+
       {/* Estadísticas clave */}
       <div className="dashboard-stats">
         <div className="stat-card">
