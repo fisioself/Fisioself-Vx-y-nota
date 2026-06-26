@@ -4,7 +4,7 @@
   display: grid;
   place-items: center;
   padding: 20px;
-  background: rgba(18, 55, 42, 0.28);
+  background: rgba(0, 0, 0, 0.3);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   z-index: 950;
@@ -13,13 +13,13 @@
 .appt-create-card {
   /* Fondo claro fijo: forzamos la paleta clara para que el texto sea legible
      también en modo oscuro. */
-  --text-main: #12372a;
+  --text-main: #334155;
   --bg-card: #fff;
-  --bg-sunken: #fffaf0;
-  --muted: #425e53;
+  --bg-sunken: #f1f5f9;
+  --muted: #64748b;
   --primary: #12372a;
-  --secondary: #dfece5;
-  --border: #eaebec;
+  --secondary: #f1f5f9;
+  --border: rgba(0, 0, 0, 0.06);
   color: var(--text-main);
   width: min(440px, 100%);
   max-height: min(820px, calc(100vh - 40px));
@@ -31,9 +31,9 @@
   gap: 14px;
   padding: 22px;
   border-radius: 24px;
-  background: #fffaf0;
-  border: 1px solid rgba(18, 55, 42, 0.18);
-  box-shadow: 0 24px 80px rgba(18, 55, 42, 0.3);
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.2);
 }
 
 /* Los <input>, sobre todo datetime-local, traen un ancho mínimo intrínseco
