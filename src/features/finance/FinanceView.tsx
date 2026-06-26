@@ -38,13 +38,14 @@ export function FinanceView(_props: FinanceViewProps) {
   const cm = summary?.currentMonth;
   const d30 = summary?.last30d;
   const caja = summary?.caja;
+  // Más reciente primero: se invierte para que el mes actual quede a la izquierda.
   const netChart = useMemo(
-    () => (summary?.monthly ?? []).map((m) => ({ month: m.month, value: m.net })),
+    () => [...(summary?.monthly ?? [])].reverse().map((m) => ({ month: m.month, value: m.net })),
     [summary]
   );
   const patientsChart = useMemo(
     () =>
-      (summary?.monthly ?? []).map((m) => ({
+      [...(summary?.monthly ?? [])].reverse().map((m) => ({
         month: m.month,
         a: m.patients,
         b: m.newPatients

@@ -42,9 +42,9 @@ export function CajaPanel({ caja }: CajaPanelProps) {
   const [description, setDescription] = useState('');
   const [occurredAt, setOccurredAt] = useState(today());
   const [busy, setBusy] = useState(false);
-  // El historial muestra solo los últimos 4 movimientos por defecto; el resto
-  // se despliega bajo demanda para no llenar la pantalla con decenas de filas.
-  const [showAllHistory, setShowAllHistory] = useState(false);
+  // Historial: muestra 5 movimientos por defecto, se amplía de 5 en 5.
+  const HISTORY_PAGE = 5;
+  const [historyLimit, setHistoryLimit] = useState(HISTORY_PAGE);
   // Confirmación + guarda contra doble-clic al eliminar (borra dinero de caja).
   const [confirmEntry, setConfirmEntry] = useState<CajaEntry | null>(null);
   const [removing, setRemoving] = useState(false);
@@ -121,8 +121,7 @@ export function CajaPanel({ caja }: CajaPanelProps) {
     return ka < kb ? 1 : ka > kb ? -1 : 0;
   });
 
-  const HISTORY_PREVIEW = 4;
-  const visibleEntries = showAllHistory ? entries : entries.slice(0, HISTORY_PREVIEW);
+  const visibleEntries = entries.slice(0, historyLimit);
 
   const submit = async () => {
     const value = Math.abs(Number(amount));
@@ -348,15 +347,24 @@ export function CajaPanel({ caja }: CajaPanelProps) {
         {entries.length === 0 && <p className="muted">Aún no hay cobros ni ajustes de caja.</p>}
       </ul>
 
-      {entries.length > HISTORY_PREVIEW && (
+      {historyLimit < entries.length && (
         <button
           type="button"
           className="secondary"
-          onClick={() => setShowAllHistory((v) => !v)}
-          aria-expanded={showAllHistory}
+          onClick={() => setHistoryLimit((n) => n + HISTORY_PAGE)}
           style={{ width: '100%', marginTop: 10 }}
         >
-          {showAllHistory ? 'Ver menos' : `Ver historial completo (${entries.length} movimientos)`}
+          Ver más ({entries.length - historyLimit} restantes)
+        </button>
+      )}
+      {historyLimit > HISTORY_PAGE && historyLimit >= entries.length && (
+        <button
+          type="button"
+          className="secondary"
+          onClick={() => setHistoryLimit(HISTORY_PAGE)}
+          style={{ width: '100%', marginTop: 6 }}
+        >
+          Ver menos
         </button>
       )}
 

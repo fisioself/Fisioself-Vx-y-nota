@@ -1105,7 +1105,10 @@ html[data-theme='dark'] .charge-commission-info {
    mueven el contenido ancho. */
 .x-scroll {
   overflow-x: auto;
-  touch-action: pan-x;
+  /* pan-x pan-y: el elemento captura scroll horizontal (tabla ancha) y
+     deja pasar el scroll vertical a la página. Solo pan-x bloqueaba
+     los gestos verticales impidiendo bajar en la vista de Finanzas. */
+  touch-action: pan-x pan-y;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-x: contain;
 }
