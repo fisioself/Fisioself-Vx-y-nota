@@ -405,6 +405,7 @@ export function NativeCalendar({ onEventClick }: NativeCalendarProps) {
           height="auto"
           slotMinTime="08:00:00"
           slotMaxTime="20:00:00"
+          slotLabelFormat={{ hour: '2-digit', minute: '2-digit', hour12: false }}
           allDaySlot={false}
           locales={[esLocale]}
           locale="es"
