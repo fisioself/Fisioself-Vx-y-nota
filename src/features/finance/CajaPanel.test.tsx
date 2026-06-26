@@ -98,10 +98,10 @@ describe('CajaPanel', () => {
     });
   });
 
-  it('shows only the latest 4 movements and expands on demand', async () => {
-    // 6 movimientos con fechas descendentes; el historial debe mostrar solo los
-    // 4 más recientes hasta que se pulse "Ver historial completo".
-    const movements = Array.from({ length: 6 }, (_, i) => ({
+  it('shows only the latest 5 movements and paginates on demand', async () => {
+    // 7 movimientos con fechas descendentes; el historial muestra solo los 5
+    // más recientes y "Ver más" añade el resto de 5 en 5.
+    const movements = Array.from({ length: 7 }, (_, i) => ({
       id: `mov-${i}`,
       description: `Movimiento ${i}`,
       amount: '100',
@@ -114,24 +114,24 @@ describe('CajaPanel', () => {
 
     render(<CajaPanel caja={CAJA} />, { wrapper: makeWrapper() });
 
-    // Los 4 primeros visibles, los 2 más viejos ocultos.
+    // Los 5 primeros visibles, los 2 más viejos ocultos.
     expect(await screen.findByText('Movimiento 0')).toBeInTheDocument();
-    expect(screen.getByText('Movimiento 3')).toBeInTheDocument();
-    expect(screen.queryByText('Movimiento 4')).not.toBeInTheDocument();
-    expect(screen.queryByText('Movimiento 5')).not.toBeInTheDocument();
-
-    await userEvent.click(screen.getByRole('button', { name: /Ver historial completo/ }));
-
-    // Tras expandir, aparecen todos.
     expect(screen.getByText('Movimiento 4')).toBeInTheDocument();
+    expect(screen.queryByText('Movimiento 5')).not.toBeInTheDocument();
+    expect(screen.queryByText('Movimiento 6')).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: /Ver más/ }));
+
+    // Tras pulsar "Ver más" aparecen los 2 restantes.
     expect(screen.getByText('Movimiento 5')).toBeInTheDocument();
+    expect(screen.getByText('Movimiento 6')).toBeInTheDocument();
 
     // Y se puede colapsar de nuevo.
     await userEvent.click(screen.getByRole('button', { name: /Ver menos/ }));
-    expect(screen.queryByText('Movimiento 5')).not.toBeInTheDocument();
+    expect(screen.queryByText('Movimiento 6')).not.toBeInTheDocument();
   });
 
-  it('does not show the expand button with 4 or fewer movements', async () => {
+  it('does not show the expand button with 5 or fewer movements', async () => {
     const movements = Array.from({ length: 3 }, (_, i) => ({
       id: `mov-${i}`,
       description: `Movimiento ${i}`,
@@ -146,9 +146,7 @@ describe('CajaPanel', () => {
     render(<CajaPanel caja={CAJA} />, { wrapper: makeWrapper() });
 
     await screen.findByText('Movimiento 0');
-    expect(
-      screen.queryByRole('button', { name: /Ver historial completo/ })
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Ver más/ })).not.toBeInTheDocument();
   });
 
   it('calls deleteCajaMovement when removing a manual movement', async () => {

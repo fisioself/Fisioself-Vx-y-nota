@@ -9,6 +9,7 @@ import { PatientFinancePanel } from './PatientFinancePanel';
 import { CajaPanel } from './CajaPanel';
 import { MonthlyHistory } from './MonthlyHistory';
 import { Skeleton } from '../../components/Skeleton';
+import { EmptyState } from '../../components/EmptyState';
 import { exportFinancePdf } from './exportFinancePdf';
 
 interface FinanceViewProps {
@@ -310,7 +311,11 @@ export function FinanceView(_props: FinanceViewProps) {
                 </li>
               ))}
               {summary && summary.topPatients.length === 0 && (
-                <p className="muted">Aún no hay pagos registrados.</p>
+                <EmptyState
+                  icon="🏆"
+                  title="Aún no hay pagos registrados"
+                  hint="Cuando cobres sesiones o paquetes, aquí aparecerán tus pacientes con mayor ingreso."
+                />
               )}
             </ul>
           </section>

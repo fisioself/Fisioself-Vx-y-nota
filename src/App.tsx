@@ -262,6 +262,11 @@ export function App() {
   // se muestra cuando NO hay un paciente seleccionado ni estamos en
   // Finanzas/Seguimientos, y el grid colapsa a una columna en su ausencia.
   const showPatientList = !showFinance && !showSeguimientos && !selectedPatient;
+  // Se calcula aquí, fuera del bloque `showPatientList && …`: como ese flag
+  // incluye `!selectedPatient`, TS estrecha `selectedPatient` a `never` dentro
+  // del bloque y `selectedPatient?.id` deja de compilar. Leerlo antes evita esa
+  // inferencia y mantiene el tipo `string | undefined`.
+  const selectedPatientId = selectedPatient?.id;
 
   return (
     <main className={`shell app-grid${showPatientList ? '' : ' finance-mode'}`}>
@@ -444,7 +449,7 @@ export function App() {
           <PanelErrorBoundary label="lista de pacientes">
             <Suspense fallback={<LoadingCard>Cargando pacientes...</LoadingCard>}>
               <PatientList
-                selectedId={selectedPatient?.id}
+                selectedId={selectedPatientId}
                 onSelect={(patient) => {
                   setSelectedPatient(patient);
                   setShowFinance(false);
