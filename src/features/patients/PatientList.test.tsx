@@ -47,12 +47,12 @@ describe('PatientList', () => {
     await waitFor(() => expect(clinicalApi.listPatientsToday).toHaveBeenCalled());
     // El nombre no se muestra hasta expandir.
     expect(screen.queryByText('Ana García')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /mostrar pacientes de hoy/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /pacientes de hoy/i })).toBeInTheDocument();
   });
 
   it('al expandir muestra los pacientes de hoy', async () => {
     render(<PatientList />, { wrapper: makeWrapper() });
-    await userEvent.click(await screen.findByRole('button', { name: /mostrar pacientes de hoy/i }));
+    await userEvent.click(await screen.findByRole('button', { name: /pacientes de hoy/i }));
     expect(await screen.findByText('Ana García')).toBeInTheDocument();
   });
 
@@ -71,7 +71,7 @@ describe('PatientList', () => {
   it('seleccionar un paciente invoca onSelect', async () => {
     const onSelect = vi.fn();
     render(<PatientList onSelect={onSelect} />, { wrapper: makeWrapper() });
-    await userEvent.click(await screen.findByRole('button', { name: /mostrar pacientes de hoy/i }));
+    await userEvent.click(await screen.findByRole('button', { name: /pacientes de hoy/i }));
     await userEvent.click(await screen.findByText('Ana García'));
     expect(onSelect).toHaveBeenCalledWith(expect.objectContaining({ id: 'p1' }));
   });
