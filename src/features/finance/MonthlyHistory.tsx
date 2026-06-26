@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import type { MonthlyPoint } from '../../services/financeApi';
 import { money, monthYearLabel, today } from './financeUtils';
 import { buildMonthlyCsv, downloadCsv } from './exportMonthly';
+import { EmptyState } from '../../components/EmptyState';
 
 interface MonthlyHistoryProps {
   monthly: MonthlyPoint[];
@@ -45,9 +46,11 @@ export function MonthlyHistory({ monthly }: MonthlyHistoryProps) {
       </div>
 
       {rows.length === 0 ? (
-        <p className="muted" style={{ marginTop: 12 }}>
-          Aún no hay movimientos registrados.
-        </p>
+        <EmptyState
+          icon="📊"
+          title="Aún no hay movimientos"
+          hint="Cuando registres ingresos o gastos, verás aquí el desglose mes con mes."
+        />
       ) : (
         <div className="x-scroll" style={{ marginTop: 12 }}>
           <table className="monthly-history-table">

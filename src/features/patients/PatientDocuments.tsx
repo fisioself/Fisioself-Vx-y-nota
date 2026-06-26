@@ -9,6 +9,7 @@ import { useToast } from '../../app/ToastProvider';
 import { getErrorMessage } from '../../shared/errors';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { SkeletonList } from '../../components/Skeleton';
+import { EmptyState } from '../../components/EmptyState';
 
 interface PatientDocumentsProps {
   patientId: string;
@@ -127,9 +128,11 @@ export function PatientDocuments({ patientId }: PatientDocumentsProps) {
       {isLoading ? (
         <SkeletonList rows={2} label="Cargando archivos…" />
       ) : docs.length === 0 ? (
-        <p className="muted" style={{ marginTop: 12 }}>
-          No hay archivos adjuntos todavía.
-        </p>
+        <EmptyState
+          icon="📎"
+          title="Sin archivos adjuntos"
+          hint="Sube estudios, radiografías o documentos del paciente para tenerlos a mano."
+        />
       ) : (
         <ul className="list-stack" style={{ listStyle: 'none', padding: 0, marginTop: 12 }}>
           {docs.map((doc) => (

@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { financeApi } from '../../services/financeApi';
 import { useToast } from '../../app/ToastProvider';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
+import { EmptyState } from '../../components/EmptyState';
 import { EXPENSE_CATEGORIES, fmtDate, money, today } from './financeUtils';
 
 export function ExpensesPanel() {
@@ -147,12 +148,20 @@ export function ExpensesPanel() {
           </li>
         ))}
         {expenses.length === 0 && (
-          <div className="empty-cta">
-            <p className="muted">Aún no hay gastos registrados.</p>
-            <button type="button" className="secondary" onClick={() => amountRef.current?.focus()}>
+          <EmptyState
+            icon="💸"
+            title="Aún no hay gastos"
+            hint="Lleva el control de material, renta y otros egresos para ver tu ganancia real."
+          >
+            <button
+              type="button"
+              className="secondary"
+              style={{ marginTop: 4 }}
+              onClick={() => amountRef.current?.focus()}
+            >
               Registrar el primer gasto
             </button>
-          </div>
+          </EmptyState>
         )}
       </ul>
 

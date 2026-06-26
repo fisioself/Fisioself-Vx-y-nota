@@ -5,6 +5,7 @@ import { AppointmentForm } from './AppointmentForm';
 import { getErrorMessage } from '../../shared/errors';
 import { useToast } from '../../app/ToastProvider';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
+import { EmptyState } from '../../components/EmptyState';
 import { fmtDate } from '../finance/financeUtils';
 import type { Appointment, Patient } from '../../types/clinical';
 import './appointments.css';
@@ -179,7 +180,11 @@ export function AppointmentList({ patient, appointments = [], onChanged }: Appoi
           );
         })}
         {!appointments.length && (
-          <p className="muted">No hay citas programadas para este paciente.</p>
+          <EmptyState
+            icon="🗓️"
+            title="Sin citas programadas"
+            hint="Crea una cita con «Nueva cita» para verla aquí y poder enviar recordatorios."
+          />
         )}
       </div>
 
