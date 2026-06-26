@@ -31,6 +31,8 @@ interface PatientFormProps {
 interface PatientListProps {
   selectedId?: string | null;
   onSelect: (patient: Patient) => void;
+  onNewPatient?: () => void;
+  newPatientActive?: boolean;
 }
 interface PatientRecordProps {
   patient: Partial<Patient> | null;
@@ -299,7 +301,6 @@ export function App() {
           <h1 style={{ margin: 0 }}>Fisioself</h1>
         </div>
         <div className="hero-actions">
-          <span className="pill">{session.user?.email}</span>
           {session.user?.id && <PushNotificationButton userId={session.user.id} />}
           <button
             type="button"
@@ -311,26 +312,27 @@ export function App() {
             <span aria-hidden="true">🔍</span>
             <span className="btn-label">Buscar</span>
           </button>
-          <button
-            type="button"
-            className="secondary"
-            onClick={() => setShowMfaSettings(true)}
-            aria-label="Seguridad"
-            title="Seguridad"
-          >
-            <span aria-hidden="true">🛡️</span>
-            <span className="btn-label">Seguridad</span>
-          </button>
-          <button
-            type="button"
-            className="secondary"
-            onClick={logout}
-            aria-label="Cerrar sesión"
-            title="Cerrar sesión"
-          >
-            <span aria-hidden="true">🚪</span>
-            <span className="btn-label">Salir</span>
-          </button>
+          {/* Seguridad y Salir como íconos compactos agrupados */}
+          <div className="hero-icon-group">
+            <button
+              type="button"
+              className="secondary hero-icon-btn"
+              onClick={() => setShowMfaSettings(true)}
+              aria-label="Seguridad"
+              title={`Seguridad · ${session.user?.email ?? ''}`}
+            >
+              🛡️
+            </button>
+            <button
+              type="button"
+              className="secondary hero-icon-btn"
+              onClick={logout}
+              aria-label="Cerrar sesión"
+              title="Cerrar sesión"
+            >
+              🚪
+            </button>
+          </div>
         </div>
       </header>
 
@@ -429,27 +431,21 @@ export function App() {
 
       {showPatientList && (
         <aside className="left-pane">
-          <button
-            type="button"
-            className={showNewPatient ? 'secondary' : ''}
-            style={{ width: '100%' }}
-            onClick={() => {
-              if (showNewPatient) {
-                setShowNewPatient(false);
-                setShowDashboard(true);
-              } else {
-                setShowNewPatient(true);
-                setShowDashboard(false);
-                setSelectedPatient(null);
-              }
-            }}
-          >
-            {showNewPatient ? 'Cancelar alta' : '+ Nuevo paciente'}
-          </button>
           <PanelErrorBoundary label="lista de pacientes">
             <Suspense fallback={<LoadingCard>Cargando pacientes...</LoadingCard>}>
               <PatientList
                 selectedId={selectedPatientId}
+                newPatientActive={showNewPatient}
+                onNewPatient={() => {
+                  if (showNewPatient) {
+                    setShowNewPatient(false);
+                    setShowDashboard(true);
+                  } else {
+                    setShowNewPatient(true);
+                    setShowDashboard(false);
+                    setSelectedPatient(null);
+                  }
+                }}
                 onSelect={(patient) => {
                   setSelectedPatient(patient);
                   setShowFinance(false);

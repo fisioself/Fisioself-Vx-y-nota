@@ -11,14 +11,21 @@ import type { Patient } from '../../types/clinical';
 interface PatientListProps {
   selectedId?: string | null;
   onSelect?: (patient: Patient) => void;
+  /** Callback para el botón «+ Nuevo paciente» integrado en la cabecera. */
+  onNewPatient?: () => void;
+  /** Indica si el formulario de nuevo paciente está activo (para alternar el label). */
+  newPatientActive?: boolean;
 }
 
-export function PatientList({ selectedId, onSelect }: PatientListProps) {
+export function PatientList({
+  selectedId,
+  onSelect,
+  onNewPatient,
+  newPatientActive
+}: PatientListProps) {
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [importing, setImporting] = useState(false);
-  // La lista de nombres arranca colapsada para no llenar la pantalla principal;
-  // se despliega al tocar "Mostrar" o automáticamente al buscar.
   const [expanded, setExpanded] = useState(false);
   const { notify } = useToast();
   const queryClient = useQueryClient();
@@ -44,16 +51,12 @@ export function PatientList({ selectedId, onSelect }: PatientListProps) {
 
   const patients = isSearching ? searchResults : todayPatients;
   const isLoading = isSearching ? loadingSearch : loadingToday;
-  // Mostramos los nombres solo al buscar o cuando el usuario despliega la lista.
   const showList = isSearching || expanded;
 
   const handleImport = async () => {
     setImporting(true);
     notify({ tone: 'success', message: 'Sincronizando pacientes desde Google Calendar...' });
     try {
-      // Dispara la importación REAL en el servidor (la edge function
-      // google-calendar-fetch crea pacientes/citas a partir del calendario).
-      // Antes esto era un setTimeout falso que afirmaba éxito sin hacer nada.
       await calendarService.fetchEvents();
       await queryClient.invalidateQueries({ queryKey: ['patients'] });
       await queryClient.invalidateQueries({ queryKey: ['appointments'] });
@@ -71,42 +74,53 @@ export function PatientList({ selectedId, onSelect }: PatientListProps) {
   return (
     <>
       <section className="card patient-list">
+        {/* Cabecera: título + botón «+ Nuevo paciente» integrado */}
         <div className="form-header">
           <div>
             <p className="eyebrow">Expedientes</p>
             <h2>Pacientes</h2>
           </div>
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <button type="button" className="secondary" onClick={handleImport} disabled={importing}>
-              {importing ? 'Sincronizando...' : 'Importar de Calendar'}
+          {onNewPatient && (
+            <button
+              type="button"
+              className={newPatientActive ? 'secondary btn-sm' : 'btn-sm'}
+              onClick={onNewPatient}
+            >
+              {newPatientActive ? 'Cancelar' : '+ Nuevo'}
             </button>
-            <span className="pill">{patients.length}</span>
-          </div>
+          )}
         </div>
 
-        <div className="filter-group">
+        {/* Búsqueda + acción secundaria «Importar» en una sola fila */}
+        <div className="patient-search-row">
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Buscar por nombre o telefono..."
+            placeholder="Buscar por nombre o teléfono…"
             aria-label="Buscar pacientes"
-            className="search-input"
           />
+          <button
+            type="button"
+            className="secondary btn-sm"
+            onClick={handleImport}
+            disabled={importing}
+            title="Importar pacientes desde Google Calendar"
+          >
+            {importing ? '…' : '↻ Calendar'}
+          </button>
         </div>
 
-        {/* Botón para mostrar/ocultar la lista de hoy (colapsada por defecto para
-          que los nombres no aparezcan en la pantalla principal). Al buscar, la
-          lista se muestra sola y este botón se oculta. */}
+        {/* «Mostrar pacientes de hoy» colapsado por defecto */}
         {!isSearching && (
           <button
             type="button"
             className="secondary"
             onClick={() => setExpanded((v) => !v)}
-            style={{ marginBottom: showList ? 12 : 0 }}
+            style={{ marginBottom: showList ? 4 : 0 }}
           >
             {expanded
               ? 'Ocultar lista'
-              : `Mostrar pacientes de hoy${todayPatients.length ? ` (${todayPatients.length})` : ''}`}
+              : `Pacientes de hoy${todayPatients.length ? ` (${todayPatients.length})` : ''}`}
           </button>
         )}
 
@@ -124,7 +138,7 @@ export function PatientList({ selectedId, onSelect }: PatientListProps) {
               >
                 <strong>{patient.full_name}</strong>
                 <span>{patient.status || 'Sin estado'}</span>
-                <small>{patient.phone || 'Sin telefono'}</small>
+                <small>{patient.phone || 'Sin teléfono'}</small>
               </button>
             ))}
 
