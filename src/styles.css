@@ -361,22 +361,22 @@ details:focus-visible summary {
 }
 
 /* ── Panel: arquitectura de 3 zonas ──────────────────────────────────────────
-   Franja superior: panel de Pacientes (izq) + métricas integradas (der). El
-   calendario ocupa TODO el ancho debajo → la agenda gana la máxima superficie. */
+   El calendario va ARRIBA, a todo el ancho (la agenda es lo primero que se ve).
+   Debajo, la franja con el panel de Pacientes (izq) + métricas integradas (der). */
 .panel-grid {
   display: grid;
   grid-template-columns: minmax(280px, 330px) 1fr;
   grid-template-areas:
-    'patients stats'
-    'calendar calendar';
+    'calendar calendar'
+    'patients stats';
   gap: var(--gap);
   align-items: start;
 }
 .panel-grid--no-sidebar {
   grid-template-columns: 1fr;
   grid-template-areas:
-    'stats'
-    'calendar';
+    'calendar'
+    'stats';
 }
 .panel-patients {
   grid-area: patients;
@@ -400,9 +400,9 @@ details:focus-visible summary {
   .panel-grid--no-sidebar {
     grid-template-columns: 1fr;
     grid-template-areas:
+      'calendar'
       'patients'
-      'stats'
-      'calendar';
+      'stats';
   }
 }
 
