@@ -41,6 +41,8 @@ interface PatientRecordProps {
 }
 interface DashboardProps {
   onPatientSelect: (patientId: string) => void;
+  /** Panel de pacientes integrado como columna de la franja superior. */
+  sidebar?: ReactNode;
 }
 interface FinanceProps {
   onPatientSelect: (patientId: string) => void;
@@ -258,20 +260,48 @@ export function App() {
     );
   }
 
-  // La lista de pacientes (left-pane) solo tiene sentido en el Panel y al dar de
-  // alta un paciente. Antes, al abrir un expediente concreto seguía apareciendo
-  // debajo del expediente en móvil, duplicando la búsqueda/papelera. Ahora solo
-  // se muestra cuando NO hay un paciente seleccionado ni estamos en
-  // Finanzas/Seguimientos, y el grid colapsa a una columna en su ausencia.
-  const showPatientList = !showFinance && !showSeguimientos && !selectedPatient;
-  // Se calcula aquí, fuera del bloque `showPatientList && …`: como ese flag
-  // incluye `!selectedPatient`, TS estrecha `selectedPatient` a `never` dentro
-  // del bloque y `selectedPatient?.id` deja de compilar. Leerlo antes evita esa
-  // inferencia y mantiene el tipo `string | undefined`.
+  // El panel de pacientes (búsqueda + lista) ya no vive como barra lateral
+  // permanente: en el Panel se integra DENTRO del dashboard, como columna de la
+  // franja superior junto a las métricas, para que el calendario ocupe todo el
+  // ancho. Solo en el alta de paciente se muestra como barra lateral clásica
+  // junto al formulario → única vista de dos columnas.
+  const twoColumn = showNewPatient;
+  // Se calcula aquí, fuera del JSX, para mantener el tipo `string | undefined`
+  // sin que TS lo estreche a `never` dentro de bloques condicionales.
   const selectedPatientId = selectedPatient?.id;
 
+  // Panel de pacientes reutilizable: barra lateral en el alta y columna
+  // integrada del dashboard en el Panel. Se define una vez para no duplicar
+  // los handlers de selección/alta.
+  const patientListPanel = (
+    <PanelErrorBoundary label="lista de pacientes">
+      <Suspense fallback={<LoadingCard>Cargando pacientes...</LoadingCard>}>
+        <PatientList
+          selectedId={selectedPatientId}
+          newPatientActive={showNewPatient}
+          onNewPatient={() => {
+            if (showNewPatient) {
+              setShowNewPatient(false);
+              setShowDashboard(true);
+            } else {
+              setShowNewPatient(true);
+              setShowDashboard(false);
+              setSelectedPatient(null);
+            }
+          }}
+          onSelect={(patient) => {
+            setSelectedPatient(patient);
+            setShowFinance(false);
+            setShowDashboard(false);
+            setShowNewPatient(false);
+          }}
+        />
+      </Suspense>
+    </PanelErrorBoundary>
+  );
+
   return (
-    <main className={`shell app-grid${showPatientList ? '' : ' finance-mode'}`}>
+    <main className={`shell app-grid${twoColumn ? '' : ' finance-mode'}`}>
       {searchOpen && (
         <GlobalSearch
           onSelectPatient={(patient) => {
@@ -430,34 +460,7 @@ export function App() {
         </div>
       )}
 
-      {showPatientList && (
-        <aside className="left-pane">
-          <PanelErrorBoundary label="lista de pacientes">
-            <Suspense fallback={<LoadingCard>Cargando pacientes...</LoadingCard>}>
-              <PatientList
-                selectedId={selectedPatientId}
-                newPatientActive={showNewPatient}
-                onNewPatient={() => {
-                  if (showNewPatient) {
-                    setShowNewPatient(false);
-                    setShowDashboard(true);
-                  } else {
-                    setShowNewPatient(true);
-                    setShowDashboard(false);
-                    setSelectedPatient(null);
-                  }
-                }}
-                onSelect={(patient) => {
-                  setSelectedPatient(patient);
-                  setShowFinance(false);
-                  setShowDashboard(false);
-                  setShowNewPatient(false);
-                }}
-              />
-            </Suspense>
-          </PanelErrorBoundary>
-        </aside>
-      )}
+      {twoColumn && <aside className="left-pane">{patientListPanel}</aside>}
 
       <section className="right-pane">
         <PanelErrorBoundary label="el panel principal">
@@ -488,6 +491,7 @@ export function App() {
               />
             ) : showDashboard ? (
               <ClinicDashboard
+                sidebar={patientListPanel}
                 onPatientSelect={(patientId) => {
                   setSelectedPatient({ id: patientId });
                   setShowFinance(false);

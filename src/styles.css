@@ -360,6 +360,52 @@ details:focus-visible summary {
   }
 }
 
+/* ── Panel: arquitectura de 3 zonas ──────────────────────────────────────────
+   Franja superior: panel de Pacientes (izq) + métricas integradas (der). El
+   calendario ocupa TODO el ancho debajo → la agenda gana la máxima superficie. */
+.panel-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 330px) 1fr;
+  grid-template-areas:
+    'patients stats'
+    'calendar calendar';
+  gap: var(--gap);
+  align-items: start;
+}
+.panel-grid--no-sidebar {
+  grid-template-columns: 1fr;
+  grid-template-areas:
+    'stats'
+    'calendar';
+}
+.panel-patients {
+  grid-area: patients;
+  min-width: 0;
+}
+.panel-stats {
+  grid-area: stats;
+}
+.panel-calendar {
+  grid-area: calendar;
+}
+/* Dentro del panel las métricas van 2×2: acompañan la altura del panel de
+   Pacientes en vez de aplastarse en una sola fila. */
+.panel-stats.dashboard-stats {
+  grid-template-columns: repeat(2, 1fr);
+  align-content: start;
+}
+
+@media (max-width: 900px) {
+  .panel-grid,
+  .panel-grid--no-sidebar {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      'patients'
+      'stats'
+      'calendar';
+  }
+}
+
 /* Búsqueda de paciente + botón Calendar en una sola fila */
 .patient-search-row {
   display: flex;

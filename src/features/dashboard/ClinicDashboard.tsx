@@ -1,4 +1,4 @@
-import { Suspense, lazy } from 'react';
+import { Suspense, lazy, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { clinicalApi } from '../../services/clinicalApi';
 import { calendarService } from '../../services/calendarService';
@@ -10,9 +10,11 @@ const NativeCalendar = lazy(() =>
 
 interface ClinicDashboardProps {
   onPatientSelect?: (patientId: string) => void;
+  /** Panel de pacientes integrado como columna de la franja superior. */
+  sidebar?: ReactNode;
 }
 
-export function ClinicDashboard({ onPatientSelect }: ClinicDashboardProps) {
+export function ClinicDashboard({ onPatientSelect, sidebar }: ClinicDashboardProps) {
   const { data: calStatus, isLoading: calLoading } = useQuery({
     queryKey: ['calendar-connection'],
     queryFn: () => calendarService.getConnectionStatus(),
@@ -29,50 +31,66 @@ export function ClinicDashboard({ onPatientSelect }: ClinicDashboardProps) {
     refetchOnWindowFocus: true
   });
 
-  if (isLoading)
-    return (
-      <section className="card" aria-busy="true">
-        <Skeleton width="35%" height={20} />
-        <div style={{ display: 'flex', gap: 12, marginTop: 16, flexWrap: 'wrap' }}>
-          <Skeleton width={110} height={64} radius={14} />
-          <Skeleton width={110} height={64} radius={14} />
-          <Skeleton width={110} height={64} radius={14} />
-          <Skeleton width={110} height={64} radius={14} />
-        </div>
-        <span className="sr-only">Cargando estadísticas…</span>
-      </section>
-    );
-  if (error || !stats)
-    return <section className="card error">Error al cargar datos: {error?.message || ''}</section>;
-
+  // Layout de 3 zonas: la franja superior integra el panel de pacientes
+  // (izquierda) con las métricas (derecha); el calendario ocupa TODO el ancho
+  // debajo para máxima superficie de agenda. El panel y el calendario se
+  // mantienen visibles aunque las estadísticas sigan cargando (sin saltos).
   return (
-    <div className="record-stack">
-      {/* Sin título flotante: la pestaña activa ya indica dónde estamos y así las
-          tarjetas de métricas arrancan en la misma línea que la tarjeta Pacientes. */}
-      {/* Estadísticas clave */}
-      <div className="dashboard-stats">
-        <div className="stat-card">
-          <span className="stat-label">Pacientes totales</span>
-          <strong className="stat-value">{stats.totalPatients}</strong>
-        </div>
-        <div className="stat-card stat-card--sunken">
-          <span className="stat-label">Sesiones este mes</span>
-          <strong className="stat-value">{stats.monthSessions}</strong>
-        </div>
-        <div className="stat-card stat-card--sunken">
-          <span className="stat-label">Valoraciones este mes</span>
-          <strong className="stat-value" style={{ color: 'var(--valoracion)' }}>
-            {stats.monthValoraciones}
-          </strong>
-        </div>
-        <div className="stat-card">
-          <span className="stat-label">Citas pendientes</span>
-          <strong className="stat-value">{stats.upcomingAppointments}</strong>
-        </div>
+    <div className={`panel-grid${sidebar ? '' : ' panel-grid--no-sidebar'}`}>
+      {sidebar && <div className="panel-patients">{sidebar}</div>}
+
+      {/* Estadísticas clave — globos integrados junto a Pacientes */}
+      <div className="panel-stats dashboard-stats" aria-busy={isLoading || undefined}>
+        {isLoading ? (
+          <>
+            <div className="stat-card">
+              <Skeleton width="70%" height={11} />
+              <Skeleton width="45%" height={26} />
+            </div>
+            <div className="stat-card stat-card--sunken">
+              <Skeleton width="70%" height={11} />
+              <Skeleton width="45%" height={26} />
+            </div>
+            <div className="stat-card stat-card--sunken">
+              <Skeleton width="70%" height={11} />
+              <Skeleton width="45%" height={26} />
+            </div>
+            <div className="stat-card">
+              <Skeleton width="70%" height={11} />
+              <Skeleton width="45%" height={26} />
+            </div>
+            <span className="sr-only">Cargando estadísticas…</span>
+          </>
+        ) : error || !stats ? (
+          <div className="stat-card error" style={{ gridColumn: '1 / -1' }}>
+            Error al cargar datos: {error?.message || ''}
+          </div>
+        ) : (
+          <>
+            <div className="stat-card">
+              <span className="stat-label">Pacientes totales</span>
+              <strong className="stat-value">{stats.totalPatients}</strong>
+            </div>
+            <div className="stat-card stat-card--sunken">
+              <span className="stat-label">Sesiones este mes</span>
+              <strong className="stat-value">{stats.monthSessions}</strong>
+            </div>
+            <div className="stat-card stat-card--sunken">
+              <span className="stat-label">Valoraciones este mes</span>
+              <strong className="stat-value" style={{ color: 'var(--valoracion)' }}>
+                {stats.monthValoraciones}
+              </strong>
+            </div>
+            <div className="stat-card">
+              <span className="stat-label">Citas pendientes</span>
+              <strong className="stat-value">{stats.upcomingAppointments}</strong>
+            </div>
+          </>
+        )}
       </div>
 
-      {/* Calendario como tarjeta independiente */}
-      <section className="card">
+      {/* Calendario a todo el ancho — la zona protagonista del panel */}
+      <section className="card panel-calendar">
         <div className="form-header" style={{ marginBottom: 12 }}>
           <div>
             <p className="eyebrow">Agenda</p>
