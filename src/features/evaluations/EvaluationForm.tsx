@@ -1068,6 +1068,17 @@ export function EvaluationForm({
                 {PAIN_MECHANISM_DESCRIPTIONS[values.pain_mechanism]}
               </small>
             )}
+            <details className="mechanism-legend">
+              <summary>¿Qué significa cada mecanismo?</summary>
+              <dl>
+                {PAIN_MECHANISM_OPTIONS.map((o) => (
+                  <div key={o}>
+                    <dt>{o}</dt>
+                    <dd>{PAIN_MECHANISM_DESCRIPTIONS[o]}</dd>
+                  </div>
+                ))}
+              </dl>
+            </details>
           </label>
           <label className="span-2">
             Historia clínica / Evolución del padecimiento

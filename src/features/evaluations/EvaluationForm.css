@@ -321,6 +321,39 @@ details.form-section[open] > summary {
   line-height: 1.35;
 }
 
+/* Leyenda con la descripción de los 4 mecanismos del dolor. */
+.mechanism-legend {
+  margin-top: 6px;
+  font-size: 0.78rem;
+}
+.mechanism-legend > summary {
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-weight: 600;
+  list-style: revert;
+}
+.mechanism-legend dl {
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  background: var(--bg-sunken);
+  border-radius: 12px;
+  display: grid;
+  gap: 8px;
+}
+.mechanism-legend dl > div {
+  display: grid;
+  gap: 1px;
+}
+.mechanism-legend dt {
+  font-weight: 700;
+  color: var(--text-main);
+}
+.mechanism-legend dd {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.35;
+}
+
 /* Diagnóstico médico mostrado como referencia dentro de la conclusión. */
 .dx-medical-ref {
   margin: 0 0 4px;
