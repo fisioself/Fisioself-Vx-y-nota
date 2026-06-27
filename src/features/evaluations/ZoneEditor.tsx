@@ -6,7 +6,6 @@ import {
   DANIELS_OPTIONS,
   ROM_RANGE_OPTIONS,
   getRomNorm,
-  classifyRom,
   rangeFromDegrees,
   PAIN_TYPE_OPTIONS
 } from './evaluationCatalog';
@@ -16,6 +15,7 @@ import {
   romRowsForCatalog,
   strengthRowsForCatalog
 } from './evaluationFormHelpers';
+import { isRomRowAltered, isStrengthRowAltered } from '../../shared/clinicalFindings';
 import type { RomRow, StrengthRow, TestResult, ZoneFormData } from './evaluationFormTypes';
 
 // ---- Editor de una zona específica ----
@@ -65,8 +65,7 @@ export function ZoneEditor({ zone, index, onChange, onRemove }: ZoneEditorProps)
     }));
   // Una fila ROM es "alterada" (se resalta en ámbar) si hay dolor o si el lado
   // afectado quedó por debajo del normal de referencia.
-  const romAltered = (r: RomRow): boolean =>
-    r.pain === 'Sí' || classifyRom(zone.zone_id, r.movement, r.degrees) === 'limitado';
+  const romAltered = (r: RomRow): boolean => isRomRowAltered(r.range, r.pain);
   const addRom = () =>
     onChange((z) => ({ ...z, movement_ranges: [...z.movement_ranges, { ...emptyRomRow }] }));
   const removeRom = (i: number) =>
@@ -113,11 +112,7 @@ export function ZoneEditor({ zone, index, onChange, onRemove }: ZoneEditorProps)
       muscle_strength: z.muscle_strength.map((r, ri) => (ri === i ? { ...r, [key]: value } : r))
     }));
   // Una fila de fuerza es "alterada" si hay dolor o Daniels < 5.
-  const strengthAltered = (r: StrengthRow): boolean => {
-    if (r.pain === 'Sí') return true;
-    const n = parseInt(r.daniels, 10);
-    return Number.isFinite(n) && n < 5;
-  };
+  const strengthAltered = (r: StrengthRow): boolean => isStrengthRowAltered(r.daniels, r.pain);
   const addStrength = () =>
     onChange((z) => ({ ...z, muscle_strength: [...z.muscle_strength, { ...emptyStrengthRow }] }));
   const removeStrength = (i: number) =>

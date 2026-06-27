@@ -1,5 +1,6 @@
 import type { Evaluation, EvaluationZone } from '../../types/clinical';
 import { BodyPainMap } from '../../components/BodyPainMap';
+import { isRomRowAltered, isStrengthRowAltered } from '../../shared/clinicalFindings';
 
 interface JointRow {
   joint?: string;
@@ -151,12 +152,15 @@ export function EvaluationSummary({ evaluation }: EvaluationSummaryProps) {
           {!!zone.movement_ranges?.length && (
             <div className="mini-table">
               {zone.movement_ranges.map((r, i) => (
-                <p key={`zr-${i}`}>
+                <p
+                  key={`zr-${i}`}
+                  className={isRomRowAltered(r.range, r.pain) ? 'finding-altered' : undefined}
+                >
                   {val(r.movement)}
                   {r.type ? ` (${r.type})` : ''}: {val(r.range)}
                   {r.degrees ? ` · afectado ${r.degrees}°` : ''}
                   {r.degrees_healthy ? ` / sano ${r.degrees_healthy}°` : ''}
-                  {r.pain ? ` · dolor: ${r.pain}` : ''}
+                  {r.pain === 'Sí' ? ' · con dolor' : ''}
                   {r.notes ? ` - ${r.notes}` : ''}
                 </p>
               ))}
@@ -165,9 +169,12 @@ export function EvaluationSummary({ evaluation }: EvaluationSummaryProps) {
           {!!zone.muscle_strength?.length && (
             <div className="mini-table">
               {zone.muscle_strength.map((r, i) => (
-                <p key={`zs-${i}`}>
+                <p
+                  key={`zs-${i}`}
+                  className={isStrengthRowAltered(r.daniels, r.pain) ? 'finding-altered' : undefined}
+                >
                   {val(r.muscle)}: {val(r.daniels)}
-                  {r.pain ? ` · dolor: ${r.pain}` : ''}
+                  {r.pain === 'Sí' ? ' · con dolor' : ''}
                   {r.notes ? ` - ${r.notes}` : ''}
                 </p>
               ))}
