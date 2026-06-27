@@ -11,11 +11,11 @@ import { clinicalApi } from '../../services/clinicalApi';
 import {
   AppointmentChargeModal,
   type ChargeAppointmentTarget
-} from '../../features/finance/AppointmentChargeModal';
+} from '../finance/AppointmentChargeModal';
 import {
   AppointmentCreateModal,
   type NewAppointmentSlot
-} from '../../features/appointments/AppointmentCreateModal';
+} from '../appointments/AppointmentCreateModal';
 import './NativeCalendar.css';
 
 // Formas minimas y estructurales de los argumentos que FullCalendar pasa a

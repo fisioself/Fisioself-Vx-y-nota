@@ -5,7 +5,7 @@ import { calendarService } from '../../services/calendarService';
 import { Skeleton } from '../../components/Skeleton';
 
 const NativeCalendar = lazy(() =>
-  import('../../components/calendar/NativeCalendar').then((m) => ({ default: m.NativeCalendar }))
+  import('../calendar/NativeCalendar').then((m) => ({ default: m.NativeCalendar }))
 );
 
 interface ClinicDashboardProps {

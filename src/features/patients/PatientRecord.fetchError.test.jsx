@@ -28,7 +28,7 @@ vi.mock('../../services/clinicalApi', () => ({
 vi.mock('../appointments/AppointmentList', () => ({ AppointmentList: () => null }));
 vi.mock('../../components/ImageUploader', () => ({ ImageUploader: () => null }));
 vi.mock('../../components/ClinicalFilesList', () => ({ ClinicalFilesList: () => null }));
-vi.mock('../../components/calendar/NativeCalendar', () => ({ NativeCalendar: () => null }));
+vi.mock('../calendar/NativeCalendar', () => ({ NativeCalendar: () => null }));
 
 import { PatientRecord } from './PatientRecord';
 import { clinicalApi } from '../../services/clinicalApi';
