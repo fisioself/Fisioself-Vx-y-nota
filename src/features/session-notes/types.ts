@@ -1,8 +1,6 @@
-export interface AiType {
-  id: string;
-  label: string;
-  traceable?: boolean;
-}
+// AiType lo define la capa de servicio (services/aiService); se reexporta aquí
+// por conveniencia para los consumidores de session-notes.
+export type { AiType } from '../../services/aiService';
 
 export interface PendingConsult {
   type: string;

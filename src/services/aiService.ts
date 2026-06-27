@@ -1,6 +1,13 @@
 import { assertSupabase } from '../lib/supabaseClient';
 import { getErrorMessage } from '../shared/errors';
-import type { AiType } from '../features/session-notes/types';
+
+// El catálogo de IA vive en esta capa de servicio (es su dueña); las features lo
+// consumen importando AiType desde aquí.
+export interface AiType {
+  id: string;
+  label: string;
+  traceable?: boolean;
+}
 
 const proxyUrl = import.meta.env.VITE_AI_PROXY_URL as string | undefined;
 const AI_TIMEOUT_MS = 30_000;

@@ -1,7 +1,7 @@
 import { assertSupabase } from '../lib/supabaseClient';
 import { trackEvent } from '../lib/analytics';
 import { NOT_VALORACION_OR_FILTER } from './sessionColors';
-import { cardCommission } from '../features/finance/financeUtils';
+import { cardCommission } from '../shared/financeMath';
 import type { Tables, TablesInsert } from '../types/supabase';
 
 export type Package = Tables<'packages'>;
