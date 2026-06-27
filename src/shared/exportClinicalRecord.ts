@@ -1,5 +1,6 @@
 import type { Patient, Evaluation, EvaluationZone } from '../types/clinical';
 import { computeAge } from './dateUtils';
+import { isRomRowAltered, isStrengthRowAltered } from './clinicalFindings';
 
 export const exportToPdf = (patient: Patient | null): void => {
   if (!patient) return;
@@ -102,14 +103,14 @@ function buildZoneHtml(zone: EvaluationZone): string {
     ${
       roms.length
         ? `<table><thead><tr><th>Movimiento</th><th>Tipo</th><th>Rango</th><th>Afectado</th><th>Sano</th><th>Dolor</th><th>Notas</th></tr></thead><tbody>
-      ${roms.map((r) => `<tr><td>${v(r.movement)}</td><td>${v(r.type)}</td><td>${v(r.range)}</td><td>${r.degrees ? `${r.degrees}°` : '—'}</td><td>${r.degrees_healthy ? `${r.degrees_healthy}°` : '—'}</td><td>${v(r.pain)}</td><td>${v(r.notes)}</td></tr>`).join('')}
+      ${roms.map((r) => `<tr class="${isRomRowAltered(r.range, r.pain) ? 'altered' : ''}"><td>${v(r.movement)}</td><td>${v(r.type)}</td><td>${v(r.range)}</td><td>${r.degrees ? `${r.degrees}°` : '—'}</td><td>${r.degrees_healthy ? `${r.degrees_healthy}°` : '—'}</td><td>${r.pain === 'Sí' ? 'Sí' : '—'}</td><td>${v(r.notes)}</td></tr>`).join('')}
     </tbody></table>`
         : ''
     }
     ${
       strengths.length
         ? `<table><thead><tr><th>Músculo</th><th>Daniels</th><th>Dolor</th><th>Notas</th></tr></thead><tbody>
-      ${strengths.map((r) => `<tr><td>${v(r.muscle)}</td><td>${v(r.daniels)}</td><td>${v(r.pain)}</td><td>${v(r.notes)}</td></tr>`).join('')}
+      ${strengths.map((r) => `<tr class="${isStrengthRowAltered(r.daniels, r.pain) ? 'altered' : ''}"><td>${v(r.muscle)}</td><td>${v(r.daniels)}</td><td>${r.pain === 'Sí' ? 'Sí' : '—'}</td><td>${v(r.notes)}</td></tr>`).join('')}
     </tbody></table>`
         : ''
     }
@@ -319,6 +320,12 @@ function buildEvaluationHtml(evaluation: Evaluation, patientName: string): strin
     th{background:var(--brand-soft);text-align:left;padding:5px 9px;font-size:9.5px;color:var(--brand);font-weight:700;text-transform:uppercase;letter-spacing:.03em}
     td{padding:5px 9px;border-bottom:1px solid var(--line)}
     tbody tr:nth-child(even){background:var(--bg-soft)}
+    /* Hallazgos alterados (ROM limitado, Daniels<5 o con dolor): resaltados para
+       que salten a la vista en el informe. Gana al rayado par/impar. */
+    tbody tr.altered,
+    tbody tr.altered:nth-child(even){background:#fbeccd}
+    tbody tr.altered td{font-weight:700;color:#7a5200}
+    tbody tr.altered td:first-child{box-shadow:inset 3px 0 0 #d99b30}
 
     /* Mapa corporal */
     .body-maps{display:flex;gap:28px;justify-content:center;padding:6px 0}

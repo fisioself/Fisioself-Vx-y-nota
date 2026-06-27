@@ -199,6 +199,15 @@ a.btn-sm {
   background: rgba(255, 255, 255, 0.9);
   padding: 10px;
 }
+/* Hallazgo alterado en el expediente: ROM limitado, Daniels < 5 o con dolor. */
+.mini-table p.finding-altered {
+  background: rgba(217, 155, 48, 0.14);
+  border-left: 3px solid #d99b30;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-weight: 700;
+  color: #7a5200;
+}
 pre {
   white-space: pre-wrap;
   overflow: auto;
