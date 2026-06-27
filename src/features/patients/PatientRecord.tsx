@@ -111,6 +111,7 @@ export const PatientRecord = memo(function PatientRecord({
   const [openEvaluationId, setOpenEvaluationId] = useState<string | null>(null);
   const [editingEvaluation, setEditingEvaluation] = useState<Evaluation | null>(null);
   const sessionNoteRef = useRef<HTMLDivElement>(null);
+  const evaluationRef = useRef<HTMLDivElement>(null);
 
   // Persiste si la valoración estaba abierta para que volver de otra pestaña
   // la restaure sin perder el borrador (que ya vive en localStorage).
@@ -125,6 +126,15 @@ export const PatientRecord = memo(function PatientRecord({
       sessionNoteRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   }, [showSessionNote]);
+
+  // Igual que la nota: al abrir la valoración hacemos scroll hasta el formulario.
+  // En móvil el botón "Nueva valoración" vive en la barra fija inferior, así que
+  // sin esto el formulario se abría arriba (fuera de vista) y parecía no abrir.
+  useEffect(() => {
+    if (showEvaluation && evaluationRef.current) {
+      evaluationRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [showEvaluation]);
 
   const {
     data: record,
@@ -317,15 +327,17 @@ export const PatientRecord = memo(function PatientRecord({
       )}
 
       {showEvaluation && (
-        <EvaluationForm
-          key={current?.id}
-          patient={current}
-          onCancel={() => setShowEvaluation(false)}
-          onCreated={() => {
-            setShowEvaluation(false);
-            refreshRecord();
-          }}
-        />
+        <div ref={evaluationRef}>
+          <EvaluationForm
+            key={current?.id}
+            patient={current}
+            onCancel={() => setShowEvaluation(false)}
+            onCreated={() => {
+              setShowEvaluation(false);
+              refreshRecord();
+            }}
+          />
+        </div>
       )}
 
       {editingEvaluation && (
