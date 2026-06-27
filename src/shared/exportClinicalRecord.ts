@@ -331,9 +331,15 @@ function buildEvaluationHtml(evaluation: Evaluation, patientName: string): strin
     .sign-line small{color:var(--muted);font-size:10px}
     .footer{margin-top:22px;font-size:10px;color:#94a3b8;border-top:1px solid var(--line);padding-top:8px;text-align:center}
 
+    /* Margen de página en 0: así el navegador NO imprime su encabezado/pie
+       (fecha, título, "about:blank", número de página). Los márgenes del
+       contenido los damos nosotros con padding, y la banda superior va a
+       sangre (full-bleed) hasta el borde del papel. */
     @media print{
-      @page{margin:1.2cm}
+      @page{margin:0}
+      body{max-width:none}
       .report-head{border-radius:0}
+      .wrap{padding:14px 16mm 16mm}
     }
   </style>
 </head>
