@@ -1,0 +1,242 @@
+/* Papelera de pacientes: enlace fantasma discreto al pie de la tarjeta de
+   Pacientes. Sin caja ni sombra; texto secundario silencioso para no competir
+   con las acciones de uso diario (buscar, agendar, alta de paciente). */
+.patient-trash {
+  margin-top: var(--s-2);
+  padding-top: var(--s-3);
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+.trash-ghost-link {
+  width: 100%;
+  background: transparent;
+  color: var(--text-secondary);
+  font-weight: 500;
+  font-size: 0.85rem;
+  padding: var(--s-2) 0;
+  text-align: center;
+  border-radius: 10px;
+}
+.trash-ghost-link:hover {
+  background: var(--bg-sunken);
+  color: var(--text-main);
+}
+/* Acción destructiva (borrado permanente) dentro de la papelera. */
+.trash-purge-btn {
+  color: var(--danger, #b42318);
+}
+.trash-purge-btn:hover {
+  background: rgba(180, 35, 24, 0.08);
+  color: var(--danger, #b42318);
+}
+
+.record-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+}
+.record-header-info {
+  min-width: 0;
+}
+/* Acciones secundarias del expediente: fila compacta que envuelve. */
+.record-secondary-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+/* Botón compacto reutilizable (acciones secundarias). */
+.btn-sm {
+  min-height: 36px;
+  padding: 6px 12px;
+  font-size: 0.82rem;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+a.btn-sm {
+  text-decoration: none;
+}
+/* Only visible inside the mobile bottom tab bar (styled inside @media). */
+.tab-cal-icon {
+  display: none;
+}
+.record-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--gap);
+}
+.summary-card {
+  display: grid;
+  gap: var(--gap);
+}
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s-3);
+}
+.summary-grid div {
+  display: grid;
+  gap: var(--s-1);
+  min-height: 88px;
+  align-content: center;
+  border-radius: var(--radius-inner);
+  background: var(--bg-sunken);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  padding: var(--s-3);
+}
+.summary-grid strong {
+  font-size: 22px;
+}
+.summary-grid span {
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+}
+.compact-card p {
+  margin: 6px 0;
+}
+.editor textarea {
+  min-height: 220px;
+}
+.row {
+  display: flex;
+  gap: 12px;
+  align-items: end;
+}
+.wrap {
+  flex-wrap: wrap;
+}
+.row > label {
+  min-width: 150px;
+}
+.clinical-table {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.clinical-table-row {
+  display: grid;
+  grid-template-columns: minmax(140px, 1.2fr) minmax(120px, 0.8fr) minmax(160px, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+}
+.clinical-table-row input,
+.clinical-table-row select {
+  margin-top: 0;
+}
+.ai-box {
+  border-radius: var(--radius-inner);
+  background: var(--bg-sunken);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  padding: var(--s-4);
+  margin: var(--s-4) 0;
+}
+.ai-box p {
+  margin: 0 0 10px;
+  font-weight: 900;
+}
+.markdown {
+  padding: 12px;
+  background: var(--bg-card);
+  border-radius: 14px;
+}
+.note-row {
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  border-radius: 16px;
+  padding: 14px;
+  background: var(--bg-sunken);
+}
+/* Disposición "etiqueta a la izquierda · acción a la derecha" usada en muchas
+   filas de listas (caja, gastos, finanzas de paciente, documentos, papelera).
+   Antes se repetía como estilo inline en ~10 sitios. */
+.row-split {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+/* Toggle de cada nota/valoración: parece una fila de lista, no un botón sólido.
+   Sin esta clase heredaba el <button> verde global y rompía la estética. */
+.note-toggle {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  color: var(--primary);
+  padding: 4px 0;
+  font-weight: 800;
+  border-radius: 8px;
+}
+.note-toggle:hover {
+  opacity: 0.7;
+}
+.note-details {
+  margin-top: 10px;
+  display: grid;
+  gap: 8px;
+}
+.note-actions {
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+.note-actions button {
+  padding: 9px 12px;
+}
+.evaluation-summary {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+.evaluation-summary p {
+  margin: 4px 0;
+}
+.mini-table {
+  display: grid;
+  gap: 6px;
+  border-radius: 14px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  background: rgba(255, 255, 255, 0.9);
+  padding: 10px;
+}
+pre {
+  white-space: pre-wrap;
+  overflow: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+/* Tabular numbers: digits align on the decimal point in financial tables */
+.tabular-nums,
+.monthly-history-table td,
+.monthly-history-table th,
+.summary-grid strong {
+  font-feature-settings: 'tnum';
+  font-variant-numeric: tabular-nums;
+}
+
+/* Microinteractions: subtle transitions on interactive list items */
+.patient-row {
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.patient-row:not(.active):hover {
+  border-color: rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+.note-row {
+  transition: box-shadow 0.15s ease;
+}
+.note-row:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.07);
+}
+button {
+  transition:
+    opacity 0.12s ease,
+    transform 0.12s ease;
+}
+button:not(:disabled):active {
+  transform: scale(0.97);
+}
+

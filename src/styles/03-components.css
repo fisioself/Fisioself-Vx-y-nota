@@ -1,0 +1,247 @@
+/* Pestañas principales (Panel / Finanzas / Seguimientos). En escritorio viven
+   DENTRO de la barra superior: grupo inline transparente, sin contenedor propio.
+   En móvil (≤900px) se sobreescriben a barra fija en la parte inferior. */
+.main-tabs {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+.main-tabs button,
+.main-tabs button.secondary {
+  min-height: 38px;
+  padding: 8px 16px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 0.9rem;
+  border-radius: 12px;
+  border: none;
+  box-shadow: none;
+  white-space: nowrap;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+.main-tabs button:not(.secondary) {
+  background: var(--bg-sunken);
+  color: var(--text-main);
+  font-weight: 700;
+}
+.main-tabs button.secondary:hover {
+  background: var(--bg-sunken);
+  color: var(--text-main);
+}
+/* En modo Finanzas la barra lateral se oculta y el panel derecho ocupa todo. */
+.app-grid.finance-mode {
+  grid-template-columns: 1fr;
+}
+.left-pane,
+.right-pane,
+.record-stack {
+  display: grid;
+  gap: var(--gap);
+  min-width: 0;
+}
+/* La columna izquierda (Pacientes) es naturalmente más corta que la derecha
+   (hero + métricas + agenda). En vez de estirarla con espacio vacío —que se
+   ve peor—, la fijamos: acompaña al hacer scroll de la agenda larga y elimina
+   la sensación de columna "cortada". Solo en escritorio y en modo dos columnas. */
+@media (min-width: 901px) {
+  .app-grid:not(.finance-mode) .left-pane {
+    position: sticky;
+    top: var(--s-5);
+    align-self: start;
+  }
+}
+/* Los items de un grid traen min-width:auto, así que su contenido (tablas,
+   textos largos, gráficas) puede empujarlos más ancho que la pantalla y
+   desbordar horizontalmente. Forzamos min-width:0 en toda la cadena para que
+   cada nivel pueda encogerse al ancho real del celular. */
+.left-pane > *,
+.right-pane > *,
+.record-stack > * {
+  min-width: 0;
+}
+.card {
+  background: var(--bg-card);
+  border: none;
+  border-radius: var(--radius-card);
+  padding: var(--card-pad);
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.04),
+    0 12px 32px rgba(0, 0, 0, 0.08);
+}
+.warning {
+  border-color: #d99b30;
+  background: #fff7df;
+}
+
+label {
+  display: grid;
+  gap: 6px;
+  font-weight: 500;
+}
+input,
+textarea,
+select {
+  width: 100%;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin-top: 4px;
+  background: var(--bg-card);
+  color: var(--text-main);
+}
+textarea {
+  resize: vertical;
+}
+
+/* Campo de fecha con calendario: input enmascarado DD/MM/AAAA + botón 📅 que
+   abre el calendario nativo. El input type=date real queda oculto y solo se usa
+   para disparar el selector visual del sistema. */
+.date-field {
+  position: relative;
+  display: block;
+  margin-top: 4px;
+}
+.date-field-text {
+  margin-top: 0;
+  padding-right: 42px;
+}
+.date-field-cal {
+  position: absolute;
+  right: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+  min-height: 0;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  color: var(--text-secondary);
+  border-radius: 9px;
+  box-shadow: none;
+  font-size: 1.05rem;
+  cursor: pointer;
+}
+.date-field-cal:hover:not(:disabled) {
+  background: var(--bg-sunken);
+}
+/* El input nativo no se ve: ancla el popup del calendario junto al botón. */
+.date-field-native {
+  position: absolute;
+  right: 8px;
+  bottom: 0;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.clinical-evaluation-form {
+  gap: 18px;
+}
+.form-section {
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  border-radius: 18px;
+  padding: 16px;
+  margin: 0;
+  background: var(--bg-sunken);
+}
+.form-section legend {
+  padding: 0 8px;
+  font-weight: 900;
+  color: var(--primary);
+}
+.span-2 {
+  grid-column: 1 / -1;
+}
+.form-header {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s-3);
+  align-items: flex-start;
+}
+.form-header h2,
+.form-header p {
+  margin: 0;
+}
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--gap-tight);
+}
+.split-actions {
+  justify-content: stretch;
+}
+.split-actions button {
+  width: 100%;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: var(--pill-bg);
+  color: var(--text-secondary);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.pill.active {
+  background: var(--primary);
+  color: white;
+}
+.error,
+.field-error {
+  color: var(--danger);
+  font-weight: 800;
+}
+.field-error {
+  font-size: 12px;
+}
+
+.patient-list {
+  display: grid;
+  gap: 14px;
+}
+.filter-group {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.filters {
+  gap: 8px;
+}
+.list-stack {
+  display: grid;
+  gap: 10px;
+}
+.patient-row {
+  display: grid;
+  gap: 4px;
+  text-align: left;
+  width: 100%;
+  background: var(--bg-sunken);
+  color: var(--primary);
+  border: 1px solid transparent;
+  padding: 14px;
+  border-radius: 16px;
+}
+.patient-row.active {
+  border-color: var(--primary);
+  background: var(--secondary);
+}
+.patient-row small {
+  color: var(--muted);
+}
+

@@ -1,0 +1,298 @@
+/* --- Print Styles for Clinical Reports (Point 2) --- */
+@media print {
+  nav,
+  button,
+  .patient-list,
+  .editor,
+  .ai-box,
+  .filters,
+  .modal-backdrop,
+  .hero-actions {
+    display: none !important;
+  }
+  body {
+    background: white !important;
+    color: black !important;
+    font-size: 11pt;
+  }
+  .shell {
+    width: 100% !important;
+    max-width: none !important;
+    padding: 0 !important;
+  }
+  .card {
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+  }
+  .record-header::before {
+    content: 'INFORME CLÍNICO DE FISIOTERAPIA';
+    display: block;
+    text-align: center;
+    font-size: 18pt;
+    font-weight: bold;
+    margin-bottom: 0.5cm;
+    border-bottom: 2px solid black;
+    padding-bottom: 10px;
+  }
+}
+
+/* Animación de pulso para el logo en pantalla de carga */
+@keyframes logo-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    filter: drop-shadow(0 0 8px #00ff8866);
+  }
+  50% {
+    opacity: 0.7;
+    filter: drop-shadow(0 0 24px #00ff88cc);
+  }
+}
+
+.app-loading {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: #000;
+  z-index: 9999;
+}
+
+.app-loading-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.app-loading-inner p {
+  color: #00ff88;
+  font-size: 0.9rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.7;
+  margin: 0;
+}
+
+/* ---- Píldoras semánticas ------------------------------------------- */
+/* Cita cancelada (rojo suave). El tema oscuro invierte fondo/texto para
+   mantener contraste WCAG AA sin depender de colores hardcodeados en JSX. */
+.pill.cancelled {
+  background: #f3d9d6;
+  color: #7a241c;
+}
+html[data-theme='dark'] .pill.cancelled {
+  background: rgba(180, 35, 24, 0.22);
+  color: #e8a09a;
+}
+
+/* Borrador con cambios sin guardar */
+.pill.alert {
+  background: #ffe0e0;
+  color: #8b2323;
+}
+html[data-theme='dark'] .pill.alert {
+  background: rgba(139, 35, 35, 0.28);
+  color: #e8a09a;
+}
+
+/* ---- Botón de WhatsApp -------------------------------------------- */
+/* Verde WhatsApp fijo (color de marca, no cambia con el tema). Separado
+   del inline style para que el hover y el foco funcionen correctamente. */
+.btn-whatsapp {
+  background: #25d366 !important;
+  color: #fff !important;
+  border: none;
+}
+.btn-whatsapp:hover {
+  opacity: 0.88;
+}
+
+/* ---- Dark mode: componentes con colores hardcodeados en su CSS ------ */
+html[data-theme='dark'] .warning-box {
+  background: rgba(217, 155, 48, 0.1);
+  border-color: rgba(217, 155, 48, 0.28);
+}
+html[data-theme='dark'] .charge-commission-info {
+  background: var(--bg-sunken);
+  border-color: var(--border);
+}
+
+/* Contador de caracteres bajo el textarea de nota de sesión */
+.char-counter {
+  font-size: 0.75rem;
+  color: var(--muted);
+  text-align: right;
+  margin-top: -6px;
+}
+.char-counter.near-limit {
+  color: var(--expense);
+  font-weight: 700;
+}
+
+/* ---- Formularios de finanzas (gastos, paquetes, abonos) ------------- */
+/* Grid responsivo: en escritorio reparte los campos en columnas flexibles; en
+   móvil baja a 2 columnas y, en pantallas muy chicas (≤380px, p. ej. iPhone SE),
+   a una sola columna para que los inputs no se apilen apretados ni se corten.
+   Antes esto era grid-template-columns inline, que no admite media queries. */
+.finance-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+}
+/* Un campo (o el botón, o una nota informativa) que ocupa toda la fila. */
+.finance-form-full {
+  grid-column: 1 / -1;
+}
+.finance-form > input,
+.finance-form > select {
+  min-width: 0; /* evita que un input fuerce overflow horizontal en móvil */
+}
+@media (max-width: 560px) {
+  .finance-form {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (max-width: 380px) {
+  .finance-form {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Contenedor con scroll horizontal (gráficas anchas, tablas). En móvil, sin
+   `touch-action: pan-x` el navegador interpreta CUALQUIER gesto sobre la zona
+   (incluido el vertical) como intento de scroll horizontal y bloquea el scroll
+   vertical de la página: el panel parecía "trabado" al deslizar el dedo encima.
+   Con pan-x, los gestos verticales pasan a la página y solo los horizontales
+   mueven el contenido ancho. */
+.x-scroll {
+  overflow-x: auto;
+  /* pan-x pan-y: el elemento captura scroll horizontal (tabla ancha) y
+     deja pasar el scroll vertical a la página. Solo pan-x bloqueaba
+     los gestos verticales impidiendo bajar en la vista de Finanzas. */
+  touch-action: pan-x pan-y;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+
+/* Estado vacío con acción: texto centrado + botón que lleva al formulario. */
+.empty-cta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+  padding: 18px 12px;
+}
+.empty-cta p {
+  margin: 0;
+}
+
+/* ====================================================================
+   Estados vacíos ilustrados
+   Reemplazan el "<p class=muted>No hay…</p>" plano por un bloque
+   centrado con icono en círculo, título y descripción. Componente:
+   <EmptyState icon title hint />.
+   ==================================================================== */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 6px;
+  padding: 28px 16px;
+  color: var(--muted);
+}
+.empty-state__icon {
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--secondary);
+  color: var(--primary);
+  font-size: 26px;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.empty-state__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--text-main);
+}
+.empty-state__hint {
+  margin: 0;
+  font-size: 0.875rem;
+  max-width: 38ch;
+  line-height: 1.5;
+}
+
+/* ====================================================================
+   Micro-animaciones
+   Entrada suave de tarjetas, "lift" al pasar el cursor y feedback de
+   pulsación. Todo se desactiva con prefers-reduced-motion.
+   ==================================================================== */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.card {
+  animation: fade-in-up 0.32s ease both;
+  transition:
+    box-shadow 0.2s ease,
+    transform 0.2s ease,
+    border-color 0.2s ease;
+}
+/* "Lift" sutil solo en tarjetas interactivas (no en formularios anidados
+   ni en las mini-cards de los grids de resumen, que se sentirían inquietas). */
+.left-pane > .card:hover,
+.right-pane > .card:hover,
+.record-stack > .card:hover {
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+/* La topbar y el hero no deben "saltar" ni reanimarse al cambiar de pestaña. */
+.hero.card,
+.app-topbar {
+  animation: none;
+}
+
+/* Entrada escalonada de las primeras tarjetas de una columna: da sensación
+   de carga en cascada sin librerías. */
+.left-pane > .card:nth-child(1),
+.right-pane > .card:nth-child(1),
+.record-stack > .card:nth-child(1) {
+  animation-delay: 0.02s;
+}
+.left-pane > .card:nth-child(2),
+.right-pane > .card:nth-child(2),
+.record-stack > .card:nth-child(2) {
+  animation-delay: 0.06s;
+}
+.left-pane > .card:nth-child(3),
+.right-pane > .card:nth-child(3),
+.record-stack > .card:nth-child(3) {
+  animation-delay: 0.1s;
+}
+
+/* Respeta a quien pide menos movimiento (accesibilidad / vestibular). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
