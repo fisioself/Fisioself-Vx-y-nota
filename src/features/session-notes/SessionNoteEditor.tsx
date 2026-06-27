@@ -44,7 +44,12 @@ Notas adicionales:
 
 // Plantillas rápidas agrupadas: "Técnicas" (qué se hizo en la sesión) y
 // "Evolución" (cómo respondió el paciente). Un toque inserta la frase.
-const CLINICAL_SNIPPETS: { id: string; group: 'Técnicas' | 'Evolución'; label: string; text: string }[] = [
+const CLINICAL_SNIPPETS: {
+  id: string;
+  group: 'Técnicas' | 'Evolución';
+  label: string;
+  text: string;
+}[] = [
   {
     id: 'terapia-manual',
     group: 'Técnicas',
@@ -222,7 +227,9 @@ export function SessionNoteEditor({
     setError('');
 
     const startText = rawText;
-    const prefix = type.id === 'soap' ? '' : `${startText}\n\n---\n## ${type.label}\n`;
+    // Acciones "replace" (formatear SOAP, corregir y estructurar) reescriben la
+    // nota; el resto anexa su salida bajo un encabezado con el nombre.
+    const prefix = type.replace ? '' : `${startText}\n\n---\n## ${type.label}\n`;
 
     // Cancela una consulta previa en vuelo y crea un controller para esta.
     aiAbortRef.current?.abort();

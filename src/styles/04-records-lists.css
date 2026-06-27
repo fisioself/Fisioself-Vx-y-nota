@@ -311,4 +311,3 @@ button {
 button:not(:disabled):active {
   transform: scale(0.97);
 }
-

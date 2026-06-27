@@ -171,7 +171,9 @@ export function EvaluationSummary({ evaluation }: EvaluationSummaryProps) {
               {zone.muscle_strength.map((r, i) => (
                 <p
                   key={`zs-${i}`}
-                  className={isStrengthRowAltered(r.daniels, r.pain) ? 'finding-altered' : undefined}
+                  className={
+                    isStrengthRowAltered(r.daniels, r.pain) ? 'finding-altered' : undefined
+                  }
                 >
                   {val(r.muscle)}: {val(r.daniels)}
                   {r.pain === 'Sí' ? ' · con dolor' : ''}
