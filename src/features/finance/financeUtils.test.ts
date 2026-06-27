@@ -4,6 +4,7 @@ import {
   CATEGORY_COLORS,
   EXPENSE_CATEGORIES,
   cardCommission,
+  cdmxDate,
   fmtDate,
   methodLabel,
   money,
@@ -86,6 +87,28 @@ describe('fmtDate', () => {
   it('formats an ISO datetime string with a time separator', () => {
     const result = fmtDate('2026-06-01T14:30:00');
     expect(result).toContain('·');
+  });
+});
+
+describe('cdmxDate', () => {
+  it('returns undefined for empty/null input', () => {
+    expect(cdmxDate(null)).toBeUndefined();
+    expect(cdmxDate(undefined)).toBeUndefined();
+    expect(cdmxDate('')).toBeUndefined();
+  });
+
+  it('extracts the CDMX calendar date from an ISO timestamp', () => {
+    // 14:30Z = 08:30 en CDMX (UTC-6): mismo día.
+    expect(cdmxDate('2026-06-01T14:30:00Z')).toBe('2026-06-01');
+  });
+
+  it('uses the CDMX day, not UTC, for late-night appointments', () => {
+    // 02:00Z del día 2 = 20:00 del día 1 en CDMX: debe registrar el día 1.
+    expect(cdmxDate('2026-06-02T02:00:00Z')).toBe('2026-06-01');
+  });
+
+  it('returns undefined for an unparseable value', () => {
+    expect(cdmxDate('not-a-date')).toBeUndefined();
   });
 });
 

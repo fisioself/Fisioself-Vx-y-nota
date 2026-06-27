@@ -49,6 +49,23 @@ export const today = () =>
     day: '2-digit'
   }).format(new Date());
 
+// Fecha (YYYY-MM-DD) de un ISO en CDMX. Se usa para que un cobro hecho desde la
+// agenda se registre con la FECHA DE LA CITA (no la del día en que se captura).
+// Devuelve undefined si no hay fecha, para que el RPC caiga a current_date.
+export const cdmxDate = (iso: string | null | undefined): string | undefined => {
+  if (!iso) return undefined;
+  try {
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Mexico_City',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).format(new Date(iso));
+  } catch {
+    return undefined;
+  }
+};
+
 // Formatea una fecha ISO o "YYYY-MM-DD" como "2 jun · 14:30" en CDMX.
 // Si el valor es solo fecha sin hora, omite la hora.
 export const fmtDate = (iso: string): string => {
