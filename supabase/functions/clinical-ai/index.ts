@@ -189,6 +189,9 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         model,
         max_tokens: 2600,
+        // Temperatura baja: salida clínica más fiel a los datos y menos
+        // propensa a inventar referencias o cifras.
+        temperature: 0.3,
         stream: false,
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },

@@ -465,17 +465,52 @@ export function EvaluationForm({
   // redacte el diagnóstico solo a partir de datos reales de la valoración.
   const buildFindingsText = (): string => {
     const lines: string[] = [];
+
+    // Contexto del paciente: edad/sexo/ocupación influyen en diagnóstico,
+    // pronóstico y objetivos (reintegro laboral, etc.).
+    const patientBits: string[] = [];
+    if (age) patientBits.push(`${age} años`);
+    if (values.sex) patientBits.push(values.sex);
+    if (values.occupation) patientBits.push(`ocupación: ${values.occupation}`);
+    if (patientBits.length) lines.push(`Paciente: ${patientBits.join(', ')}`);
+
     if (values.consultation_reason) lines.push(`Motivo: ${values.consultation_reason}`);
     if (values.medical_diagnosis) lines.push(`Dx médico: ${values.medical_diagnosis}`);
+    if (values.symptom_onset_date) lines.push(`Inicio de síntomas: ${values.symptom_onset_date}`);
     if (values.symptom_classification)
       lines.push(`Clasificación: ${values.symptom_classification}`);
     if (values.injury_mechanism) lines.push(`Mecanismo de lesión: ${values.injury_mechanism}`);
     if (values.pain_mechanism) lines.push(`Mecanismo del dolor: ${values.pain_mechanism}`);
 
+    // Antecedentes y estilo de vida: comorbilidades, medicación y nivel de
+    // actividad pesan en el pronóstico y el plan.
+    const ante: string[] = [];
+    if (values.personal_history) ante.push(`personales: ${values.personal_history}`);
+    if (values.family_history) ante.push(`heredofamiliares: ${values.family_history}`);
+    if (values.surgical_history) ante.push(`quirúrgicos: ${values.surgical_history}`);
+    if (values.current_medications) ante.push(`medicamentos: ${values.current_medications}`);
+    if (values.known_allergies) ante.push(`alergias: ${values.known_allergies}`);
+    if (values.physical_activity) ante.push(`actividad física: ${values.physical_activity}`);
+    if (values.previous_imaging) ante.push(`estudios previos: ${values.previous_imaging}`);
+    if (ante.length) lines.push(`Antecedentes — ${ante.join('; ')}`);
+
+    if (values.clinical_history) lines.push(`Historia/evolución: ${values.clinical_history}`);
+
     const reds = [...values.red_flags, values.red_flags_other.trim()].filter(Boolean);
     if (reds.length) lines.push(`Banderas rojas: ${reds.join('; ')}`);
     const yellows = [...values.yellow_flags, values.yellow_flags_other.trim()].filter(Boolean);
     if (yellows.length) lines.push(`Banderas amarillas: ${yellows.join('; ')}`);
+
+    // Exploración física general (signos vitales, inspección, postura, marcha).
+    const gen: string[] = [];
+    if (values.blood_pressure) gen.push(`TA ${values.blood_pressure}`);
+    if (values.heart_rate) gen.push(`FC ${values.heart_rate}`);
+    if (values.respiratory_rate) gen.push(`FR ${values.respiratory_rate}`);
+    if (values.oxygen_saturation) gen.push(`SatO₂ ${values.oxygen_saturation}`);
+    if (values.general_inspection) gen.push(`inspección: ${values.general_inspection}`);
+    if (values.posture) gen.push(`postura: ${values.posture}`);
+    if (values.gait) gen.push(`marcha: ${values.gait}`);
+    if (gen.length) lines.push(`Valoración general — ${gen.join('; ')}`);
 
     values.zones.forEach((z) => {
       const catalog = getZoneCatalog(z.zone_id);
@@ -484,6 +519,8 @@ export function EvaluationForm({
       if (z.pain_intensity !== '') parts.push(`EVA ${z.pain_intensity}/10`);
       if (z.pain_location) parts.push(`localización ${z.pain_location}`);
       if (z.pain_type) parts.push(`tipo ${z.pain_type}`);
+      if (z.aggravating_factors) parts.push(`agrava: ${z.aggravating_factors}`);
+      if (z.easing_factors) parts.push(`alivia: ${z.easing_factors}`);
       lines.push(`— Zona ${label}: ${parts.join(', ') || 'sin dolor registrado'}`);
 
       z.movement_ranges
