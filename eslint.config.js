@@ -81,6 +81,44 @@ export default [
       }
     }
   },
+  // Límites de arquitectura: la dependencia va UI → services → lib. Las capas de
+  // abajo no pueden importar de features (eso invierte la dependencia). Lo
+  // compartido entre service y feature va a shared/ o types/.
+  {
+    files: ['src/services/**/*.{ts,tsx}'],
+    ignores: ['**/*.test.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/features/*', '**/features/**'],
+              message:
+                'services no debe importar de features (invierte la dependencia). Mueve lo común a shared/ o types/.'
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    files: ['src/lib/**/*.{ts,tsx}'],
+    ignores: ['**/*.test.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/features/*', '**/features/**', '**/services/*', '**/services/**'],
+              message: 'lib es la capa más baja: no debe importar de services ni de features.'
+            }
+          ]
+        }
+      ]
+    }
+  },
   {
     files: ['public/sw.js'],
     languageOptions: {
