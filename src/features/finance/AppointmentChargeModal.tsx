@@ -228,7 +228,7 @@ export function AppointmentChargeModal({
       queryClient.invalidateQueries({ queryKey: ['caja-payments'] }),
       queryClient.invalidateQueries({ queryKey: ['patient-finance', patientId] }),
       // Un cobro con tarjeta inserta un gasto de comisión y mueve la caja; sin
-      // estas dos, ExpensesPanel y el historial de caja quedaban desfasados.
+      // estas dos, los gastos y el historial de caja quedaban desfasados.
       queryClient.invalidateQueries({ queryKey: ['expenses'] }),
       queryClient.invalidateQueries({ queryKey: ['caja-movements'] }),
       // El cobro marca la cita como atendida → refresca los KPIs del panel.
