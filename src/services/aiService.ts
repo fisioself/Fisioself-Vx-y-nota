@@ -7,13 +7,22 @@ export interface AiType {
   id: string;
   label: string;
   traceable?: boolean;
+  // Si true, la salida REEMPLAZA la nota completa (p. ej. formatear/corregir);
+  // si no, se anexa bajo un encabezado con el nombre de la acción.
+  replace?: boolean;
 }
 
 const proxyUrl = import.meta.env.VITE_AI_PROXY_URL as string | undefined;
 const AI_TIMEOUT_MS = 30_000;
 
 export const AI_TYPES: AiType[] = [
-  { id: 'soap', label: 'Formatear SOAP', traceable: false },
+  { id: 'soap', label: 'Formatear SOAP', traceable: false, replace: true },
+  {
+    id: 'proofread',
+    label: 'Corregir y estructurar',
+    traceable: false,
+    replace: true
+  },
   { id: 'summary', label: 'Resumir nota', traceable: false },
   { id: 'exercises', label: 'Sugerir ejercicios', traceable: false },
   { id: 'clinical_analysis', label: 'Analisis clinico', traceable: true },

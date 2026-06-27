@@ -27,7 +27,15 @@ describe('romRowsForCatalog', () => {
 
   it('fills saved values into the matching movement row', () => {
     const rows = romRowsForCatalog('rodilla', [
-      { movement: 'Flexión', type: 'Activo', range: '', degrees: '120', degrees_healthy: '', pain: 'Sí', notes: '' }
+      {
+        movement: 'Flexión',
+        type: 'Activo',
+        range: '',
+        degrees: '120',
+        degrees_healthy: '',
+        pain: 'Sí',
+        notes: ''
+      }
     ]);
     const flexion = rows.find((r) => r.movement === 'Flexión');
     expect(flexion?.degrees).toBe('120');
@@ -37,7 +45,15 @@ describe('romRowsForCatalog', () => {
   it('keeps a custom (off-catalog) saved movement at the end', () => {
     const catalog = getZoneCatalog('rodilla')!;
     const rows = romRowsForCatalog('rodilla', [
-      { movement: 'Movimiento personalizado', type: '', range: 'Limitado', degrees: '', degrees_healthy: '', pain: '', notes: '' }
+      {
+        movement: 'Movimiento personalizado',
+        type: '',
+        range: 'Limitado',
+        degrees: '',
+        degrees_healthy: '',
+        pain: '',
+        notes: ''
+      }
     ]);
     expect(rows).toHaveLength(catalog.movements.length + 1);
     expect(rows[rows.length - 1].movement).toBe('Movimiento personalizado');
