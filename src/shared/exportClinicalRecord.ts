@@ -26,6 +26,18 @@ const fmtDateMX = (iso: string | null | undefined): string => {
   return d.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
 };
 
+// Edad en años a partir de la fecha de nacimiento. '' si no aplica.
+const computeAge = (birth: string | null | undefined): string => {
+  if (!birth) return '';
+  const b = new Date(/^\d{4}-\d{2}-\d{2}$/.test(birth) ? `${birth}T12:00:00` : birth);
+  if (Number.isNaN(b.getTime())) return '';
+  const now = new Date();
+  let age = now.getFullYear() - b.getFullYear();
+  const m = now.getMonth() - b.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < b.getDate())) age -= 1;
+  return age >= 0 && age < 130 ? String(age) : '';
+};
+
 // Fila corta etiqueta:valor. Devuelve '' si el valor está vacío → no se imprime.
 const row = (label: string, value: unknown): string =>
   value ? `<p class="row"><span class="row-label">${label}</span> ${esc(value)}</p>` : '';
@@ -156,7 +168,7 @@ function buildEvaluationHtml(evaluation: Evaluation, patientName: string): strin
     'Datos generales',
     `<div class="two-col">
       ${row('Nombre', id.full_name || patientName)}
-      ${row('Fecha de nacimiento', id.birth_date ? fmtDateMX(id.birth_date) : '')}
+      ${row('Fecha de nacimiento', id.birth_date ? `${fmtDateMX(id.birth_date)}${computeAge(id.birth_date) ? ` (${computeAge(id.birth_date)} años)` : ''}` : '')}
       ${row('Sexo', id.sex)}
       ${row('Ocupación', id.occupation)}
       ${row('Teléfono', id.phone)}
@@ -329,7 +341,10 @@ function buildEvaluationHtml(evaluation: Evaluation, patientName: string): strin
     .sign-line{flex:1;text-align:center;border-top:1px solid var(--ink);padding-top:6px;max-width:260px}
     .sign-line span{display:block;font-weight:700}
     .sign-line small{color:var(--muted);font-size:10px}
-    .footer{margin-top:22px;font-size:10px;color:#94a3b8;border-top:1px solid var(--line);padding-top:8px;text-align:center}
+
+    /* Pie propio repetido en cada hoja (sustituye al del navegador). Solo en
+       impresión; en pantalla no estorba. */
+    .running-foot{display:none}
 
     /* Margen de página en 0: así el navegador NO imprime su encabezado/pie
        (fecha, título, "about:blank", número de página). Los márgenes del
@@ -339,7 +354,12 @@ function buildEvaluationHtml(evaluation: Evaluation, patientName: string): strin
       @page{margin:0}
       body{max-width:none}
       .report-head{border-radius:0}
-      .wrap{padding:14px 16mm 16mm}
+      .wrap{padding:14px 16mm 20mm}
+      .running-foot{
+        display:flex;position:fixed;bottom:0;left:0;right:0;height:11mm;
+        align-items:center;justify-content:space-between;gap:16px;padding:0 16mm;
+        font-size:9px;color:#94a3b8;border-top:1px solid var(--line);background:#fff;
+      }
     }
   </style>
 </head>
@@ -356,6 +376,7 @@ function buildEvaluationHtml(evaluation: Evaluation, patientName: string): strin
       <div class="patient-name">${esc(patientName)}</div>
       <div>Valoración: ${fmtDateMX(evaluation.evaluation_date)}</div>
       <div>Impreso: ${date}</div>
+      ${evaluation.id ? `<div>Folio: ${esc(String(evaluation.id).slice(0, 8).toUpperCase())}</div>` : ''}
       ${evaluation.eva_initial != null ? `<div class="head-eva">EVA inicial ${evaluation.eva_initial}/10</div>` : ''}
     </div>
   </header>
@@ -374,8 +395,12 @@ function buildEvaluationHtml(evaluation: Evaluation, patientName: string): strin
       </div>
     </div>
 
-    <p class="footer">Documento clínico confidencial · Generado por Fisioself</p>
   </div>
+
+  <footer class="running-foot">
+    <span>Fisioself · Documento clínico confidencial</span>
+    <span>${esc(patientName)}</span>
+  </footer>
 </body>
 </html>`;
 }
