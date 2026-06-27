@@ -7,6 +7,7 @@ import {
   ROM_RANGE_OPTIONS,
   getRomNorm,
   rangeFromDegrees,
+  negativeOptionFor,
   PAIN_TYPE_OPTIONS
 } from './evaluationCatalog';
 import {
@@ -134,6 +135,23 @@ export function ZoneEditor({ zone, index, onChange, onRemove }: ZoneEditorProps)
           [name]: { ...prev, [key]: value }
         }
       };
+    });
+
+  // Deja en "negativo/normal" todas las pruebas de un grupo que aún no se hayan
+  // valorado (no pisa las que ya marcaste positivas). Acelera mucho: un toque
+  // por grupo (ligamentos, manguito, etc.) y solo editas las positivas.
+  const markGroupNegative = (groupName: string) =>
+    onChange((z) => {
+      const next = { ...z.special_results };
+      for (const t of catalog?.specialTests ?? []) {
+        if (t.group !== groupName) continue;
+        const neg = negativeOptionFor(t);
+        if (!neg) continue;
+        const prev = next[t.name] ?? { result: '', notes: '' };
+        if (prev.result) continue; // respeta lo ya valorado
+        next[t.name] = { ...prev, result: neg };
+      }
+      return { ...z, special_results: next };
     });
 
   // Agrupa las pruebas del catálogo por su subtítulo, preservando el orden.
@@ -482,7 +500,19 @@ export function ZoneEditor({ zone, index, onChange, onRemove }: ZoneEditorProps)
           <p className="zone-subtitle">D. Pruebas especiales / ortopédicas</p>
           {groupedTests.map((g) => (
             <div className="test-group" key={g.group}>
-              <p className="test-group-title">{g.group}</p>
+              <div className="test-group-head">
+                <p className="test-group-title">{g.group}</p>
+                {g.tests.some((t) => negativeOptionFor(t)) && (
+                  <button
+                    type="button"
+                    className="link-button test-group-neg"
+                    onClick={() => markGroupNegative(g.group)}
+                    title="Marcar negativas/normales las pruebas sin valorar de este grupo"
+                  >
+                    Todas negativas
+                  </button>
+                )}
+              </div>
               {g.tests.map((t) => {
                 const r = zone.special_results[t.name] ?? { result: '', notes: '' };
                 const options = t.options ?? [...DEFAULT_TEST_OPTIONS];

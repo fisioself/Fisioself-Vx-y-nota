@@ -11,7 +11,8 @@ import {
   DANIELS_OPTIONS,
   classifyRom,
   rangeFromDegrees,
-  getRomNormDegrees
+  getRomNormDegrees,
+  negativeOptionFor
 } from './evaluationCatalog';
 
 describe('romRowsForCatalog', () => {
@@ -123,6 +124,57 @@ describe('clasificación de ROM por grados', () => {
     expect(rangeFromDegrees('hombro', 'Flexión', '180')).toBe('Completo');
     expect(rangeFromDegrees('hombro', 'Flexión', '120')).toBe('Limitado');
     expect(rangeFromDegrees('hombro', 'Flexión', '')).toBe('');
+  });
+});
+
+describe('negativeOptionFor — "Marcar todas negativas"', () => {
+  it('elige "Negativo" cuando existe', () => {
+    expect(negativeOptionFor({ name: 'X', group: 'G' })).toBe('Negativo');
+    expect(
+      negativeOptionFor({ name: 'X', group: 'G', options: ['Positivo', 'Negativo', 'No valorado'] })
+    ).toBe('Negativo');
+  });
+
+  it('elige la opción normal/estable cuando no hay "Negativo"', () => {
+    expect(
+      negativeOptionFor({ name: 'X', group: 'G', options: ['Inestable', 'Estable', 'No valorado'] })
+    ).toBe('Estable');
+    expect(
+      negativeOptionFor({
+        name: 'X',
+        group: 'G',
+        options: ['> 10mm (hiperpronación)', 'Normal', 'No valorado']
+      })
+    ).toBe('Normal');
+    expect(
+      negativeOptionFor({
+        name: 'X',
+        group: 'G',
+        options: ['Cumple criterios (requiere Rx)', 'No cumple (seguro para carga)', 'No valorado']
+      })
+    ).toBe('No cumple (seguro para carga)');
+  });
+
+  it('es null para pruebas de segundos/texto', () => {
+    expect(negativeOptionFor({ name: 'X', group: 'G', input: 'seconds' })).toBeNull();
+    expect(negativeOptionFor({ name: 'X', group: 'G', input: 'text' })).toBeNull();
+  });
+
+  it('es null cuando ninguna opción representa un negativo claro', () => {
+    expect(
+      negativeOptionFor({
+        name: 'X',
+        group: 'G',
+        options: ['Centralización', 'Periferización', 'Sin cambio', 'No valorado']
+      })
+    ).toBeNull();
+  });
+
+  it('cubre las pruebas con opción negativa en todo el catálogo de rodilla', () => {
+    const knee = getZoneCatalog('rodilla')!;
+    // La mayoría de pruebas ligamentarias/meniscales deben tener negativo.
+    const withNeg = knee.specialTests.filter((t) => negativeOptionFor(t));
+    expect(withNeg.length).toBeGreaterThan(5);
   });
 });
 

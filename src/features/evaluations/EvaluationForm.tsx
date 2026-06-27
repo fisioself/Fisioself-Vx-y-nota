@@ -557,6 +557,24 @@ export function EvaluationForm({
     }
   };
 
+  // Índice de secciones: salta directo a una sección (la abre si está plegada).
+  const sectionLinks = [
+    { id: 'eval-sec-1', label: '1. Datos' },
+    { id: 'eval-sec-2', label: '2. Antecedentes' },
+    { id: 'eval-sec-3', label: '3. Motivo' },
+    { id: 'eval-sec-4', label: '4. General' },
+    { id: 'eval-sec-5', label: '5. Zonas' },
+    { id: 'eval-sec-6', label: '6. PROMs' },
+    { id: 'eval-sec-7', label: '7. Conclusión' },
+    ...(resolvedPatientId ? [{ id: 'eval-sec-8', label: '8. Archivos' }] : [])
+  ];
+  const goToSection = (id: string) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (el instanceof HTMLDetailsElement) el.open = true;
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
   return (
     <form className="card form-grid clinical-evaluation-form" onSubmit={submit}>
       <div className="form-header span-2">
@@ -573,8 +591,22 @@ export function EvaluationForm({
         )}
       </div>
 
+      {/* Índice rápido de secciones (salta sin scrollear toda la valoración). */}
+      <nav className="eval-section-nav span-2" aria-label="Secciones de la valoración">
+        {sectionLinks.map((s) => (
+          <button
+            type="button"
+            key={s.id}
+            className="eval-section-chip"
+            onClick={() => goToSection(s.id)}
+          >
+            {s.label}
+          </button>
+        ))}
+      </nav>
+
       {/* 1. Datos generales */}
-      <details className="form-section span-2" open>
+      <details className="form-section span-2" id="eval-sec-1" open>
         <summary>1. Datos generales</summary>
         <div className="form-grid">
           <label>
@@ -653,7 +685,7 @@ export function EvaluationForm({
       </details>
 
       {/* 2. Antecedentes */}
-      <details className="form-section span-2">
+      <details className="form-section span-2" id="eval-sec-2">
         <summary>2. Antecedentes</summary>
         <div className="form-grid">
           <label className="span-2">
@@ -720,7 +752,7 @@ export function EvaluationForm({
       </details>
 
       {/* 3. Motivo de consulta e historia */}
-      <details className="form-section span-2">
+      <details className="form-section span-2" id="eval-sec-3">
         <summary>3. Motivo de consulta e historia del padecimiento</summary>
         <div className="form-grid">
           <label className="span-2">
@@ -849,7 +881,7 @@ export function EvaluationForm({
       </details>
 
       {/* 4. Valoración general */}
-      <details className="form-section span-2">
+      <details className="form-section span-2" id="eval-sec-4">
         <summary>4. Valoración general (exploración física global)</summary>
         <div className="form-grid">
           <label>
@@ -922,7 +954,7 @@ export function EvaluationForm({
       </details>
 
       {/* 5. Valoración por zonas */}
-      <details className="form-section span-2">
+      <details className="form-section span-2" id="eval-sec-5">
         <summary>5. Valoración por zonas específicas</summary>
         <p className="zone-subtitle">Mapa corporal de dolor</p>
         <BodyPainMap
@@ -953,7 +985,7 @@ export function EvaluationForm({
       </details>
 
       {/* 6. Cuestionarios funcionales (PROMs) */}
-      <details className="form-section span-2">
+      <details className="form-section span-2" id="eval-sec-6">
         <summary>6. Cuestionarios funcionales (PROMs)</summary>
         <p className="muted" style={{ margin: '4px 0 12px' }}>
           Escala estandarizada para medir la función de forma objetiva y dar seguimiento al progreso
@@ -1038,7 +1070,7 @@ export function EvaluationForm({
       </details>
 
       {/* 7. Conclusión y diagnóstico */}
-      <details className="form-section span-2">
+      <details className="form-section span-2" id="eval-sec-7">
         <summary>7. Conclusión y diagnóstico</summary>
         <div className="form-grid">
           <label className="span-2">
@@ -1173,7 +1205,7 @@ export function EvaluationForm({
 
       {/* 8. Archivos clínicos */}
       {resolvedPatientId && (
-        <details className="form-section span-2">
+        <details className="form-section span-2" id="eval-sec-8">
           <summary>8. Archivos clínicos y estudios</summary>
           <PatientDocuments patientId={resolvedPatientId} />
         </details>
