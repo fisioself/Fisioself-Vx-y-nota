@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
   ZONE_CATALOGS,
   getZoneCatalog,
@@ -6,6 +6,8 @@ import {
   DANIELS_OPTIONS,
   ROM_RANGE_OPTIONS,
   getRomNorm,
+  classifyRom,
+  rangeFromDegrees,
   PAIN_TYPE_OPTIONS
 } from './evaluationCatalog';
 import {
@@ -27,6 +29,10 @@ interface ZoneEditorProps {
 
 export function ZoneEditor({ zone, index, onChange, onRemove }: ZoneEditorProps) {
   const catalog = getZoneCatalog(zone.zone_id);
+  // Vista compacta por defecto (Movimiento · Grados · Dolor); "+ detalles"
+  // muestra Tipo, Rango manual, lado sano y notas. Acelera la captura en móvil.
+  const [showRomDetails, setShowRomDetails] = useState(false);
+  const [showStrengthDetails, setShowStrengthDetails] = useState(false);
 
   const setZoneField = <K extends keyof ZoneFormData>(field: K, value: ZoneFormData[K]) =>
     onChange((z) => ({ ...z, [field]: value }));
@@ -46,6 +52,21 @@ export function ZoneEditor({ zone, index, onChange, onRemove }: ZoneEditorProps)
       ...z,
       movement_ranges: z.movement_ranges.map((r, ri) => (ri === i ? { ...r, [key]: value } : r))
     }));
+  // Al escribir los grados, el rango se deduce solo (≥ normal → Completo; si no,
+  // Limitado) cuando hay un normal de referencia para ese movimiento.
+  const setRomDegrees = (i: number, value: string) =>
+    onChange((z) => ({
+      ...z,
+      movement_ranges: z.movement_ranges.map((r, ri) => {
+        if (ri !== i) return r;
+        const auto = rangeFromDegrees(z.zone_id, r.movement, value);
+        return { ...r, degrees: value, range: auto || r.range };
+      })
+    }));
+  // Una fila ROM es "alterada" (se resalta en ámbar) si hay dolor o si el lado
+  // afectado quedó por debajo del normal de referencia.
+  const romAltered = (r: RomRow): boolean =>
+    r.pain === 'Sí' || classifyRom(zone.zone_id, r.movement, r.degrees) === 'limitado';
   const addRom = () =>
     onChange((z) => ({ ...z, movement_ranges: [...z.movement_ranges, { ...emptyRomRow }] }));
   const removeRom = (i: number) =>
@@ -91,6 +112,12 @@ export function ZoneEditor({ zone, index, onChange, onRemove }: ZoneEditorProps)
       ...z,
       muscle_strength: z.muscle_strength.map((r, ri) => (ri === i ? { ...r, [key]: value } : r))
     }));
+  // Una fila de fuerza es "alterada" si hay dolor o Daniels < 5.
+  const strengthAltered = (r: StrengthRow): boolean => {
+    if (r.pain === 'Sí') return true;
+    const n = parseInt(r.daniels, 10);
+    return Number.isFinite(n) && n < 5;
+  };
   const addStrength = () =>
     onChange((z) => ({ ...z, muscle_strength: [...z.muscle_strength, { ...emptyStrengthRow }] }));
   const removeStrength = (i: number) =>
@@ -231,97 +258,124 @@ export function ZoneEditor({ zone, index, onChange, onRemove }: ZoneEditorProps)
 
           {/* B. ROM */}
           <p className="zone-subtitle">B. Rangos de movimiento (ROM)</p>
-          <div className="clinical-table">
-            {zone.movement_ranges.map((row, i) => (
-              <div className="clinical-table-row rom-row" key={`rom-${i}`}>
-                <select
-                  aria-label="Movimiento"
-                  value={row.movement}
-                  onChange={(e) => setRom(i, 'movement', e.target.value)}
+          <div className={`clinical-table ${showRomDetails ? 'detailed' : 'compact'}`}>
+            {zone.movement_ranges.map((row, i) => {
+              const norm = catalog ? getRomNorm(catalog.id, row.movement) : undefined;
+              const rangeClass =
+                row.range === 'Completo'
+                  ? 'ok'
+                  : row.range === 'Limitado'
+                    ? 'warn'
+                    : row.range === 'Funcional'
+                      ? 'neutral'
+                      : 'muted';
+              return (
+                <div
+                  className={`clinical-table-row rom-row ${showRomDetails ? 'detailed' : 'compact'} ${
+                    romAltered(row) ? 'is-altered' : ''
+                  }`}
+                  key={`rom-${i}`}
                 >
-                  <option value="">Movimiento…</option>
-                  {catalog?.movements.map((mv) => (
-                    <option key={mv} value={mv}>
-                      {mv}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  aria-label="Tipo de movimiento"
-                  value={row.type}
-                  onChange={(e) => setRom(i, 'type', e.target.value)}
-                >
-                  <option value="">Tipo…</option>
-                  <option value="Activo">Activo</option>
-                  <option value="Pasivo">Pasivo</option>
-                </select>
-                <select
-                  aria-label="Rango"
-                  value={row.range}
-                  onChange={(e) => setRom(i, 'range', e.target.value)}
-                >
-                  <option value="">Rango…</option>
-                  {ROM_RANGE_OPTIONS.map((o) => (
-                    <option key={o} value={o}>
-                      {o}
-                    </option>
-                  ))}
-                </select>
-                <input
-                  aria-label="Grados lado afectado"
-                  placeholder={
-                    catalog && getRomNorm(catalog.id, row.movement)
-                      ? `Afect. (nl ${getRomNorm(catalog.id, row.movement)})`
-                      : 'Grados afectado °'
-                  }
-                  inputMode="numeric"
-                  value={row.degrees}
-                  onChange={(e) => setRom(i, 'degrees', e.target.value)}
-                />
-                <input
-                  aria-label="Grados lado sano"
-                  placeholder="Sano °"
-                  inputMode="numeric"
-                  value={row.degrees_healthy}
-                  onChange={(e) => setRom(i, 'degrees_healthy', e.target.value)}
-                />
-                <button
-                  type="button"
-                  className={`pain-toggle ${row.pain === 'Sí' ? 'is-pain' : ''}`}
-                  onClick={() => setRom(i, 'pain', row.pain === 'Sí' ? 'No' : 'Sí')}
-                  aria-pressed={row.pain === 'Sí'}
-                  aria-label="Dolor en el movimiento (toca para alternar)"
-                  title="Toca para alternar: sin dolor / con dolor"
-                >
-                  {row.pain === 'Sí' ? '⚠ Con dolor' : 'Sin dolor'}
-                </button>
-                <input
-                  aria-label="Notas del movimiento"
-                  placeholder="Notas"
-                  value={row.notes}
-                  onChange={(e) => setRom(i, 'notes', e.target.value)}
-                />
-                <div className="row-actions">
+                  <select
+                    aria-label="Movimiento"
+                    value={row.movement}
+                    onChange={(e) => setRom(i, 'movement', e.target.value)}
+                  >
+                    <option value="">Movimiento…</option>
+                    {catalog?.movements.map((mv) => (
+                      <option key={mv} value={mv}>
+                        {mv}
+                      </option>
+                    ))}
+                  </select>
+                  {showRomDetails && (
+                    <select
+                      aria-label="Tipo de movimiento"
+                      value={row.type}
+                      onChange={(e) => setRom(i, 'type', e.target.value)}
+                    >
+                      <option value="">Tipo…</option>
+                      <option value="Activo">Activo</option>
+                      <option value="Pasivo">Pasivo</option>
+                    </select>
+                  )}
+                  <input
+                    aria-label="Grados lado afectado"
+                    placeholder={norm ? `Afect. (nl ${norm})` : 'Grados °'}
+                    inputMode="numeric"
+                    value={row.degrees}
+                    onChange={(e) => setRomDegrees(i, e.target.value)}
+                  />
+                  {showRomDetails && (
+                    <input
+                      aria-label="Grados lado sano"
+                      placeholder="Sano °"
+                      inputMode="numeric"
+                      value={row.degrees_healthy}
+                      onChange={(e) => setRom(i, 'degrees_healthy', e.target.value)}
+                    />
+                  )}
+                  {showRomDetails ? (
+                    <select
+                      aria-label="Rango"
+                      value={row.range}
+                      onChange={(e) => setRom(i, 'range', e.target.value)}
+                    >
+                      <option value="">Rango…</option>
+                      {ROM_RANGE_OPTIONS.map((o) => (
+                        <option key={o} value={o}>
+                          {o}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <span
+                      className={`rom-range-badge ${rangeClass}`}
+                      title="Rango (se calcula solo con los grados)"
+                    >
+                      {row.range || '—'}
+                    </span>
+                  )}
                   <button
                     type="button"
-                    className="secondary row-normal-btn"
-                    onClick={() => markRomNormal(i)}
-                    title="Marcar normal (Activo · Completo · Sin dolor)"
-                    aria-label={`Marcar ${row.movement || 'movimiento'} como normal`}
+                    className={`pain-toggle ${row.pain === 'Sí' ? 'is-pain' : ''}`}
+                    onClick={() => setRom(i, 'pain', row.pain === 'Sí' ? 'No' : 'Sí')}
+                    aria-pressed={row.pain === 'Sí'}
+                    aria-label="Dolor en el movimiento (toca para alternar)"
+                    title="Toca para alternar: sin dolor / con dolor"
                   >
-                    ✓
+                    {row.pain === 'Sí' ? '⚠ Con dolor' : 'Sin dolor'}
                   </button>
-                  <button
-                    type="button"
-                    className="secondary"
-                    onClick={() => removeRom(i)}
-                    aria-label="Quitar movimiento"
-                  >
-                    −
-                  </button>
+                  {showRomDetails && (
+                    <input
+                      aria-label="Notas del movimiento"
+                      placeholder="Notas"
+                      value={row.notes}
+                      onChange={(e) => setRom(i, 'notes', e.target.value)}
+                    />
+                  )}
+                  <div className="row-actions">
+                    <button
+                      type="button"
+                      className="secondary row-normal-btn"
+                      onClick={() => markRomNormal(i)}
+                      title="Marcar normal (Activo · Completo · Sin dolor)"
+                      aria-label={`Marcar ${row.movement || 'movimiento'} como normal`}
+                    >
+                      ✓
+                    </button>
+                    <button
+                      type="button"
+                      className="secondary"
+                      onClick={() => removeRom(i)}
+                      aria-label="Quitar movimiento"
+                    >
+                      −
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
           <div className="zone-table-actions">
             <button type="button" className="secondary" onClick={addRom}>
@@ -330,13 +384,25 @@ export function ZoneEditor({ zone, index, onChange, onRemove }: ZoneEditorProps)
             <button type="button" className="secondary" onClick={markAllRomNormal}>
               ✓ Marcar todos normales
             </button>
+            <button
+              type="button"
+              className="link-button zone-details-toggle"
+              onClick={() => setShowRomDetails((v) => !v)}
+            >
+              {showRomDetails ? '− Ocultar detalles' : '+ Detalles (tipo, sano, notas)'}
+            </button>
           </div>
 
           {/* C. Fuerza */}
           <p className="zone-subtitle">C. Fuerza muscular (Daniels)</p>
-          <div className="clinical-table">
+          <div className={`clinical-table ${showStrengthDetails ? 'detailed' : 'compact'}`}>
             {zone.muscle_strength.map((row, i) => (
-              <div className="clinical-table-row strength-row" key={`str-${i}`}>
+              <div
+                className={`clinical-table-row strength-row ${
+                  showStrengthDetails ? 'detailed' : 'compact'
+                } ${strengthAltered(row) ? 'is-altered' : ''}`}
+                key={`str-${i}`}
+              >
                 <select
                   aria-label="Músculo o grupo"
                   value={row.muscle}
@@ -371,12 +437,14 @@ export function ZoneEditor({ zone, index, onChange, onRemove }: ZoneEditorProps)
                 >
                   {row.pain === 'Sí' ? '⚠ Con dolor' : 'Sin dolor'}
                 </button>
-                <input
-                  aria-label="Notas de fuerza"
-                  placeholder="Notas"
-                  value={row.notes}
-                  onChange={(e) => setStrength(i, 'notes', e.target.value)}
-                />
+                {showStrengthDetails && (
+                  <input
+                    aria-label="Notas de fuerza"
+                    placeholder="Notas"
+                    value={row.notes}
+                    onChange={(e) => setStrength(i, 'notes', e.target.value)}
+                  />
+                )}
                 <div className="row-actions">
                   <button
                     type="button"
@@ -405,6 +473,13 @@ export function ZoneEditor({ zone, index, onChange, onRemove }: ZoneEditorProps)
             </button>
             <button type="button" className="secondary" onClick={markAllStrengthNormal}>
               ✓ Marcar todos normales
+            </button>
+            <button
+              type="button"
+              className="link-button zone-details-toggle"
+              onClick={() => setShowStrengthDetails((v) => !v)}
+            >
+              {showStrengthDetails ? '− Ocultar notas' : '+ Notas'}
             </button>
           </div>
 

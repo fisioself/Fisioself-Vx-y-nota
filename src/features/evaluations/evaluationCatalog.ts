@@ -975,6 +975,35 @@ export const ROM_NORMS: Record<string, string> = {
 export const getRomNorm = (zoneId: string, movement: string): string | undefined =>
   ROM_NORMS[`${zoneId}:${movement}`];
 
+// Valor numérico del rango normal de referencia (sin el símbolo de grado).
+export const getRomNormDegrees = (zoneId: string, movement: string): number | undefined => {
+  const raw = ROM_NORMS[`${zoneId}:${movement}`];
+  if (!raw) return undefined;
+  const n = parseInt(raw, 10);
+  return Number.isFinite(n) ? n : undefined;
+};
+
+// Clasifica los grados medidos contra el normal de referencia:
+//  • 'normal'    → grados ≥ normal (rango Completo)
+//  • 'limitado'  → grados < normal (hallazgo: rango Limitado)
+//  • 'unknown'   → sin normal de referencia o sin grados (no se puede clasificar)
+export const classifyRom = (
+  zoneId: string,
+  movement: string,
+  degrees: string
+): 'normal' | 'limitado' | 'unknown' => {
+  const norm = getRomNormDegrees(zoneId, movement);
+  const val = parseFloat(degrees);
+  if (norm === undefined || !Number.isFinite(val)) return 'unknown';
+  return val >= norm ? 'normal' : 'limitado';
+};
+
+// Rango (Limitado/Completo) deducido de los grados. '' si no se puede deducir.
+export const rangeFromDegrees = (zoneId: string, movement: string, degrees: string): string => {
+  const cls = classifyRom(zoneId, movement, degrees);
+  return cls === 'normal' ? 'Completo' : cls === 'limitado' ? 'Limitado' : '';
+};
+
 // Banderas rojas más relevantes en fisioterapia (checklist). "Otras" va aparte.
 export const RED_FLAG_OPTIONS = [
   'Fiebre / escalofríos',

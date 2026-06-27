@@ -138,18 +138,68 @@ details.form-section[open] > summary {
   padding-bottom: 4px;
 }
 
-/* Filas de ROM (8 columnas: movimiento, tipo, rango, grados afectado, grados
-   sano, dolor, notas, quitar) y fuerza (5 columnas) sobreescriben el grid base. */
-.clinical-table-row.rom-row {
+/* Filas de ROM y fuerza en dos modos: compacto (lo esencial) y detallado.
+   Compacto ROM: movimiento · grados · rango · dolor · acciones.
+   Detallado ROM: + tipo, lado sano y notas. */
+.clinical-table-row.rom-row.compact {
   grid-template-columns:
-    minmax(110px, 1fr) minmax(80px, 0.5fr) minmax(90px, 0.6fr)
-    minmax(95px, 0.6fr) minmax(70px, 0.45fr) minmax(75px, 0.45fr)
-    minmax(95px, 0.75fr) auto;
+    minmax(130px, 1.5fr) minmax(95px, 0.7fr) minmax(90px, 0.6fr)
+    minmax(95px, 0.7fr) auto;
 }
-.clinical-table-row.strength-row {
+.clinical-table-row.rom-row.detailed {
   grid-template-columns:
-    minmax(140px, 1.2fr) minmax(150px, 1fr) minmax(80px, 0.5fr)
+    minmax(110px, 1fr) minmax(80px, 0.5fr) minmax(80px, 0.5fr) minmax(70px, 0.45fr)
+    minmax(90px, 0.6fr) minmax(95px, 0.7fr) minmax(90px, 0.7fr) auto;
+}
+.clinical-table-row.strength-row.compact {
+  grid-template-columns: minmax(150px, 1.5fr) minmax(150px, 1fr) minmax(95px, 0.7fr) auto;
+}
+.clinical-table-row.strength-row.detailed {
+  grid-template-columns:
+    minmax(140px, 1.2fr) minmax(150px, 1fr) minmax(95px, 0.7fr)
     minmax(120px, 1fr) auto;
+}
+
+/* Resaltado de hallazgos: fila en ámbar cuando el ROM está limitado (afectado <
+   normal) o hay dolor / Daniels < 5. Permite ver de un vistazo lo alterado. */
+.clinical-table-row.is-altered {
+  background: rgba(217, 155, 48, 0.12);
+  border-left: 3px solid #d99b30;
+  padding-left: 7px;
+}
+
+/* Badge del rango deducido de los grados (vista compacta, solo lectura). */
+.rom-range-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 0.8rem;
+  border: 1px solid var(--border);
+  background: var(--bg-sunken);
+}
+.rom-range-badge.ok {
+  background: rgba(var(--primary-rgb), 0.1);
+  color: var(--primary);
+  border-color: rgba(var(--primary-rgb), 0.35);
+}
+.rom-range-badge.warn {
+  background: rgba(217, 155, 48, 0.16);
+  color: #8a6200;
+  border-color: rgba(217, 155, 48, 0.5);
+}
+.rom-range-badge.neutral {
+  color: var(--secondary-text);
+}
+.rom-range-badge.muted {
+  color: var(--muted);
+}
+.zone-details-toggle {
+  align-self: center;
+  margin-left: auto;
 }
 
 /* Acciones por fila: "✓" (marcar normal) + "−" (quitar), juntas en la última
@@ -249,8 +299,10 @@ details.form-section[open] > summary {
     flex-direction: column;
     align-items: stretch;
   }
-  .clinical-table-row.rom-row,
-  .clinical-table-row.strength-row {
+  .clinical-table-row.rom-row.compact,
+  .clinical-table-row.rom-row.detailed,
+  .clinical-table-row.strength-row.compact,
+  .clinical-table-row.strength-row.detailed {
     grid-template-columns: 1fr 1fr;
   }
   .clinical-table-row.rom-row > *,
