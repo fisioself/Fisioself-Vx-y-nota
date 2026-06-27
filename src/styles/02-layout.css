@@ -1,0 +1,226 @@
+/* Hero de sección — franja de título neutral para Panel, Finanzas y
+   Seguimientos. Sin fondo de color: el acento visual lo pone la topbar. */
+.section-hero {
+  padding: var(--s-3) 0 var(--s-2);
+  margin-bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--gap);
+  background: transparent;
+}
+.section-hero h1 {
+  font-size: clamp(24px, 3vw, 28px);
+  font-weight: 600;
+  margin: 2px 0 0;
+  color: var(--text-main);
+}
+.section-hero .eyebrow {
+  color: var(--text-secondary);
+}
+
+/* Barra superior limpia — reemplaza el bloque verde pesado. Fondo blanco,
+   borde ultra-fino: toda la jerarquía visual viene del contenido, no del color. */
+.app-topbar {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 16px 8px 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  min-height: 64px;
+  margin-bottom: var(--s-5);
+}
+.app-topbar > div {
+  min-width: 0;
+}
+/* Marca (logo + nombre) a la izquierda de la barra superior. */
+.topbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.app-topbar h1 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.hero-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+/* Seguridad + Salir agrupados como botones icono cuadrados */
+.hero-icon-group {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+.hero-icon-btn {
+  width: 40px;
+  height: 40px;
+  min-height: unset;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+  border-radius: 12px;
+}
+
+/* Stats grid del dashboard */
+.dashboard-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--s-3);
+}
+.stat-card {
+  display: grid;
+  gap: var(--s-2);
+  padding: var(--s-5);
+  border-radius: var(--radius-inner);
+  background: var(--bg-card);
+  border: none;
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.04),
+    0 12px 32px rgba(0, 0, 0, 0.06);
+}
+.stat-card--sunken {
+  background: var(--bg-sunken);
+  box-shadow: none;
+}
+/* Tipografía premium para las métricas: etiqueta pequeña y aireada en gris
+   suave; número refinado (no en negrita tosca). */
+.stat-label {
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  font-feature-settings: 'tnum';
+}
+@media (max-width: 900px) {
+  .dashboard-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ── Panel: arquitectura de 3 zonas ──────────────────────────────────────────
+   El calendario va ARRIBA, a todo el ancho (la agenda es lo primero que se ve).
+   Debajo, la franja con el panel de Pacientes (izq) + métricas integradas (der). */
+.panel-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 330px) 1fr;
+  grid-template-areas:
+    'calendar calendar'
+    'patients stats';
+  gap: var(--gap);
+  align-items: start;
+}
+.panel-grid--no-sidebar {
+  grid-template-columns: 1fr;
+  grid-template-areas:
+    'calendar'
+    'stats';
+}
+.panel-patients {
+  grid-area: patients;
+  min-width: 0;
+}
+.panel-stats {
+  grid-area: stats;
+}
+.panel-calendar {
+  grid-area: calendar;
+}
+/* Dentro del panel las métricas van 2×2: acompañan la altura del panel de
+   Pacientes en vez de aplastarse en una sola fila. */
+.panel-stats.dashboard-stats {
+  grid-template-columns: repeat(2, 1fr);
+  align-content: start;
+}
+
+@media (max-width: 900px) {
+  .panel-grid,
+  .panel-grid--no-sidebar {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      'calendar'
+      'patients'
+      'stats';
+  }
+}
+
+/* Búsqueda de paciente + botón Calendar en una sola fila */
+.patient-search-row {
+  display: flex;
+  gap: var(--s-2);
+  align-items: center;
+  margin-bottom: var(--s-1);
+}
+.patient-search-row input {
+  flex: 1;
+  min-width: 0;
+  margin-top: 0;
+}
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 2px;
+}
+.muted {
+  color: var(--text-secondary);
+}
+html[data-theme='dark'] .muted,
+html[data-theme='dark'] .eyebrow {
+  color: var(--text-secondary);
+}
+
+/* ---- Ritmo tipográfico --------------------------------------------
+   Interlineado cómodo para texto largo (notas, descripciones) y una
+   jerarquía de títulos más afinada y consistente entre tarjetas. */
+body {
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+.card h2,
+.form-header h2 {
+  font-size: 1.3rem;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  font-weight: 700;
+  color: var(--text-main);
+}
+.card p,
+.note-row p {
+  line-height: 1.55;
+}
+
+.app-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 380px) 1fr;
+  gap: var(--gap);
+  align-items: start;
+}
+/* Mismo motivo: que ningún item del grid principal (hero, pestañas, paneles)
+   pueda crecer más que el ancho de la pantalla. */
+.app-grid > * {
+  min-width: 0;
+}

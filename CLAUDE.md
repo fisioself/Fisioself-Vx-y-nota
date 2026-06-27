@@ -49,7 +49,10 @@ src/
 ├── lib/         Singletons de terceros (supabaseClient, sentry, analytics, offlineSync).
 ├── types/       Tipos compartidos: clinical.ts (dominio) y supabase.ts (GENERADO).
 ├── test/        setup de vitest.
-└── styles.css   Sistema de diseño global (tokens + componentes).
+├── styles.css   Índice: solo @import de src/styles/* EN ORDEN (la cascada
+│                depende del orden; no reordenar).
+└── styles/      Sistema de diseño partido en módulos contiguos (base, layout,
+                 components, records-lists, finance-responsive, print-animations).
 
 supabase/
 ├── functions/   Edge Functions (Deno). Se despliegan APARTE del frontend.
