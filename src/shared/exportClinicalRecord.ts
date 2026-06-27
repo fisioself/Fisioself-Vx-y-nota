@@ -1,4 +1,5 @@
 import type { Patient, Evaluation, EvaluationZone } from '../types/clinical';
+import { computeAge } from './dateUtils';
 
 export const exportToPdf = (patient: Patient | null): void => {
   if (!patient) return;
@@ -24,18 +25,6 @@ const fmtDateMX = (iso: string | null | undefined): string => {
   const d = new Date(/^\d{4}-\d{2}-\d{2}$/.test(iso) ? `${iso}T12:00:00` : iso);
   if (Number.isNaN(d.getTime())) return String(iso);
   return d.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
-};
-
-// Edad en años a partir de la fecha de nacimiento. '' si no aplica.
-const computeAge = (birth: string | null | undefined): string => {
-  if (!birth) return '';
-  const b = new Date(/^\d{4}-\d{2}-\d{2}$/.test(birth) ? `${birth}T12:00:00` : birth);
-  if (Number.isNaN(b.getTime())) return '';
-  const now = new Date();
-  let age = now.getFullYear() - b.getFullYear();
-  const m = now.getMonth() - b.getMonth();
-  if (m < 0 || (m === 0 && now.getDate() < b.getDate())) age -= 1;
-  return age >= 0 && age < 130 ? String(age) : '';
 };
 
 // Fila corta etiqueta:valor. Devuelve '' si el valor está vacío → no se imprime.

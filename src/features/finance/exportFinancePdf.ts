@@ -1,20 +1,7 @@
 import type { GlobalFinanceSummary } from '../../services/financeApi';
-
-const m = (n: number) =>
-  new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2
-  }).format(Number.isFinite(n) ? n : 0);
-
-const monthLabel = (ym: string) => {
-  const [y, mo] = ym.split('-').map(Number);
-  if (!y || !mo) return ym;
-  return new Intl.DateTimeFormat('es-MX', { month: 'long', year: 'numeric' }).format(
-    new Date(y, mo - 1, 1)
-  );
-};
+// money y monthYearLabel viven una sola vez en financeUtils; aquí se reusan con
+// alias locales (m, monthLabel) para no duplicar el formateo de moneda/mes.
+import { money as m, monthYearLabel as monthLabel } from './financeUtils';
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 

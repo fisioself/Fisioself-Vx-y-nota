@@ -5,8 +5,6 @@ const connectUrl = import.meta.env.VITE_GOOGLE_CALENDAR_CONNECT_URL as string | 
 const syncUrl = import.meta.env.VITE_GOOGLE_CALENDAR_SYNC_URL as string | undefined;
 const fetchUrl = import.meta.env.VITE_GOOGLE_CALENDAR_FETCH_URL as string | undefined;
 
-export const isGoogleCalendarConfigured = Boolean(connectUrl && syncUrl);
-
 export interface GoogleCalendarEvent {
   id: string;
   summary: string | null;
