@@ -10,6 +10,19 @@
   z-index: 950;
 }
 
+/* En móvil, dejar el modal por encima de la barra inferior fija (con scroll
+   interno) para que sus botones no queden tapados por la barra de pestañas. */
+@media (max-width: 700px) {
+  .appt-create-backdrop {
+    padding: 10px;
+    padding-bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom) + 12px);
+  }
+  .appt-create-card {
+    max-height: calc(100vh - var(--bottom-nav-h) - 22px);
+    max-height: calc(100dvh - var(--bottom-nav-h) - env(safe-area-inset-bottom) - 22px);
+  }
+}
+
 .appt-create-card {
   /* Fondo claro fijo: forzamos la paleta clara para que el texto sea legible
      también en modo oscuro. */
