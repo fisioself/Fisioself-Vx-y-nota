@@ -924,6 +924,34 @@ export const ZONE_CATALOGS: ZoneCatalog[] = [
 export const getZoneCatalog = (id: string): ZoneCatalog | undefined =>
   ZONE_CATALOGS.find((z) => z.id === id);
 
+// Patrones de la opción que representa "negativo / normal" en una prueba, en
+// orden de preferencia. Habilita el botón "Marcar todas negativas" por grupo.
+const NEGATIVE_RX = [
+  /^negativo/i,
+  /^normal/i,
+  /^estable/i,
+  /^ausente/i,
+  /^sin dolor/i,
+  /^sin lag/i,
+  /no cumple/i,
+  /^simétrico/i,
+  /^adecuado/i,
+  /^logrado/i,
+  /^logra 5/i
+];
+
+// Opción "negativa/normal" de una prueba, o null si no aplica (pruebas de
+// segundos/texto, o sin una opción claramente negativa).
+export const negativeOptionFor = (t: SpecialTestDef): string | null => {
+  if (t.input === 'seconds' || t.input === 'text') return null;
+  const opts = t.options ?? [...DEFAULT_TEST_OPTIONS];
+  for (const rx of NEGATIVE_RX) {
+    const match = opts.find((o) => rx.test(o));
+    if (match) return match;
+  }
+  return null;
+};
+
 // Rango de movimiento NORMAL de referencia (grados aprox. AAOS), por
 // `${zoneId}:${movimiento}`. Se muestra como guía junto al campo de grados.
 export const ROM_NORMS: Record<string, string> = {

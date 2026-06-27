@@ -1,5 +1,49 @@
 /* Valoración clínica por zonas — estilos del módulo nuevo. */
 
+/* Índice de secciones: barra de chips pegada arriba para saltar a una sección
+   sin scrollear toda la valoración. */
+.eval-section-nav {
+  position: sticky;
+  top: 8px;
+  z-index: 6;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px;
+  margin-bottom: 4px;
+  border-radius: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+.eval-section-chip {
+  padding: 5px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-sunken);
+  color: var(--text-main);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.eval-section-chip:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+@media (max-width: 700px) {
+  .eval-section-nav {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+@media print {
+  .eval-section-nav {
+    display: none;
+  }
+}
+
 /* Banderas rojas: checklist en rejilla compacta. */
 .red-flags-box {
   border: 1px solid rgba(180, 35, 24, 0.35);
@@ -249,6 +293,12 @@ details.form-section[open] > summary {
 .test-group {
   margin-bottom: 12px;
 }
+.test-group-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
 .test-group-title {
   font-weight: 700;
   font-size: 0.82rem;
@@ -256,6 +306,10 @@ details.form-section[open] > summary {
   text-transform: uppercase;
   letter-spacing: 0.03em;
   margin: 10px 0 6px;
+}
+.test-group-neg {
+  font-size: 0.78rem;
+  white-space: nowrap;
 }
 .test-row {
   display: grid;
