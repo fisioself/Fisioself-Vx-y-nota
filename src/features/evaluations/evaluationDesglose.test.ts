@@ -5,7 +5,14 @@ import {
   cleanRomRows,
   cleanStrengthRows
 } from './evaluationFormHelpers';
-import { getZoneCatalog, ROM_RANGE_OPTIONS, DANIELS_OPTIONS } from './evaluationCatalog';
+import {
+  getZoneCatalog,
+  ROM_RANGE_OPTIONS,
+  DANIELS_OPTIONS,
+  classifyRom,
+  rangeFromDegrees,
+  getRomNormDegrees
+} from './evaluationCatalog';
 
 describe('romRowsForCatalog', () => {
   it('itemizes every movement of the zone when nothing is saved', () => {
@@ -88,6 +95,34 @@ describe('atajo "Normal" — valores válidos del catálogo', () => {
   });
   it('"5 - Fuerza normal" es una opción de Daniels', () => {
     expect(DANIELS_OPTIONS).toContain('5 - Fuerza normal');
+  });
+});
+
+describe('clasificación de ROM por grados', () => {
+  it('lee el normal de referencia como número', () => {
+    // hombro:Flexión = 180°
+    expect(getRomNormDegrees('hombro', 'Flexión')).toBe(180);
+    expect(getRomNormDegrees('hombro', 'Movimiento inexistente')).toBeUndefined();
+  });
+
+  it('clasifica normal cuando los grados alcanzan el normal', () => {
+    expect(classifyRom('hombro', 'Flexión', '180')).toBe('normal');
+    expect(classifyRom('hombro', 'Flexión', '200')).toBe('normal');
+  });
+
+  it('clasifica limitado cuando los grados quedan por debajo', () => {
+    expect(classifyRom('hombro', 'Flexión', '120')).toBe('limitado');
+  });
+
+  it('es unknown sin grados o sin normal de referencia', () => {
+    expect(classifyRom('hombro', 'Flexión', '')).toBe('unknown');
+    expect(classifyRom('mano_muneca', 'Flexión de dedos', '90')).toBe('unknown');
+  });
+
+  it('deduce el rango (Completo / Limitado) desde los grados', () => {
+    expect(rangeFromDegrees('hombro', 'Flexión', '180')).toBe('Completo');
+    expect(rangeFromDegrees('hombro', 'Flexión', '120')).toBe('Limitado');
+    expect(rangeFromDegrees('hombro', 'Flexión', '')).toBe('');
   });
 });
 

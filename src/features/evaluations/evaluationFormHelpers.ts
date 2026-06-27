@@ -124,7 +124,7 @@ export const today = (): string => getLocalISODate();
 // (ver romRowHasData), para no guardar movimientos que nunca se exploraron.
 export const emptyRomRow: RomRow = {
   movement: '',
-  type: '',
+  type: 'Activo',
   range: '',
   degrees: '',
   degrees_healthy: '',
@@ -170,10 +170,11 @@ export const strengthRowsForCatalog = (
 // Una fila de ROM/fuerza precargada solo "cuenta" si tiene algún dato medido
 // además del nombre (que viene del catálogo). Así el desglose no guarda decenas
 // de movimientos sin valorar en el expediente ni en el PDF.
-// "Dolor = No" es el valor por defecto, así que no cuenta como dato; solo un
-// "Sí" (hallazgo positivo) marca la fila como valorada por la vía del dolor.
+// "Dolor = No" y "Tipo = Activo" son valores por defecto, así que no cuentan
+// como dato: solo un "Sí" (hallazgo positivo) o una medición real marcan la
+// fila como valorada. Evita guardar movimientos que nunca se exploraron.
 const romRowHasData = (r: RomRow): boolean =>
-  Boolean(r.type || r.range || r.degrees || r.degrees_healthy || r.pain === 'Sí' || r.notes);
+  Boolean(r.range || r.degrees || r.degrees_healthy || r.pain === 'Sí' || r.notes);
 const strengthRowHasData = (r: StrengthRow): boolean =>
   Boolean(r.daniels || r.pain === 'Sí' || r.notes);
 
