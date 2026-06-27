@@ -60,6 +60,18 @@ describe('cleanRomRows / cleanStrengthRows', () => {
     expect(cleanRomRows(rows)).toHaveLength(1);
   });
 
+  it('defaults pain to "No" but that alone does not mark a row as assessed', () => {
+    const rows = romRowsForCatalog('mano_muneca', []);
+    expect(rows.every((r) => r.pain === 'No')).toBe(true);
+    expect(cleanRomRows(rows)).toHaveLength(0);
+  });
+
+  it('keeps a row when pain is toggled to "Sí" (a positive finding)', () => {
+    const rows = romRowsForCatalog('mano_muneca', []);
+    rows[0].pain = 'Sí';
+    expect(cleanRomRows(rows)).toHaveLength(1);
+  });
+
   it('keeps a strength row only once Daniels/pain/notes are set', () => {
     const rows = strengthRowsForCatalog('hombro', []);
     expect(cleanStrengthRows(rows)).toHaveLength(0);

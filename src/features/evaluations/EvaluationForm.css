@@ -171,6 +171,30 @@ details.form-section[open] > summary {
   gap: 8px;
 }
 
+/* Toggle de dolor por fila: predeterminado en "Sin dolor" (neutro); un toque lo
+   pone en "Con dolor" (rojo). Reemplaza al antiguo selector ¿Dolor? para que
+   sea un solo toque en vez de abrir un desplegable. */
+.pain-toggle {
+  width: 100%;
+  min-height: 40px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-sunken);
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 0.82rem;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pain-toggle.is-pain {
+  background: rgba(180, 35, 24, 0.12);
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
 /* Grupo de pruebas especiales (subtítulo por tejido). */
 .test-group {
   margin-bottom: 12px;
