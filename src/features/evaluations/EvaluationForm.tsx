@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { clinicalApi } from '../../services/clinicalApi';
-import { getLocalISODate } from '../../shared/dateUtils';
+import { getLocalISODate, computeAge } from '../../shared/dateUtils';
 import { draftStorage, getEvaluationDraftKey } from '../../shared/draftStorage';
 import { useDraftAutosave } from '../../shared/useDraftAutosave';
 import { getErrorMessage, isOfflineError, OFFLINE_MESSAGE } from '../../shared/errors';
@@ -322,18 +322,6 @@ const sexOptions = ['', 'F', 'M', 'Otro'];
 const toNullable = (value: string | null | undefined): string | null => {
   const trimmed = (value ?? '').trim();
   return trimmed === '' ? null : trimmed;
-};
-
-// Calcula la edad (años) a partir de la fecha de nacimiento. '' si no aplica.
-const computeAge = (birth: string): string => {
-  if (!birth) return '';
-  const b = new Date(birth);
-  if (Number.isNaN(b.getTime())) return '';
-  const now = new Date();
-  let age = now.getFullYear() - b.getFullYear();
-  const m = now.getMonth() - b.getMonth();
-  if (m < 0 || (m === 0 && now.getDate() < b.getDate())) age -= 1;
-  return age >= 0 && age < 130 ? String(age) : '';
 };
 
 const cleanRows = <T extends object>(rows: ReadonlyArray<T>): Record<string, unknown>[] =>
