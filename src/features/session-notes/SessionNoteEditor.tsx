@@ -42,28 +42,87 @@ Indicaciones, ejercicios en casa, progresion y proxima sesion.
 Notas adicionales:
 `;
 
-const CLINICAL_SNIPPETS = [
+// Plantillas rápidas agrupadas: "Técnicas" (qué se hizo en la sesión) y
+// "Evolución" (cómo respondió el paciente). Un toque inserta la frase.
+const CLINICAL_SNIPPETS: { id: string; group: 'Técnicas' | 'Evolución'; label: string; text: string }[] = [
   {
     id: 'terapia-manual',
+    group: 'Técnicas',
     label: 'Terapia Manual',
     text: 'Se aplica terapia manual ortopedica enfocada en liberacion miofascial y movilizacion articular (Grado I-III), logrando disminucion del tono muscular y mejora del ROM sin dolor agudo.'
   },
   {
     id: 'puncion-seca',
+    group: 'Técnicas',
     label: 'Puncion Seca',
     text: 'Puncion seca en puntos gatillo miofasciales activos (PGM) con respuesta de espasmo local (REL) positiva. Se complementa con estiramiento pasivo.'
   },
   {
+    id: 'electroterapia',
+    group: 'Técnicas',
+    label: 'Electroterapia',
+    text: 'Electroterapia analgesica (TENS) sobre la zona de tratamiento durante 20 min, con buena tolerancia y efecto analgesico referido al finalizar.'
+  },
+  {
+    id: 'ultrasonido',
+    group: 'Técnicas',
+    label: 'Ultrasonido',
+    text: 'Ultrasonido terapeutico en modo pulsatil sobre el tejido afectado para favorecer la reparacion tisular y disminuir el dolor.'
+  },
+  {
+    id: 'termo-crio',
+    group: 'Técnicas',
+    label: 'Termo/Crioterapia',
+    text: 'Aplicacion de termoterapia/crioterapia como coadyuvante analgesico y antiinflamatorio al inicio/cierre de la sesion.'
+  },
+  {
+    id: 'vendaje',
+    group: 'Técnicas',
+    label: 'Vendaje neuromuscular',
+    text: 'Colocacion de vendaje neuromuscular (kinesiotape) con tecnica de descarga/facilitacion para soporte y modulacion del dolor.'
+  },
+  {
+    id: 'ejercicio-terapeutico',
+    group: 'Técnicas',
+    label: 'Ejercicio Terapeutico',
+    text: 'Prescripcion de ejercicio terapeutico: movilidad activa, fortalecimiento isometrico/isotonico progresivo y control motor. Tolerancia adecuada al esfuerzo.'
+  },
+  {
     id: 'descarga',
+    group: 'Técnicas',
     label: 'Descarga',
     text: 'Sesion de descarga muscular global enfocada en tren inferior post-competicion. Masaje deportivo descontracturante, presoterapia y estiramientos neuromusculares (FNP).'
   },
   {
-    id: 'ejercicio-terapeutico',
-    label: 'Ejercicio Terapeutico',
-    text: 'Prescripcion de ejercicio terapeutico: movilidad activa, fortalecimiento isometrico/isotonico progresivo y control motor. Tolerancia adecuada al esfuerzo.'
+    id: 'evo-mejoria',
+    group: 'Evolución',
+    label: 'Refiere mejoría',
+    text: 'El paciente refiere mejoria respecto a la sesion anterior, con disminucion del dolor y mayor funcionalidad en las actividades de la vida diaria.'
+  },
+  {
+    id: 'evo-igual',
+    group: 'Evolución',
+    label: 'Continúa igual',
+    text: 'Cuadro clinico estable sin cambios significativos respecto a la sesion previa; se mantiene el plan de tratamiento.'
+  },
+  {
+    id: 'evo-tolera',
+    group: 'Evolución',
+    label: 'Tolera bien',
+    text: 'Buena tolerancia al tratamiento, sin reacciones adversas ni aumento del dolor durante ni despues de la sesion.'
+  },
+  {
+    id: 'evo-casa',
+    group: 'Evolución',
+    label: 'Indicaciones casa',
+    text: 'Se refuerzan indicaciones para casa: ejercicios pautados, higiene postural y control de cargas hasta la proxima sesion.'
   }
 ];
+
+const SNIPPET_GROUPS = ['Técnicas', 'Evolución'] as const;
+
+// Color del chip de EVA según intensidad (verde → ámbar → rojo).
+const evaTone = (n: number): string => (n <= 3 ? 'eva-low' : n <= 6 ? 'eva-mid' : 'eva-high');
 
 export function SessionNoteEditor({
   patientId,
@@ -383,21 +442,26 @@ export function SessionNoteEditor({
             }}
           />
         </label>
-        <label>
-          EVA hoy
-          <input
-            type="number"
-            min={0}
-            max={10}
-            step={0.5}
-            value={eva}
-            onChange={(e) => {
-              setEva(e.target.value);
-              setIsDirty(true);
-            }}
-            placeholder="0-10"
-          />
-        </label>
+        <div className="eva-quick">
+          <span className="eva-quick-label">EVA hoy</span>
+          <div className="eva-quick-chips">
+            {Array.from({ length: 11 }, (_, n) => (
+              <button
+                key={n}
+                type="button"
+                className={`eva-chip ${evaTone(n)} ${Number(eva) === n && eva !== '' ? 'active' : ''}`}
+                onClick={() => {
+                  setEva(eva !== '' && Number(eva) === n ? '' : n);
+                  setIsDirty(true);
+                }}
+                aria-pressed={eva !== '' && Number(eva) === n}
+                aria-label={`EVA ${n}`}
+              >
+                {n}
+              </button>
+            ))}
+          </div>
+        </div>
         <span className="pill">Nota #{sessionNumber}</span>
         {isDirty && <span className="pill alert">Borrador local con cambios</span>}
         <button type="button" className="secondary" onClick={insertSoapTemplate}>
@@ -423,19 +487,24 @@ export function SessionNoteEditor({
         <p className="eyebrow" style={{ marginBottom: 4 }}>
           Plantillas Rapidas
         </p>
-        <div className="row wrap filters">
-          {CLINICAL_SNIPPETS.map((snippet) => (
-            <button
-              key={snippet.id}
-              type="button"
-              className="pill secondary"
-              style={{ fontSize: '0.85rem', padding: '6px 10px' }}
-              onClick={() => insertSnippet(snippet.text)}
-            >
-              + {snippet.label}
-            </button>
-          ))}
-        </div>
+        {SNIPPET_GROUPS.map((group) => (
+          <div key={group} className="snippet-group">
+            <span className="snippet-group-label">{group}</span>
+            <div className="row wrap filters">
+              {CLINICAL_SNIPPETS.filter((s) => s.group === group).map((snippet) => (
+                <button
+                  key={snippet.id}
+                  type="button"
+                  className="pill secondary"
+                  style={{ fontSize: '0.85rem', padding: '6px 10px' }}
+                  onClick={() => insertSnippet(snippet.text)}
+                >
+                  + {snippet.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
 
       <label>

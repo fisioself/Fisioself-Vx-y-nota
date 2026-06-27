@@ -43,7 +43,7 @@ describe('SessionNoteEditor', () => {
     fireEvent.change(screen.getByLabelText(/nota de sesion/i), {
       target: { value: 'Dolor lumbar con mejora' }
     });
-    fireEvent.change(screen.getByLabelText(/eva hoy/i), { target: { value: '4' } });
+    await userEvent.click(screen.getByRole('button', { name: /^EVA 4$/ }));
     await userEvent.click(screen.getByRole('button', { name: /guardar sesion #2/i }));
 
     await waitFor(() => {

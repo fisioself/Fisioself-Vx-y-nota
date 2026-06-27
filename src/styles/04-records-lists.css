@@ -126,6 +126,69 @@ a.btn-sm {
 .clinical-table-row select {
   margin-top: 0;
 }
+/* EVA de un toque (0–10) en la nota de sesión: chips con color por intensidad. */
+.eva-quick {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.eva-quick-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+.eva-quick-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.eva-chip {
+  min-width: 34px;
+  min-height: 34px;
+  padding: 4px 8px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  font-weight: 800;
+  cursor: pointer;
+  color: var(--text-main);
+}
+.eva-chip.eva-low {
+  color: #1b7a43;
+}
+.eva-chip.eva-mid {
+  color: #8a6200;
+}
+.eva-chip.eva-high {
+  color: var(--danger);
+}
+.eva-chip.active.eva-low {
+  background: rgba(27, 122, 67, 0.15);
+  border-color: #1b7a43;
+}
+.eva-chip.active.eva-mid {
+  background: rgba(217, 155, 48, 0.18);
+  border-color: #d99b30;
+}
+.eva-chip.active.eva-high {
+  background: rgba(180, 35, 24, 0.14);
+  border-color: var(--danger);
+}
+
+/* Plantillas rápidas agrupadas (Técnicas / Evolución). */
+.snippet-group {
+  margin-bottom: 6px;
+}
+.snippet-group-label {
+  display: block;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin: 6px 0 3px;
+}
+
 .ai-box {
   border-radius: var(--radius-inner);
   background: var(--bg-sunken);
