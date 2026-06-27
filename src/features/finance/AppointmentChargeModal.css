@@ -140,3 +140,17 @@
   font-size: 0.85rem;
   gap: 8px;
 }
+
+/* En móvil, mantener el modal por encima de la barra inferior fija y dejar que
+   haga scroll interno: si no, los últimos botones (Registrar cobro, Ver
+   expediente, Eliminar cita) quedaban tapados por la barra de pestañas. */
+@media (max-width: 700px) {
+  .charge-backdrop {
+    padding: 10px;
+    padding-bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom) + 12px);
+  }
+  .charge-card {
+    max-height: calc(100vh - var(--bottom-nav-h) - 22px);
+    max-height: calc(100dvh - var(--bottom-nav-h) - env(safe-area-inset-bottom) - 22px);
+  }
+}

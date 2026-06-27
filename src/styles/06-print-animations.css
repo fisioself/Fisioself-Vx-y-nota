@@ -267,10 +267,14 @@ html[data-theme='dark'] .charge-commission-info {
    transform convierte a la tarjeta en el contenedor de referencia de los hijos
    `position: fixed` — eso "atrapaba" la barra flotante de acciones (Nueva
    valoración / Nota de sesión) y la encimaba sobre el nombre en móvil. Sin
-   transform, la barra fija se ancla a la pantalla (al pie) como debe. */
+   transform, la barra fija se ancla a la pantalla (al pie) como debe.
+   `.panel-calendar` se excluye por la MISMA razón: contiene los modales (cobro
+   de sesión, nueva cita) con position:fixed; con transform en la tarjeta, el
+   modal quedaba atrapado y por debajo de la barra inferior (se cortaba). */
 .hero.card,
 .app-topbar,
-.record-header {
+.record-header,
+.panel-calendar {
   animation: none;
 }
 
