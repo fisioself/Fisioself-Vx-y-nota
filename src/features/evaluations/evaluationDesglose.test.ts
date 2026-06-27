@@ -5,7 +5,7 @@ import {
   cleanRomRows,
   cleanStrengthRows
 } from './evaluationFormHelpers';
-import { getZoneCatalog } from './evaluationCatalog';
+import { getZoneCatalog, ROM_RANGE_OPTIONS, DANIELS_OPTIONS } from './evaluationCatalog';
 
 describe('romRowsForCatalog', () => {
   it('itemizes every movement of the zone when nothing is saved', () => {
@@ -65,6 +65,17 @@ describe('cleanRomRows / cleanStrengthRows', () => {
     expect(cleanStrengthRows(rows)).toHaveLength(0);
     rows[0].daniels = '4 - Movimiento contra resistencia moderada';
     expect(cleanStrengthRows(rows)).toHaveLength(1);
+  });
+});
+
+describe('atajo "Normal" — valores válidos del catálogo', () => {
+  // El botón "Normal" de ZoneEditor escribe estos valores; deben existir como
+  // opciones reales del catálogo o el atajo dejaría un valor fuera de rango.
+  it('"Completo" es una opción de rango de ROM', () => {
+    expect(ROM_RANGE_OPTIONS).toContain('Completo');
+  });
+  it('"5 - Fuerza normal" es una opción de Daniels', () => {
+    expect(DANIELS_OPTIONS).toContain('5 - Fuerza normal');
   });
 });
 

@@ -152,6 +152,25 @@ details.form-section[open] > summary {
     minmax(120px, 1fr) auto;
 }
 
+/* Acciones por fila: "✓" (marcar normal) + "−" (quitar), juntas en la última
+   columna `auto` del grid. */
+.row-actions {
+  display: flex;
+  gap: 4px;
+}
+.row-normal-btn {
+  color: var(--primary);
+  border-color: var(--primary);
+  font-weight: 800;
+}
+
+/* Acciones bajo cada tabla: "+ Agregar" y "✓ Marcar todos normales". */
+.zone-table-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 /* Grupo de pruebas especiales (subtítulo por tejido). */
 .test-group {
   margin-bottom: 12px;
@@ -215,8 +234,13 @@ details.form-section[open] > summary {
     min-width: 0;
   }
   .clinical-table-row.rom-row > button,
-  .clinical-table-row.strength-row > button {
+  .clinical-table-row.strength-row > button,
+  .clinical-table-row.rom-row > .row-actions,
+  .clinical-table-row.strength-row > .row-actions {
     grid-column: 1 / -1;
+  }
+  .row-actions > button {
+    flex: 1;
   }
   .test-row {
     grid-template-columns: 1fr;

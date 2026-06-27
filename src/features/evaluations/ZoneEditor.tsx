@@ -57,6 +57,35 @@ export function ZoneEditor({ zone, index, onChange, onRemove }: ZoneEditorProps)
           : z.movement_ranges.filter((_, ri) => ri !== i)
     }));
 
+  // Atajos "Normal": un toque deja la fila como hallazgo normal (Activo ·
+  // Completo · Sin dolor para ROM; Daniels 5 · Sin dolor para fuerza). Acelera
+  // la valoración: marcas todo normal y solo editas lo alterado.
+  const ROM_NORMAL = { type: 'Activo', range: 'Completo', pain: 'No' } as const;
+  const STRENGTH_NORMAL = { daniels: '5 - Fuerza normal', pain: 'No' } as const;
+
+  const markRomNormal = (i: number) =>
+    onChange((z) => ({
+      ...z,
+      movement_ranges: z.movement_ranges.map((r, ri) => (ri === i ? { ...r, ...ROM_NORMAL } : r))
+    }));
+  const markAllRomNormal = () =>
+    onChange((z) => ({
+      ...z,
+      movement_ranges: z.movement_ranges.map((r) => ({ ...r, ...ROM_NORMAL }))
+    }));
+  const markStrengthNormal = (i: number) =>
+    onChange((z) => ({
+      ...z,
+      muscle_strength: z.muscle_strength.map((r, ri) =>
+        ri === i ? { ...r, ...STRENGTH_NORMAL } : r
+      )
+    }));
+  const markAllStrengthNormal = () =>
+    onChange((z) => ({
+      ...z,
+      muscle_strength: z.muscle_strength.map((r) => ({ ...r, ...STRENGTH_NORMAL }))
+    }));
+
   const setStrength = (i: number, key: keyof StrengthRow, value: string) =>
     onChange((z) => ({
       ...z,
@@ -271,15 +300,36 @@ export function ZoneEditor({ zone, index, onChange, onRemove }: ZoneEditorProps)
                   value={row.notes}
                   onChange={(e) => setRom(i, 'notes', e.target.value)}
                 />
-                <button type="button" className="secondary" onClick={() => removeRom(i)}>
-                  −
-                </button>
+                <div className="row-actions">
+                  <button
+                    type="button"
+                    className="secondary row-normal-btn"
+                    onClick={() => markRomNormal(i)}
+                    title="Marcar normal (Activo · Completo · Sin dolor)"
+                    aria-label={`Marcar ${row.movement || 'movimiento'} como normal`}
+                  >
+                    ✓
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={() => removeRom(i)}
+                    aria-label="Quitar movimiento"
+                  >
+                    −
+                  </button>
+                </div>
               </div>
             ))}
           </div>
-          <button type="button" className="secondary" onClick={addRom}>
-            + Agregar movimiento
-          </button>
+          <div className="zone-table-actions">
+            <button type="button" className="secondary" onClick={addRom}>
+              + Agregar movimiento
+            </button>
+            <button type="button" className="secondary" onClick={markAllRomNormal}>
+              ✓ Marcar todos normales
+            </button>
+          </div>
 
           {/* C. Fuerza */}
           <p className="zone-subtitle">C. Fuerza muscular (Daniels)</p>
@@ -325,15 +375,36 @@ export function ZoneEditor({ zone, index, onChange, onRemove }: ZoneEditorProps)
                   value={row.notes}
                   onChange={(e) => setStrength(i, 'notes', e.target.value)}
                 />
-                <button type="button" className="secondary" onClick={() => removeStrength(i)}>
-                  −
-                </button>
+                <div className="row-actions">
+                  <button
+                    type="button"
+                    className="secondary row-normal-btn"
+                    onClick={() => markStrengthNormal(i)}
+                    title="Marcar normal (Daniels 5 · Sin dolor)"
+                    aria-label={`Marcar ${row.muscle || 'músculo'} como normal`}
+                  >
+                    ✓
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary"
+                    onClick={() => removeStrength(i)}
+                    aria-label="Quitar músculo"
+                  >
+                    −
+                  </button>
+                </div>
               </div>
             ))}
           </div>
-          <button type="button" className="secondary" onClick={addStrength}>
-            + Agregar músculo
-          </button>
+          <div className="zone-table-actions">
+            <button type="button" className="secondary" onClick={addStrength}>
+              + Agregar músculo
+            </button>
+            <button type="button" className="secondary" onClick={markAllStrengthNormal}>
+              ✓ Marcar todos normales
+            </button>
+          </div>
 
           {/* D. Pruebas especiales (catálogo de la zona) */}
           <p className="zone-subtitle">D. Pruebas especiales / ortopédicas</p>
