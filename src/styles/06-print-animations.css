@@ -260,6 +260,15 @@ html[data-theme='dark'] .charge-commission-info {
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1);
   transform: translateY(-2px);
 }
+/* `.record-header` NUNCA debe recibir transform, ni siquiera en :hover. En
+   móvil el :hover queda "pegado" tras un tap; un transform en la tarjeta la
+   convierte en contenedor de referencia de su hijo `position: fixed`
+   (.record-primary-actions, la barra "Nueva valoración"), que entonces salta
+   desde el pie hasta arriba encimándose sobre el nombre. Por eso anulamos el
+   lift aquí (misma razón que `animation: none` más abajo). */
+.record-stack > .card.record-header:hover {
+  transform: none;
+}
 
 /* La topbar y el hero no deben "saltar" ni reanimarse al cambiar de pestaña.
    `.record-header` también va sin animación A PROPÓSITO: la animación deja un
