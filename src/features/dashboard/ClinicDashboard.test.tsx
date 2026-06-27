@@ -15,7 +15,7 @@ vi.mock('../../services/calendarService', () => ({
 
 // FullCalendar necesita APIs de DOM que jsdom no implementa; lo sustituimos por
 // un div vacío para que los tests que NO validan el calendario no revienten.
-vi.mock('../../components/calendar/NativeCalendar', () => ({
+vi.mock('../calendar/NativeCalendar', () => ({
   NativeCalendar: () => <div data-testid="native-calendar" />
 }));
 

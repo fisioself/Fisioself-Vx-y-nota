@@ -36,10 +36,10 @@ src/
 ├── app/         Shell de la app: providers, ErrorBoundary, PWA (install/SW update),
 │                estado online, y su CSS. Es el "marco", no lógica de negocio.
 ├── features/    Una carpeta por dominio (slice). UI + lógica de esa feature.
-│   ├── appointments/  auth/  dashboard/  evaluations/  finance/
+│   ├── appointments/  auth/  calendar/  dashboard/  evaluations/  finance/
 │   ├── notifications/ patients/  search/  seguimientos/  session-notes/
 ├── components/  UI compartida y presentacional (AppLogo, DateField, Skeleton,
-│                ConfirmDialog, BodyPainMap, calendar/NativeCalendar).
+│                ConfirmDialog, BodyPainMap).
 ├── services/    CAPA DE DATOS: toda lectura/escritura a Supabase y APIs externas
 │                (clinicalApi, financeApi, authService, aiService, calendarService,
 │                documentsApi, pushService, seguimientosApi, sessionColors).
@@ -58,9 +58,10 @@ supabase/
 
 ### Reglas de estructura (¡mantenerlas!)
 
-- **Las features NO se importan entre sí.** Hoy hay 0 imports cruzados; lo
-  compartido va a `components/`, `shared/` o `services/`. (Idealmente protegido
-  con reglas de import en ESLint.)
+- **Las features NO se importan entre sí.** Lo compartido va a `components/`,
+  `shared/` o `services/`. Única excepción: `features/calendar` es un
+  **orquestador** (la agenda) y compone los modales de `finance` y
+  `appointments`; no lo imites en otras features.
 - **Solo `services/` habla con Supabase.** La UI llama a un service, no a
   `supabaseClient` directo (salvo casos muy puntuales ya existentes).
 - **`types/supabase.ts` es generado** — no editar a mano; regenerar.
