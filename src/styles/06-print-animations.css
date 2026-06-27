@@ -261,9 +261,16 @@ html[data-theme='dark'] .charge-commission-info {
   transform: translateY(-2px);
 }
 
-/* La topbar y el hero no deben "saltar" ni reanimarse al cambiar de pestaña. */
+/* La topbar y el hero no deben "saltar" ni reanimarse al cambiar de pestaña.
+   `.record-header` también va sin animación A PROPÓSITO: la animación deja un
+   `transform: translateY(0)` permanente (fill `both`), y un ancestro con
+   transform convierte a la tarjeta en el contenedor de referencia de los hijos
+   `position: fixed` — eso "atrapaba" la barra flotante de acciones (Nueva
+   valoración / Nota de sesión) y la encimaba sobre el nombre en móvil. Sin
+   transform, la barra fija se ancla a la pantalla (al pie) como debe. */
 .hero.card,
-.app-topbar {
+.app-topbar,
+.record-header {
   animation: none;
 }
 
