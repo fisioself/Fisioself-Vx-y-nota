@@ -169,10 +169,13 @@ Deno.serve(async (req) => {
     );
   }
 
-  // Groq: free tier, OpenAI-compatible, does NOT train on API data (critical for PHI).
+  // Groq: OpenAI-compatible, does NOT train on API data (critical for PHI).
   // Same GROQ_API_KEY used by whisper-transcribe.
+  // Default = openai/gpt-oss-120b (modelo de PRODUCCIÓN). Reemplaza a
+  // llama-3.3-70b-versatile, que Groq deprecó (anuncio 17/06/2026) y apaga en
+  // agosto/2026. Se puede sobreescribir con el secret GROQ_MODEL.
   const apiKey = Deno.env.get('GROQ_API_KEY');
-  const model = Deno.env.get('GROQ_MODEL') || 'llama-3.3-70b-versatile';
+  const model = Deno.env.get('GROQ_MODEL') || 'openai/gpt-oss-120b';
 
   if (!apiKey) return json(req, 503, { error: 'IA no configurada' });
 
