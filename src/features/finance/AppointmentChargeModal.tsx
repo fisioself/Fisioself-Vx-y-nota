@@ -8,7 +8,7 @@ import { isValoracionColorId } from '../../services/sessionColors';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { PaymentMethodSelect } from './PaymentMethodSelect';
 import { useModalA11y } from '../../shared/useModalA11y';
-import { money, netAfterCommission, cdmxLabel } from './financeUtils';
+import { money, netAfterCommission, cdmxLabel, cdmxDate } from './financeUtils';
 import './AppointmentChargeModal.css';
 
 export interface ChargeAppointmentTarget {
@@ -272,7 +272,10 @@ export function AppointmentChargeModal({
         usePackage: mode === 'paquete',
         patientPackageId: mode === 'paquete' ? packageId : null,
         amount: mode === 'suelta' ? grossSuelta : grossAbono,
-        method: mode === 'suelta' ? method : abonoAmount ? abonoMethod : undefined
+        method: mode === 'suelta' ? method : abonoAmount ? abonoMethod : undefined,
+        // El cobro se registra con la fecha de la cita agendada (en CDMX), no con
+        // la fecha en que se captura. Si la cita no tiene hora, el RPC usa hoy.
+        paidAt: cdmxDate(appointment.startsAt)
       });
       notify({ tone: 'success', message: 'Cobro registrado.' });
       onClose();
