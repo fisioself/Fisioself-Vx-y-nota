@@ -29,7 +29,8 @@ import {
   newZone,
   today,
   toNullable,
-  cleanRows,
+  cleanRomRows,
+  cleanStrengthRows,
   sexOptions
 } from './evaluationFormHelpers';
 import type { EvaluationFormValues, ZoneFormData } from './evaluationFormTypes';
@@ -440,8 +441,8 @@ export function EvaluationForm({
             aggravating_factors: toNullable(z.aggravating_factors),
             easing_factors: toNullable(z.easing_factors)
           },
-          movement_ranges: cleanRows(z.movement_ranges),
-          muscle_strength: cleanRows(z.muscle_strength),
+          movement_ranges: cleanRomRows(z.movement_ranges),
+          muscle_strength: cleanStrengthRows(z.muscle_strength),
           special_tests,
           palpation: toNullable(z.palpation)
         };

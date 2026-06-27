@@ -8,7 +8,12 @@ import {
   getRomNorm,
   PAIN_TYPE_OPTIONS
 } from './evaluationCatalog';
-import { emptyRomRow, emptyStrengthRow } from './evaluationFormHelpers';
+import {
+  emptyRomRow,
+  emptyStrengthRow,
+  romRowsForCatalog,
+  strengthRowsForCatalog
+} from './evaluationFormHelpers';
 import type { RomRow, StrengthRow, TestResult, ZoneFormData } from './evaluationFormTypes';
 
 // ---- Editor de una zona específica ----
@@ -25,6 +30,16 @@ export function ZoneEditor({ zone, index, onChange, onRemove }: ZoneEditorProps)
 
   const setZoneField = <K extends keyof ZoneFormData>(field: K, value: ZoneFormData[K]) =>
     onChange((z) => ({ ...z, [field]: value }));
+
+  // Al cambiar de zona, recarga el desglose completo de ROM y fuerza del nuevo
+  // catálogo (la batería de movimientos/músculos cambia entre zonas).
+  const changeZone = (zoneId: string) =>
+    onChange((z) => ({
+      ...z,
+      zone_id: zoneId,
+      movement_ranges: romRowsForCatalog(zoneId, []),
+      muscle_strength: strengthRowsForCatalog(zoneId, [])
+    }));
 
   const setRom = (i: number, key: keyof RomRow, value: string) =>
     onChange((z) => ({
@@ -90,7 +105,7 @@ export function ZoneEditor({ zone, index, onChange, onRemove }: ZoneEditorProps)
       <div className="zone-card-head">
         <label style={{ flex: 1 }}>
           Zona a evaluar
-          <select value={zone.zone_id} onChange={(e) => setZoneField('zone_id', e.target.value)}>
+          <select value={zone.zone_id} onChange={(e) => changeZone(e.target.value)}>
             <option value="">— Seleccionar zona —</option>
             {ZONE_CATALOGS.map((z) => (
               <option key={z.id} value={z.id}>

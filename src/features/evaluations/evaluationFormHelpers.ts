@@ -1,6 +1,7 @@
 // Helpers puros del formulario de valoración: conversión desde una Evaluation,
 // valores por defecto y utilidades de saneo. Sin estado de React.
 import { getLocalISODate } from '../../shared/dateUtils';
+import { getZoneCatalog } from './evaluationCatalog';
 import type { Evaluation } from '../../types/clinical';
 import type {
   EvaluationFormValues,
@@ -20,41 +21,44 @@ export function evaluationToFormValues(ev: Evaluation): EvaluationFormValues {
   const fs = s.functional_scales || {};
   const cl = s.conclusion || {};
 
-  const zones: ZoneFormData[] = (s.zones || []).map((zone) => ({
-    zone_id: zone.zone_id || '',
-    zone_label: zone.zone_id ? '' : zone.zone || '',
-    pain_location: zone.pain?.location || '',
-    pain_intensity: zone.pain?.intensity != null ? String(zone.pain.intensity) : '',
-    pain_type: zone.pain?.type || '',
-    aggravating_factors: zone.pain?.aggravating_factors || '',
-    easing_factors: zone.pain?.easing_factors || '',
-    movement_ranges: zone.movement_ranges?.length
-      ? zone.movement_ranges.map((r) => ({
-          movement: r.movement || '',
-          type: r.type || '',
-          range: r.range || '',
-          degrees: r.degrees || '',
-          degrees_healthy: r.degrees_healthy || '',
-          pain: r.pain || '',
-          notes: r.notes || ''
-        }))
-      : [{ ...emptyRomRow }],
-    muscle_strength: zone.muscle_strength?.length
-      ? zone.muscle_strength.map((r) => ({
-          muscle: r.muscle || '',
-          daniels: r.daniels || '',
-          pain: r.pain || '',
-          notes: r.notes || ''
-        }))
-      : [{ ...emptyStrengthRow }],
-    special_results: Object.fromEntries(
-      (zone.special_tests || []).map((t) => [
-        t.name || '',
-        { result: t.result || '', notes: t.notes || '' }
-      ])
-    ),
-    palpation: zone.palpation || ''
-  }));
+  const zones: ZoneFormData[] = (s.zones || []).map((zone) => {
+    const zoneId = zone.zone_id || '';
+    const savedRoms: RomRow[] = (zone.movement_ranges || []).map((r) => ({
+      movement: r.movement || '',
+      type: r.type || '',
+      range: r.range || '',
+      degrees: r.degrees || '',
+      degrees_healthy: r.degrees_healthy || '',
+      pain: r.pain || '',
+      notes: r.notes || ''
+    }));
+    const savedStrength: StrengthRow[] = (zone.muscle_strength || []).map((r) => ({
+      muscle: r.muscle || '',
+      daniels: r.daniels || '',
+      pain: r.pain || '',
+      notes: r.notes || ''
+    }));
+    return {
+      zone_id: zoneId,
+      zone_label: zoneId ? '' : zone.zone || '',
+      pain_location: zone.pain?.location || '',
+      pain_intensity: zone.pain?.intensity != null ? String(zone.pain.intensity) : '',
+      pain_type: zone.pain?.type || '',
+      aggravating_factors: zone.pain?.aggravating_factors || '',
+      easing_factors: zone.pain?.easing_factors || '',
+      // Desglose completo: se muestran TODOS los movimientos/músculos del catálogo
+      // (rellenando los valores ya guardados) para que el examen venga itemizado.
+      movement_ranges: romRowsForCatalog(zoneId, savedRoms),
+      muscle_strength: strengthRowsForCatalog(zoneId, savedStrength),
+      special_results: Object.fromEntries(
+        (zone.special_tests || []).map((t) => [
+          t.name || '',
+          { result: t.result || '', notes: t.notes || '' }
+        ])
+      ),
+      palpation: zone.palpation || ''
+    };
+  });
 
   return {
     full_name: id.full_name || '',
@@ -125,6 +129,52 @@ export const emptyRomRow: RomRow = {
   notes: ''
 };
 export const emptyStrengthRow: StrengthRow = { muscle: '', daniels: '', pain: '', notes: '' };
+
+// ---- Desglose completo de ROM / fuerza por catálogo ------------------------
+// Una zona con catálogo muestra SIEMPRE todos sus movimientos y músculos, ya
+// rellenados con los valores guardados. Las filas con un nombre fuera del
+// catálogo (añadidas a mano) se conservan al final.
+
+export const romRowsForCatalog = (zoneId: string, saved: RomRow[] = []): RomRow[] => {
+  const catalog = getZoneCatalog(zoneId);
+  if (!catalog) return saved.length ? saved : [{ ...emptyRomRow }];
+  const byMovement = new Map(saved.filter((r) => r.movement).map((r) => [r.movement, r]));
+  const rows = catalog.movements.map((mv) => ({
+    ...emptyRomRow,
+    ...(byMovement.get(mv) ?? {}),
+    movement: mv
+  }));
+  const extra = saved.filter((r) => r.movement && !catalog.movements.includes(r.movement));
+  return [...rows, ...extra];
+};
+
+export const strengthRowsForCatalog = (
+  zoneId: string,
+  saved: StrengthRow[] = []
+): StrengthRow[] => {
+  const catalog = getZoneCatalog(zoneId);
+  if (!catalog) return saved.length ? saved : [{ ...emptyStrengthRow }];
+  const byMuscle = new Map(saved.filter((r) => r.muscle).map((r) => [r.muscle, r]));
+  const rows = catalog.muscles.map((mu) => ({
+    ...emptyStrengthRow,
+    ...(byMuscle.get(mu) ?? {}),
+    muscle: mu
+  }));
+  const extra = saved.filter((r) => r.muscle && !catalog.muscles.includes(r.muscle));
+  return [...rows, ...extra];
+};
+
+// Una fila de ROM/fuerza precargada solo "cuenta" si tiene algún dato medido
+// además del nombre (que viene del catálogo). Así el desglose no guarda decenas
+// de movimientos sin valorar en el expediente ni en el PDF.
+const romRowHasData = (r: RomRow): boolean =>
+  Boolean(r.type || r.range || r.degrees || r.degrees_healthy || r.pain || r.notes);
+const strengthRowHasData = (r: StrengthRow): boolean => Boolean(r.daniels || r.pain || r.notes);
+
+export const cleanRomRows = (rows: ReadonlyArray<RomRow>): Record<string, unknown>[] =>
+  cleanRows(rows.filter(romRowHasData));
+export const cleanStrengthRows = (rows: ReadonlyArray<StrengthRow>): Record<string, unknown>[] =>
+  cleanRows(rows.filter(strengthRowHasData));
 
 export const newZone = (): ZoneFormData => ({
   zone_id: '',

@@ -835,6 +835,22 @@ const MANO_MUNECA: ZoneCatalog = {
       note: 'Sujeta un papel entre pulgar e índice; flexión compensatoria del pulgar = debilidad del aductor (cubital).'
     },
     {
+      group: 'Neurológico — Nervio radial (rama superficial / queiralgia)',
+      name: 'Signo de Tinel sobre el nervio radial superficial (Wartenberg)',
+      note: 'Percute el nervio radial superficial en el borde dorsorradial del antebrazo distal (donde emerge entre braquiorradial y extensor radial); parestesias en el dorso del 1.°-2.° dedo = queiralgia parestésica / atrapamiento del radial superficial.'
+    },
+    {
+      group: 'Neurológico — Nervio radial (rama superficial / queiralgia)',
+      name: 'Tensión neural del radial / ULNT 2b (Upper Limb Neurodynamic Test)',
+      options: [
+        'Positivo con diferenciación',
+        'Positivo sin diferenciación',
+        'Negativo',
+        'No valorado'
+      ],
+      note: 'Depresión escapular + extensión de codo + rotación interna y pronación + flexión de muñeca, desviación cubital y flexión del pulgar; reproducción de síntomas dorsorradiales que cambian con la diferenciación estructural = compromiso neural del nervio radial.'
+    },
+    {
       group: 'Tendinosa — Estiloides radial / De Quervain',
       name: 'Finkelstein (De Quervain — APL / EPB)',
       options: ['Positivo (dolor intenso en estiloides)', 'Leve', 'Negativo', 'No valorado'],
