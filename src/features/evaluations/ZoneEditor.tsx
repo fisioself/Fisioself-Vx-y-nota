@@ -285,15 +285,16 @@ export function ZoneEditor({ zone, index, onChange, onRemove }: ZoneEditorProps)
                   value={row.degrees_healthy}
                   onChange={(e) => setRom(i, 'degrees_healthy', e.target.value)}
                 />
-                <select
-                  aria-label="¿Genera dolor?"
-                  value={row.pain}
-                  onChange={(e) => setRom(i, 'pain', e.target.value)}
+                <button
+                  type="button"
+                  className={`pain-toggle ${row.pain === 'Sí' ? 'is-pain' : ''}`}
+                  onClick={() => setRom(i, 'pain', row.pain === 'Sí' ? 'No' : 'Sí')}
+                  aria-pressed={row.pain === 'Sí'}
+                  aria-label="Dolor en el movimiento (toca para alternar)"
+                  title="Toca para alternar: sin dolor / con dolor"
                 >
-                  <option value="">¿Dolor?</option>
-                  <option value="Sí">Sí</option>
-                  <option value="No">No</option>
-                </select>
+                  {row.pain === 'Sí' ? '⚠ Con dolor' : 'Sin dolor'}
+                </button>
                 <input
                   aria-label="Notas del movimiento"
                   placeholder="Notas"
@@ -360,15 +361,16 @@ export function ZoneEditor({ zone, index, onChange, onRemove }: ZoneEditorProps)
                     </option>
                   ))}
                 </select>
-                <select
-                  aria-label="¿Genera dolor?"
-                  value={row.pain}
-                  onChange={(e) => setStrength(i, 'pain', e.target.value)}
+                <button
+                  type="button"
+                  className={`pain-toggle ${row.pain === 'Sí' ? 'is-pain' : ''}`}
+                  onClick={() => setStrength(i, 'pain', row.pain === 'Sí' ? 'No' : 'Sí')}
+                  aria-pressed={row.pain === 'Sí'}
+                  aria-label="Dolor con la contracción (toca para alternar)"
+                  title="Toca para alternar: sin dolor / con dolor"
                 >
-                  <option value="">¿Dolor?</option>
-                  <option value="Sí">Sí</option>
-                  <option value="No">No</option>
-                </select>
+                  {row.pain === 'Sí' ? '⚠ Con dolor' : 'Sin dolor'}
+                </button>
                 <input
                   aria-label="Notas de fuerza"
                   placeholder="Notas"

@@ -119,16 +119,19 @@ export function evaluationToFormValues(ev: Evaluation): EvaluationFormValues {
 
 export const today = (): string => getLocalISODate();
 
+// El dolor viene predeterminado en "No" (lo más común): el botón toggle solo se
+// toca para marcar "Sí". Un "No" por sí solo NO marca la fila como valorada
+// (ver romRowHasData), para no guardar movimientos que nunca se exploraron.
 export const emptyRomRow: RomRow = {
   movement: '',
   type: '',
   range: '',
   degrees: '',
   degrees_healthy: '',
-  pain: '',
+  pain: 'No',
   notes: ''
 };
-export const emptyStrengthRow: StrengthRow = { muscle: '', daniels: '', pain: '', notes: '' };
+export const emptyStrengthRow: StrengthRow = { muscle: '', daniels: '', pain: 'No', notes: '' };
 
 // ---- Desglose completo de ROM / fuerza por catálogo ------------------------
 // Una zona con catálogo muestra SIEMPRE todos sus movimientos y músculos, ya
@@ -167,9 +170,12 @@ export const strengthRowsForCatalog = (
 // Una fila de ROM/fuerza precargada solo "cuenta" si tiene algún dato medido
 // además del nombre (que viene del catálogo). Así el desglose no guarda decenas
 // de movimientos sin valorar en el expediente ni en el PDF.
+// "Dolor = No" es el valor por defecto, así que no cuenta como dato; solo un
+// "Sí" (hallazgo positivo) marca la fila como valorada por la vía del dolor.
 const romRowHasData = (r: RomRow): boolean =>
-  Boolean(r.type || r.range || r.degrees || r.degrees_healthy || r.pain || r.notes);
-const strengthRowHasData = (r: StrengthRow): boolean => Boolean(r.daniels || r.pain || r.notes);
+  Boolean(r.type || r.range || r.degrees || r.degrees_healthy || r.pain === 'Sí' || r.notes);
+const strengthRowHasData = (r: StrengthRow): boolean =>
+  Boolean(r.daniels || r.pain === 'Sí' || r.notes);
 
 export const cleanRomRows = (rows: ReadonlyArray<RomRow>): Record<string, unknown>[] =>
   cleanRows(rows.filter(romRowHasData));
