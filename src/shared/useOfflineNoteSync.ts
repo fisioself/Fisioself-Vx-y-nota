@@ -4,11 +4,22 @@ import { clinicalApi } from '../services/clinicalApi';
 import { offlineNotes } from './offlineNotes';
 import { useToast } from '../app/ToastProvider';
 
-// Vacía la cola de notas offline cuando hay (o vuelve) la conexión. Se monta una
-// sola vez en <App>. Envía cada nota pendiente a Supabase; al lograrlo la quita
-// de la cola y refresca el expediente. Si una nota ya existía (duplicado por un
-// flush doble), la descarta; ante cualquier otro fallo de red, detiene el envío
-// y reintenta en el próximo evento 'online'.
+// ¿El error es por sesión/token caducado? (hay que volver a iniciar sesión).
+function isAuthExpired(err: unknown): boolean {
+  const e = err as { code?: string; status?: number; message?: string };
+  if (e?.code === 'PGRST301') return true;
+  if (e?.status === 401) return true;
+  return /jwt|expired|not authenticated|invalid (token|claim)|no autoriz/i.test(e?.message || '');
+}
+
+// ¿El error es "no encontrado"? (la nota ya no existe: borrada en otro lado).
+function isNotFound(err: unknown): boolean {
+  const e = err as { code?: string; status?: number };
+  return e?.code === 'PGRST116' || e?.status === 404;
+}
+
+// Vacía la cola de cambios de notas hechos sin conexión (crear/editar/borrar)
+// cuando hay (o vuelve) la conexión. Se monta una sola vez en <App>.
 export function useOfflineNoteSync(): void {
   const queryClient = useQueryClient();
   const { notify } = useToast();
@@ -19,22 +30,38 @@ export function useOfflineNoteSync(): void {
     async function flush() {
       if (running) return;
       if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
-      const items = offlineNotes.all();
-      if (!items.length) return;
+      const ops = offlineNotes.all();
+      if (!ops.length) return;
 
       running = true;
       let synced = 0;
+      let authExpired = false;
       try {
-        for (const item of items) {
+        for (const op of ops) {
           try {
-            await clinicalApi.addSessionNote(item.note);
-            offlineNotes.remove(item.outboxId);
+            if (op.op === 'create' && op.note) {
+              await clinicalApi.addSessionNote(op.note);
+            } else if (op.op === 'update' && op.note) {
+              await clinicalApi.updateSessionNote(op.noteId, op.note);
+            } else if (op.op === 'delete') {
+              await clinicalApi.deleteSessionNote(op.noteId);
+            }
+            offlineNotes.remove(op.outboxId);
             synced += 1;
           } catch (err) {
+            if (isAuthExpired(err)) {
+              authExpired = true;
+              break;
+            }
             const msg = err instanceof Error ? err.message : '';
-            // Duplicado (la nota ya está en el servidor): la sacamos de la cola.
-            if (/Ya existe una nota/i.test(msg)) {
-              offlineNotes.remove(item.outboxId);
+            // Duplicado (create ya subido) o nota inexistente (update/delete sobre
+            // algo ya borrado): la operación ya no aplica, la sacamos de la cola.
+            if (op.op === 'create' && /Ya existe una nota/i.test(msg)) {
+              offlineNotes.remove(op.outboxId);
+              continue;
+            }
+            if (op.op !== 'create' && isNotFound(err)) {
+              offlineNotes.remove(op.outboxId);
               continue;
             }
             // Otro error (sin red, 5xx…): paramos y reintentamos al reconectar.
@@ -47,7 +74,15 @@ export function useOfflineNoteSync(): void {
           queryClient.invalidateQueries({ queryKey: ['patient'] });
           notify({
             tone: 'success',
-            message: `${synced} nota${synced > 1 ? 's' : ''} sincronizada${synced > 1 ? 's' : ''}.`
+            message: `${synced} cambio${synced > 1 ? 's' : ''} de notas sincronizado${synced > 1 ? 's' : ''}.`
+          });
+        }
+        if (authExpired) {
+          notify({
+            tone: 'error',
+            duration: 8000,
+            message:
+              'Tu sesión caducó. Inicia sesión de nuevo para sincronizar tus notas pendientes.'
           });
         }
       }

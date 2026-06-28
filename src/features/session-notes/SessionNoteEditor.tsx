@@ -395,20 +395,32 @@ export function SessionNoteEditor({
       return;
     }
 
-    // Sin conexión: guardamos la nota NUEVA en la cola local (se sincroniza al
-    // reconectar) en vez de enviarla — así no se pierde y se ve al instante.
-    // Editar una nota existente sí requiere conexión (Fase 1 = solo creación).
+    // Sin conexión: guardamos el cambio en la cola local (se sincroniza al
+    // reconectar) en vez de enviarlo — así no se pierde y se ve al instante.
+    // Funciona para notas nuevas (create) y para editar una existente (update).
     const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
     if (offline) {
-      if (isEditing) {
-        const message = 'Sin conexión: para editar una nota existente necesitas internet.';
-        setError(message);
-        notify({ tone: 'warning', message });
+      if (isEditing && note) {
+        // Edición offline: actualiza la nota (mantiene su id y nº de sesión).
+        const updated: SessionNote = {
+          ...note,
+          session_date: sessionDate,
+          eva: eva === '' ? null : Number(eva),
+          raw_text: rawText
+        };
+        offlineNotes.enqueueUpdate(updated);
+        draftStorage.remove(draftKey);
+        setIsDirty(false);
+        notify({
+          tone: 'success',
+          message: 'Edición guardada sin conexión. Se sincronizará al reconectar.'
+        });
+        onSaved?.(updated);
         return;
       }
-      // Número de sesión a prueba de colisiones entre varias notas offline del
-      // mismo paciente: corre el contador por cada pendiente ya encolada.
-      const pendingForPatient = offlineNotes.forPatient(patientId).length;
+      // Nota nueva: id uuid de cliente y nº de sesión a prueba de colisiones
+      // entre varias notas offline del mismo paciente.
+      const pendingForPatient = offlineNotes.pendingCreates(patientId).length;
       const localNote: SessionNote = {
         id: crypto.randomUUID(),
         patient_id: patientId,
@@ -418,13 +430,10 @@ export function SessionNoteEditor({
         eva: eva === '' ? null : Number(eva),
         raw_text: rawText
       };
-      offlineNotes.enqueue(localNote);
+      offlineNotes.enqueueCreate(localNote);
       draftStorage.remove(draftKey);
       setIsDirty(false);
-      notify({
-        tone: 'success',
-        message: 'Guardada sin conexión. Se sincronizará al reconectar.'
-      });
+      notify({ tone: 'success', message: 'Guardada sin conexión. Se sincronizará al reconectar.' });
       onSaved?.(localNote);
       return;
     }

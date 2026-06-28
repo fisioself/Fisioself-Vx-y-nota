@@ -13,9 +13,10 @@ interface SessionNotesListProps {
   onChanged?: () => void;
 }
 
-// ¿Es una nota pendiente de sincronizar (escrita sin conexión)?
-const isPendingNote = (note: SessionNote): boolean =>
-  (note as SessionNote & { _pending?: boolean })._pending === true;
+// Marcas que añade la cola offline a una nota para la UI.
+type ListNote = SessionNote & { _pending?: boolean; _pendingEdit?: boolean };
+
+const isOffline = (): boolean => typeof navigator !== 'undefined' && navigator.onLine === false;
 
 export function SessionNotesList({ notes = [], patientId, onChanged }: SessionNotesListProps) {
   const [query, setQuery] = useState('');
@@ -28,18 +29,12 @@ export function SessionNotesList({ notes = [], patientId, onChanged }: SessionNo
   const [optimisticDeleted, setOptimisticDeleted] = useState<ReadonlySet<string>>(new Set());
   // Nota pendiente de confirmar su borrado permanente (null = sin diálogo).
   const [confirmNote, setConfirmNote] = useState<SessionNote | null>(null);
-  // Notas escritas sin conexión, pendientes de sincronizar (cola local).
-  const [pending, setPending] = useState<SessionNote[]>(() =>
-    patientId ? offlineNotes.forPatient(patientId) : []
-  );
+  // Se incrementa cuando cambia la cola offline (encolar/sincronizar/descartar)
+  // para recalcular qué notas están pendientes de crear/editar/borrar.
+  const [pendingTick, setPendingTick] = useState(0);
   const { notify } = useToast();
 
-  // Mantener `pending` al día: cambia al encolar/sincronizar una nota offline.
-  useEffect(() => {
-    if (!patientId) return;
-    setPending(offlineNotes.forPatient(patientId));
-    return offlineNotes.subscribe(() => setPending(offlineNotes.forPatient(patientId)));
-  }, [patientId]);
+  useEffect(() => offlineNotes.subscribe(() => setPendingTick((t) => t + 1)), []);
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -48,11 +43,25 @@ export function SessionNotesList({ notes = [], patientId, onChanged }: SessionNo
     return () => clearTimeout(handler);
   }, [query]);
 
-  const filtered = useMemo(() => {
+  const filtered = useMemo<ListNote[]>(() => {
+    void pendingTick; // recalcula cuando cambia la cola offline
+    const creates = patientId ? offlineNotes.pendingCreates(patientId) : [];
+    const updates = patientId
+      ? offlineNotes.pendingUpdates(patientId)
+      : new Map<string, SessionNote>();
+    const deletes = patientId ? offlineNotes.pendingDeletes(patientId) : new Set<string>();
+
+    // Notas del servidor: ocultamos las que tienen borrado pendiente y aplicamos
+    // las ediciones pendientes sobre su contenido (marcándolas).
+    const serverView: ListNote[] = notes
+      .filter((n) => !deletes.has(n.id))
+      .map((n) => (updates.has(n.id) ? { ...n, ...updates.get(n.id), _pendingEdit: true } : n));
+
+    // Notas nuevas pendientes que aún no llegaron del servidor (dedupe por id).
+    const freshCreates = creates.filter((c) => !notes.some((n) => n.id === c.id));
+
     const q = debouncedQuery.trim().toLowerCase();
-    // Pendientes que aún no llegan del servidor (dedupe por id), arriba del todo.
-    const freshPending = pending.filter((p) => !notes.some((n) => n.id === p.id));
-    const sorted = [...freshPending, ...notes]
+    const sorted = [...freshCreates, ...serverView]
       .filter((n) => !optimisticDeleted.has(n.id))
       .sort((a, b) => Number(b.session_number) - Number(a.session_number));
     if (!q) return sorted;
@@ -61,11 +70,20 @@ export function SessionNotesList({ notes = [], patientId, onChanged }: SessionNo
         .filter((value) => value != null)
         .some((value) => String(value).toLowerCase().includes(q))
     );
-  }, [notes, pending, debouncedQuery, optimisticDeleted]);
+  }, [notes, patientId, pendingTick, debouncedQuery, optimisticDeleted]);
 
   const deleteNote = useCallback(
     async (note: SessionNote) => {
       setConfirmNote(null);
+      // Sin conexión: encolamos el borrado y lo aplicamos al reconectar.
+      if (isOffline() && patientId) {
+        offlineNotes.enqueueDelete(note.id, patientId);
+        notify({
+          tone: 'success',
+          message: 'Eliminación guardada sin conexión. Se aplicará al reconectar.'
+        });
+        return;
+      }
       setDeletingId(note.id);
       // Optimistic: remove immediately from the visible list.
       setOptimisticDeleted((prev) => new Set([...prev, note.id]));
@@ -85,7 +103,7 @@ export function SessionNotesList({ notes = [], patientId, onChanged }: SessionNo
         setDeletingId(null);
       }
     },
-    [notify, onChanged]
+    [notify, onChanged, patientId]
   );
 
   return (
@@ -109,9 +127,11 @@ export function SessionNotesList({ notes = [], patientId, onChanged }: SessionNo
         {filtered.map((note) => {
           const isOpen = openId === note.id;
           const isEditing = editingId === note.id;
-          const pendingNote = isPendingNote(note);
+          const pendingCreate = note._pending === true;
+          const pendingEdit = note._pendingEdit === true;
+          const pendingAny = pendingCreate || pendingEdit;
           return (
-            <article key={note.id} className={`note-row${pendingNote ? ' note-pending' : ''}`}>
+            <article key={note.id} className={`note-row${pendingAny ? ' note-pending' : ''}`}>
               <button
                 type="button"
                 className="note-toggle"
@@ -119,18 +139,19 @@ export function SessionNotesList({ notes = [], patientId, onChanged }: SessionNo
               >
                 <span>
                   <strong>Sesion #{note.session_number}</strong>
-                  {pendingNote && <span className="pill alert">Pendiente de sincronizar</span>}
+                  {pendingCreate && <span className="pill alert">Pendiente de sincronizar</span>}
+                  {pendingEdit && <span className="pill alert">Edición pendiente</span>}
                 </span>
               </button>
               <div className="row wrap note-actions">
-                {pendingNote ? (
-                  // Pendiente: aún no está en el servidor. Solo se puede descartar
-                  // (quitarla de la cola local); editar/borrar exige conexión.
+                {pendingCreate ? (
+                  // Nota nueva aún no subida: solo se puede descartar (quitarla de
+                  // la cola local). Al reconectar se crea en el servidor.
                   <button
                     type="button"
                     className="danger"
                     onClick={() => {
-                      offlineNotes.remove(note.id);
+                      offlineNotes.removeForNote(note.id);
                       notify({ tone: 'success', message: 'Nota pendiente descartada.' });
                     }}
                   >
@@ -145,6 +166,18 @@ export function SessionNotesList({ notes = [], patientId, onChanged }: SessionNo
                     >
                       {isEditing ? 'Cerrar edicion' : 'Editar'}
                     </button>
+                    {pendingEdit && (
+                      <button
+                        type="button"
+                        className="secondary"
+                        onClick={() => {
+                          offlineNotes.removeForNote(note.id);
+                          notify({ tone: 'success', message: 'Edición pendiente descartada.' });
+                        }}
+                      >
+                        Descartar cambios
+                      </button>
+                    )}
                     <button
                       type="button"
                       className="danger"
@@ -156,7 +189,7 @@ export function SessionNotesList({ notes = [], patientId, onChanged }: SessionNo
                   </>
                 )}
               </div>
-              {isEditing && !pendingNote && (
+              {isEditing && !pendingCreate && (
                 <SessionNoteEditor
                   patientId={note.patient_id}
                   therapistId={note.therapist_id}
