@@ -85,6 +85,17 @@ const LoadingCard = ({ children = 'Cargando...' }: { children?: ReactNode }) => 
   </section>
 );
 
+// Carrera contra un timeout: usado en el arranque para que una llamada de red
+// lenta o colgada (sin conexión) NUNCA deje la app atrapada en el spinner.
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error('timeout')), ms))
+  ]);
+}
+
+const isOffline = (): boolean => typeof navigator !== 'undefined' && navigator.onLine === false;
+
 export function App() {
   const queryClient = useQueryClient();
   const [session, setSession] = useState<Session | null>(null);
@@ -125,6 +136,16 @@ export function App() {
   useEffect(() => {
     let cancelled = false;
 
+    // Failsafe: el arranque NUNCA debe quedarse colgado en el spinner. Si la
+    // verificación de sesión tarda (red lenta o SIN conexión), liberamos la
+    // pantalla de carga igual; `onAuthStateChange` emite la sesión persistida
+    // (evento INITIAL_SESSION) en cuanto está lista, así que la app entra con la
+    // sesión guardada aunque no haya internet. Esto arregla el spinner eterno
+    // offline.
+    const failsafe = setTimeout(() => {
+      if (!cancelled) setCheckingAuth(false);
+    }, 3000);
+
     async function loadSession() {
       if (!isSupabaseConfigured) {
         setCheckingAuth(false);
@@ -149,6 +170,7 @@ export function App() {
     });
     return () => {
       cancelled = true;
+      clearTimeout(failsafe);
       subscription?.unsubscribe?.();
     };
   }, []);
@@ -163,9 +185,19 @@ export function App() {
         setMfaFactorId(null);
         return;
       }
+      // Sin conexión no podemos (ni necesitamos) verificar el 2FA contra el
+      // servidor: la sesión ya está validada localmente y RLS protege los datos
+      // en el servidor. No bloqueamos el arranque; entramos en modo lectura
+      // offline. (Sin esto, el chequeo de red se colgaba y dejaba el spinner.)
+      if (isOffline()) {
+        setMfaFactorId(null);
+        setMfaChecking(false);
+        return;
+      }
       setMfaChecking(true);
       try {
-        const needs = await authService.needsMfaChallenge();
+        // Con timeout: si la red está colgada, no dejamos el arranque atrapado.
+        const needs = await withTimeout(authService.needsMfaChallenge(), 6000);
         if (!needs) {
           if (!cancelled) setMfaFactorId(null);
           return;
