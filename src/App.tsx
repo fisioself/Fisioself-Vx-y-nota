@@ -5,7 +5,9 @@ import { authService } from './services/authService';
 import { isSupabaseConfigured } from './lib/supabaseClient';
 import { draftStorage } from './shared/draftStorage';
 import { offlineNotes } from './shared/offlineNotes';
+import { offlinePayments } from './shared/offlinePayments';
 import { useOfflineNoteSync } from './shared/useOfflineNoteSync';
+import { useOfflinePaymentSync } from './shared/useOfflinePaymentSync';
 import { clearPersistedQueryCache } from './lib/offlineSync';
 import { setUser as sentrySetUser, clearUser as sentryClearUser } from './lib/sentry';
 import { AppLogo } from './components/AppLogo';
@@ -116,8 +118,9 @@ export function App() {
   const [mfaChecking, setMfaChecking] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
 
-  // Vacía la cola de notas escritas sin conexión cuando vuelve el internet.
+  // Vacía las colas offline (notas y cobros) cuando vuelve el internet.
   useOfflineNoteSync();
+  useOfflinePaymentSync();
 
   // Siempre tema claro.
   useEffect(() => {
@@ -227,10 +230,11 @@ export function App() {
   const logout = async () => {
     await authService.signOut();
     draftStorage.clearAll();
-    // Notas escritas sin conexión (PHI): no deben quedar en el navegador tras el
-    // logout. (Quedan sin sincronizar si se cierra sesión sin internet, igual que
-    // los borradores.)
+    // Datos escritos sin conexión (PHI / finanzas): no deben quedar en el
+    // navegador tras el logout. (Quedan sin sincronizar si se cierra sesión sin
+    // internet, igual que los borradores.)
     offlineNotes.clearAll();
+    offlinePayments.clearAll();
     // Vacía el caché de React Query (memoria + IndexedDB) para no dejar datos
     // clínicos de pacientes legibles en el navegador tras cerrar sesión.
     queryClient.clear();

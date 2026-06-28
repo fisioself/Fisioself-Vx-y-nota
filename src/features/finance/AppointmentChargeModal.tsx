@@ -9,6 +9,7 @@ import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { PaymentMethodSelect } from './PaymentMethodSelect';
 import { useModalA11y } from '../../shared/useModalA11y';
 import { money, netAfterCommission, cdmxLabel, cdmxDate } from './financeUtils';
+import { offlinePayments } from '../../shared/offlinePayments';
 import './AppointmentChargeModal.css';
 
 export interface ChargeAppointmentTarget {
@@ -266,7 +267,7 @@ export function AppointmentChargeModal({
       const grossSuelta = Number(amount);
       const grossAbono = Number(abonoAmount || 0);
 
-      await financeApi.chargeAppointment({
+      const chargeInput = {
         appointmentId: appointment.id,
         patientId: appointment.patientId,
         usePackage: mode === 'paquete',
@@ -276,7 +277,27 @@ export function AppointmentChargeModal({
         // El cobro se registra con la fecha de la cita agendada (en CDMX), no con
         // la fecha en que se captura. Si la cita no tiene hora, el RPC usa hoy.
         paidAt: cdmxDate(appointment.startsAt)
-      });
+      };
+
+      // Sin conexión: guardamos la intención de cobro en la cola local y la
+      // reproducimos al reconectar (con verificación anti-doble-cobro). No se
+      // muestra en caja hasta que se sincroniza.
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        if (offlinePayments.hasForAppointment(appointment.id)) {
+          setError('Esta cita ya tiene un cobro pendiente de sincronizar.');
+          setSaving(false);
+          return;
+        }
+        offlinePayments.enqueue(chargeInput, appointment.patientName);
+        notify({
+          tone: 'success',
+          message: 'Cobro guardado sin conexión. Se registrará al reconectar.'
+        });
+        onClose();
+        return;
+      }
+
+      await financeApi.chargeAppointment(chargeInput);
       notify({ tone: 'success', message: 'Cobro registrado.' });
       onClose();
       refreshAfterMoneyChange();
