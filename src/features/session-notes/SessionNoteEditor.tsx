@@ -10,6 +10,7 @@ import { consent, CONSENT_KEYS } from '../../shared/consent';
 import { draftStorage, getDraftKey } from '../../shared/draftStorage';
 import { DateField } from '../../components/DateField';
 import { useDraftAutosave } from '../../shared/useDraftAutosave';
+import { offlineNotes } from '../../shared/offlineNotes';
 import { useShortcuts } from '../../shared/useShortcuts';
 import { AiConsultModal } from './AiConsultModal';
 import { ConsentGate } from './ConsentGate';
@@ -391,6 +392,40 @@ export function SessionNoteEditor({
       const message = Object.values(validation)[0] || 'Datos invalidos.';
       setError(message);
       notify({ tone: 'warning', message });
+      return;
+    }
+
+    // Sin conexión: guardamos la nota NUEVA en la cola local (se sincroniza al
+    // reconectar) en vez de enviarla — así no se pierde y se ve al instante.
+    // Editar una nota existente sí requiere conexión (Fase 1 = solo creación).
+    const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
+    if (offline) {
+      if (isEditing) {
+        const message = 'Sin conexión: para editar una nota existente necesitas internet.';
+        setError(message);
+        notify({ tone: 'warning', message });
+        return;
+      }
+      // Número de sesión a prueba de colisiones entre varias notas offline del
+      // mismo paciente: corre el contador por cada pendiente ya encolada.
+      const pendingForPatient = offlineNotes.forPatient(patientId).length;
+      const localNote: SessionNote = {
+        id: crypto.randomUUID(),
+        patient_id: patientId,
+        therapist_id: therapistId || null,
+        session_number: sessionNumber + pendingForPatient,
+        session_date: sessionDate,
+        eva: eva === '' ? null : Number(eva),
+        raw_text: rawText
+      };
+      offlineNotes.enqueue(localNote);
+      draftStorage.remove(draftKey);
+      setIsDirty(false);
+      notify({
+        tone: 'success',
+        message: 'Guardada sin conexión. Se sincronizará al reconectar.'
+      });
+      onSaved?.(localNote);
       return;
     }
 

@@ -492,7 +492,7 @@ export const PatientRecord = memo(function PatientRecord({
             </div>
           </section>
 
-          <SessionNotesList notes={notes} onChanged={refreshRecord} />
+          <SessionNotesList notes={notes} patientId={patient.id} onChanged={refreshRecord} />
 
           <AppointmentList
             patient={current}

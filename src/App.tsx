@@ -4,6 +4,7 @@ import type { Session } from '@supabase/supabase-js';
 import { authService } from './services/authService';
 import { isSupabaseConfigured } from './lib/supabaseClient';
 import { draftStorage } from './shared/draftStorage';
+import { useOfflineNoteSync } from './shared/useOfflineNoteSync';
 import { clearPersistedQueryCache } from './lib/offlineSync';
 import { setUser as sentrySetUser, clearUser as sentryClearUser } from './lib/sentry';
 import { AppLogo } from './components/AppLogo';
@@ -113,6 +114,9 @@ export function App() {
   const [mfaFactorId, setMfaFactorId] = useState<string | null>(null);
   const [mfaChecking, setMfaChecking] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+
+  // Vacía la cola de notas escritas sin conexión cuando vuelve el internet.
+  useOfflineNoteSync();
 
   // Siempre tema claro.
   useEffect(() => {
