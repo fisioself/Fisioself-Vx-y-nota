@@ -2,18 +2,27 @@ import { useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from './ToastProvider';
 import { offlineNotes } from '../shared/offlineNotes';
+import { offlinePayments } from '../shared/offlinePayments';
+
+const totalPending = (): number => offlineNotes.count() + offlinePayments.count();
 
 export function OnlineStatus() {
   const [online, setOnline] = useState<boolean>(() => navigator.onLine);
-  // Notas escritas sin conexión que aún no se suben al servidor.
-  const [pendingCount, setPendingCount] = useState<number>(() => offlineNotes.count());
+  // Cambios escritos sin conexión (notas + cobros) que aún no se suben.
+  const [pendingCount, setPendingCount] = useState<number>(() => totalPending());
   const queryClient = useQueryClient();
   const { notify } = useToast();
 
   // Mantiene el contador de pendientes al día (al encolar o al sincronizar).
   useEffect(() => {
-    setPendingCount(offlineNotes.count());
-    return offlineNotes.subscribe(() => setPendingCount(offlineNotes.count()));
+    const update = () => setPendingCount(totalPending());
+    update();
+    const unsubNotes = offlineNotes.subscribe(update);
+    const unsubPays = offlinePayments.subscribe(update);
+    return () => {
+      unsubNotes();
+      unsubPays();
+    };
   }, []);
 
   // Escucha los mensajes que el Service Worker envia al reenviar la cola offline.
@@ -80,7 +89,7 @@ export function OnlineStatus() {
   // (mientras la cola se vacía) para que se vea que aún falta subir algo.
   const pendingPill = pendingCount > 0 && (
     <div className="offline-pending" role="status">
-      {pendingCount === 1 ? '1 nota por sincronizar' : `${pendingCount} notas por sincronizar`}
+      {pendingCount === 1 ? '1 cambio por sincronizar' : `${pendingCount} cambios por sincronizar`}
     </div>
   );
 
