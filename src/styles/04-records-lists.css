@@ -211,6 +211,18 @@ a.btn-sm {
   padding: 14px;
   background: var(--bg-sunken);
 }
+/* Nota escrita sin conexión, aún sin sincronizar: borde ámbar para distinguirla
+   de las ya guardadas en el servidor. */
+.note-row.note-pending {
+  border-left: 3px solid #d99b30;
+  background: rgba(217, 155, 48, 0.08);
+}
+.note-row.note-pending .note-toggle span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
 /* Disposición "etiqueta a la izquierda · acción a la derecha" usada en muchas
    filas de listas (caja, gastos, finanzas de paciente, documentos, papelera).
    Antes se repetía como estilo inline en ~10 sitios. */

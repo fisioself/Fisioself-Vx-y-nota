@@ -4,14 +4,20 @@ import { clinicalApi } from '../../services/clinicalApi';
 import { SessionNoteEditor } from './SessionNoteEditor';
 import type { SessionNote } from '../../types/clinical';
 import { getErrorMessage } from '../../shared/errors';
+import { offlineNotes } from '../../shared/offlineNotes';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 
 interface SessionNotesListProps {
   notes?: SessionNote[];
+  patientId?: string;
   onChanged?: () => void;
 }
 
-export function SessionNotesList({ notes = [], onChanged }: SessionNotesListProps) {
+// ¿Es una nota pendiente de sincronizar (escrita sin conexión)?
+const isPendingNote = (note: SessionNote): boolean =>
+  (note as SessionNote & { _pending?: boolean })._pending === true;
+
+export function SessionNotesList({ notes = [], patientId, onChanged }: SessionNotesListProps) {
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [openId, setOpenId] = useState<string | null>(null);
@@ -22,7 +28,18 @@ export function SessionNotesList({ notes = [], onChanged }: SessionNotesListProp
   const [optimisticDeleted, setOptimisticDeleted] = useState<ReadonlySet<string>>(new Set());
   // Nota pendiente de confirmar su borrado permanente (null = sin diálogo).
   const [confirmNote, setConfirmNote] = useState<SessionNote | null>(null);
+  // Notas escritas sin conexión, pendientes de sincronizar (cola local).
+  const [pending, setPending] = useState<SessionNote[]>(() =>
+    patientId ? offlineNotes.forPatient(patientId) : []
+  );
   const { notify } = useToast();
+
+  // Mantener `pending` al día: cambia al encolar/sincronizar una nota offline.
+  useEffect(() => {
+    if (!patientId) return;
+    setPending(offlineNotes.forPatient(patientId));
+    return offlineNotes.subscribe(() => setPending(offlineNotes.forPatient(patientId)));
+  }, [patientId]);
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -33,7 +50,9 @@ export function SessionNotesList({ notes = [], onChanged }: SessionNotesListProp
 
   const filtered = useMemo(() => {
     const q = debouncedQuery.trim().toLowerCase();
-    const sorted = [...notes]
+    // Pendientes que aún no llegan del servidor (dedupe por id), arriba del todo.
+    const freshPending = pending.filter((p) => !notes.some((n) => n.id === p.id));
+    const sorted = [...freshPending, ...notes]
       .filter((n) => !optimisticDeleted.has(n.id))
       .sort((a, b) => Number(b.session_number) - Number(a.session_number));
     if (!q) return sorted;
@@ -42,7 +61,7 @@ export function SessionNotesList({ notes = [], onChanged }: SessionNotesListProp
         .filter((value) => value != null)
         .some((value) => String(value).toLowerCase().includes(q))
     );
-  }, [notes, debouncedQuery, optimisticDeleted]);
+  }, [notes, pending, debouncedQuery, optimisticDeleted]);
 
   const deleteNote = useCallback(
     async (note: SessionNote) => {
@@ -90,8 +109,9 @@ export function SessionNotesList({ notes = [], onChanged }: SessionNotesListProp
         {filtered.map((note) => {
           const isOpen = openId === note.id;
           const isEditing = editingId === note.id;
+          const pendingNote = isPendingNote(note);
           return (
-            <article key={note.id} className="note-row">
+            <article key={note.id} className={`note-row${pendingNote ? ' note-pending' : ''}`}>
               <button
                 type="button"
                 className="note-toggle"
@@ -99,26 +119,44 @@ export function SessionNotesList({ notes = [], onChanged }: SessionNotesListProp
               >
                 <span>
                   <strong>Sesion #{note.session_number}</strong>
+                  {pendingNote && <span className="pill alert">Pendiente de sincronizar</span>}
                 </span>
               </button>
               <div className="row wrap note-actions">
-                <button
-                  type="button"
-                  className="secondary"
-                  onClick={() => setEditingId(isEditing ? null : note.id)}
-                >
-                  {isEditing ? 'Cerrar edicion' : 'Editar'}
-                </button>
-                <button
-                  type="button"
-                  className="danger"
-                  disabled={deletingId === note.id}
-                  onClick={() => setConfirmNote(note)}
-                >
-                  {deletingId === note.id ? 'Eliminando...' : 'Eliminar'}
-                </button>
+                {pendingNote ? (
+                  // Pendiente: aún no está en el servidor. Solo se puede descartar
+                  // (quitarla de la cola local); editar/borrar exige conexión.
+                  <button
+                    type="button"
+                    className="danger"
+                    onClick={() => {
+                      offlineNotes.remove(note.id);
+                      notify({ tone: 'success', message: 'Nota pendiente descartada.' });
+                    }}
+                  >
+                    Descartar
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      className="secondary"
+                      onClick={() => setEditingId(isEditing ? null : note.id)}
+                    >
+                      {isEditing ? 'Cerrar edicion' : 'Editar'}
+                    </button>
+                    <button
+                      type="button"
+                      className="danger"
+                      disabled={deletingId === note.id}
+                      onClick={() => setConfirmNote(note)}
+                    >
+                      {deletingId === note.id ? 'Eliminando...' : 'Eliminar'}
+                    </button>
+                  </>
+                )}
               </div>
-              {isEditing && (
+              {isEditing && !pendingNote && (
                 <SessionNoteEditor
                   patientId={note.patient_id}
                   therapistId={note.therapist_id}
