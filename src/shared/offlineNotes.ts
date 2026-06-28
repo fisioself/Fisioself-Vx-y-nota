@@ -68,6 +68,13 @@ export const offlineNotes = {
     write(read().filter((q) => q.outboxId !== outboxId));
   },
 
+  // Vacía toda la cola. Se llama al cerrar sesión: las notas contienen PHI y no
+  // deben quedar en el navegador tras el logout (igual que el caché de datos y
+  // los borradores, que también se limpian al salir).
+  clearAll(): void {
+    write([]);
+  },
+
   count(): number {
     return read().length;
   },
