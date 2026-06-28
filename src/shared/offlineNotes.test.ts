@@ -55,6 +55,15 @@ describe('offlineNotes outbox', () => {
     expect(calls).toBe(1); // ya no escucha tras desuscribir
   });
 
+  it('clearAll vacía toda la cola (logout)', () => {
+    offlineNotes.enqueue(makeNote({ patient_id: 'p1' }));
+    offlineNotes.enqueue(makeNote({ patient_id: 'p2' }));
+    expect(offlineNotes.count()).toBe(2);
+    offlineNotes.clearAll();
+    expect(offlineNotes.count()).toBe(0);
+    expect(offlineNotes.forPatient('p1')).toHaveLength(0);
+  });
+
   it('sobrevive a JSON corrupto en localStorage', () => {
     localStorage.setItem('fisioself-offline-notes', '{no es json');
     expect(offlineNotes.all()).toEqual([]);

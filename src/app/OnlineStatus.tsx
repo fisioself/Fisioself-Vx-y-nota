@@ -1,11 +1,20 @@
 import { useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from './ToastProvider';
+import { offlineNotes } from '../shared/offlineNotes';
 
 export function OnlineStatus() {
   const [online, setOnline] = useState<boolean>(() => navigator.onLine);
+  // Notas escritas sin conexión que aún no se suben al servidor.
+  const [pendingCount, setPendingCount] = useState<number>(() => offlineNotes.count());
   const queryClient = useQueryClient();
   const { notify } = useToast();
+
+  // Mantiene el contador de pendientes al día (al encolar o al sincronizar).
+  useEffect(() => {
+    setPendingCount(offlineNotes.count());
+    return offlineNotes.subscribe(() => setPendingCount(offlineNotes.count()));
+  }, []);
 
   // Escucha los mensajes que el Service Worker envia al reenviar la cola offline.
   // Antes el SW emitia SYNC_ERROR / SYNC_CONFLICT pero nadie los escuchaba, asi
@@ -67,12 +76,23 @@ export function OnlineStatus() {
     };
   }, [queryClient]);
 
-  if (online) return null;
+  // Píldora de "pendientes por sincronizar": visible aunque haya conexión
+  // (mientras la cola se vacía) para que se vea que aún falta subir algo.
+  const pendingPill = pendingCount > 0 && (
+    <div className="offline-pending" role="status">
+      {pendingCount === 1 ? '1 nota por sincronizar' : `${pendingCount} notas por sincronizar`}
+    </div>
+  );
+
+  if (online) return pendingPill || null;
 
   return (
-    <div className="offline-banner" role="status">
-      Sin conexion. Puedes seguir redactando borradores locales; guarda en expediente cuando vuelva
-      internet.
-    </div>
+    <>
+      <div className="offline-banner" role="status">
+        Sin conexión. Puedes seguir trabajando: las notas se guardan localmente y se sincronizan al
+        reconectar.
+      </div>
+      {pendingPill}
+    </>
   );
 }
