@@ -6,7 +6,11 @@
     <meta name="theme-color" content="#12372a" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" type="image/png" href="/icons/icon-192.png" />
-    <link rel="apple-touch-icon" href="/icons/icon-512.png" />
+    <!-- iOS usa el apple-touch-icon de 180×180 (su tamaño preferido); con uno de
+         512 algunas versiones lo ignoran y dibujan un recuadro blanco. Es opaco y
+         a borde completo para que iOS lo redondee sin márgenes blancos. -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon-180.png" />
+    <link rel="apple-touch-icon" sizes="512x512" href="/icons/icon-512.png" />
     <!-- iOS: permite instalar como app a pantalla completa (Compartir → Agregar a inicio) -->
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
