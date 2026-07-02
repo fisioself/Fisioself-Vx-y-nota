@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect, useRef, memo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { clinicalApi } from '../../services/clinicalApi';
 import type { Patient, SessionNote, Evaluation, ClinicalRecord } from '../../types/clinical';
-import { exportToPdf, printEvaluation } from '../../shared/exportClinicalRecord';
+import { exportToPdf, printEvaluation, printPatientPlan } from '../../shared/exportClinicalRecord';
 import { fmtDateMX } from '../../shared/dateUtils';
 import { EvaluationForm } from '../evaluations/EvaluationForm';
 import { SessionNoteEditor } from '../session-notes/SessionNoteEditor';
@@ -313,6 +313,16 @@ export const PatientRecord = memo(function PatientRecord({
             >
               📄 Exportar PDF
             </button>
+            {evaluations.length > 0 && (
+              <button
+                type="button"
+                className="secondary btn-sm"
+                onClick={() => printPatientPlan(evaluations[0], current)}
+                title="Plan cálido y en lenguaje cercano para entregar al paciente"
+              >
+                💚 Plan del paciente
+              </button>
+            )}
             {current.phone && (
               <a
                 href={buildPatientWhatsAppUrl(current)}
