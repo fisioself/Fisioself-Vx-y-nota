@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { clinicalApi } from '../../services/clinicalApi';
 import { calendarService } from '../../services/calendarService';
 import { Skeleton } from '../../components/Skeleton';
+import { isOfflineError } from '../../shared/errors';
 
 const NativeCalendar = lazy(() =>
   import('../calendar/NativeCalendar').then((m) => ({ default: m.NativeCalendar }))
@@ -41,7 +42,7 @@ export function ClinicDashboard({ onPatientSelect, sidebar }: ClinicDashboardPro
 
       {/* Estadísticas clave — globos integrados junto a Pacientes */}
       <div className="panel-stats dashboard-stats" aria-busy={isLoading || undefined}>
-        {isLoading ? (
+        {isLoading && !stats ? (
           <>
             <div className="stat-card">
               <Skeleton width="70%" height={11} />
@@ -61,9 +62,16 @@ export function ClinicDashboard({ onPatientSelect, sidebar }: ClinicDashboardPro
             </div>
             <span className="sr-only">Cargando estadísticas…</span>
           </>
-        ) : error || !stats ? (
-          <div className="stat-card error" style={{ gridColumn: '1 / -1' }}>
-            Error al cargar datos: {error?.message || ''}
+        ) : !stats ? (
+          // Sin datos que mostrar: si es un fallo de red, mensaje calmado (no un
+          // error rojo alarmante); la app sigue usable y sincroniza al reconectar.
+          <div
+            className={`stat-card${isOfflineError(error) ? '' : ' error'}`}
+            style={{ gridColumn: '1 / -1' }}
+          >
+            {isOfflineError(error)
+              ? 'Sin conexión con el servidor. Mostraremos tus datos en cuanto vuelva la red; mientras, puedes seguir trabajando y tus cambios se sincronizarán solos.'
+              : `Error al cargar datos: ${error?.message || ''}`}
           </div>
         ) : (
           <>
