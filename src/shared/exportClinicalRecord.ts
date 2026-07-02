@@ -452,6 +452,20 @@ const warmBlock = (label: string, value: unknown): string => {
     : '';
 };
 
+// Rutina de ejercicios como TARJETAS: cada ejercicio (separado por línea en
+// blanco en el texto de la IA) se vuelve una tarjeta con sus líneas. Si el texto
+// no trae bloques separados, cae a una sola tarjeta con todo el contenido.
+const exerciseCards = (value: unknown): string => {
+  const clean = humanize(value);
+  if (!clean) return '';
+  const blocks = clean
+    .split(/\n\s*\n/)
+    .map((b) => b.trim())
+    .filter(Boolean);
+  const cards = blocks.map((b) => `<div class="ex-card">${multiline(b)}</div>`).join('');
+  return `<section class="warm-block"><h2>Tu rutina de ejercicios en casa</h2>${cards}</section>`;
+};
+
 export function buildPatientPlanHtml(evaluation: Evaluation, patient: Patient): string {
   const cl = evaluation.sections?.conclusion || {};
   const fullName = patient.full_name || 'paciente';
@@ -463,9 +477,15 @@ export function buildPatientPlanHtml(evaluation: Evaluation, patient: Patient): 
     year: 'numeric'
   }).format(new Date());
 
+  // Los ejercicios se muestran como tarjetas cálidas si el fisio los generó/editó
+  // en "Ejercicios para casa"; si no, caemos al plan clínico como texto simple.
+  const exercisesSection = cl.home_exercises
+    ? exerciseCards(cl.home_exercises)
+    : warmBlock('Tu plan de trabajo en casa', cl.treatment_plan);
+
   const body = [
     warmBlock('Tus metas', cl.objectives),
-    warmBlock('Tu plan de trabajo en casa', cl.treatment_plan),
+    exercisesSection,
     warmBlock('Tu camino hacia la recuperación', cl.prognosis)
   ]
     .filter(Boolean)
@@ -506,6 +526,12 @@ export function buildPatientPlanHtml(evaluation: Evaluation, patient: Patient): 
       margin:0 0 8px;font-weight:600
     }
     .warm-body{font-size:14.5px;line-height:1.7;color:var(--ink)}
+    .ex-card{
+      background:#fff;border:1px solid var(--line);border-radius:12px;
+      padding:12px 16px;margin:10px 0;font-size:14px;line-height:1.6;
+      page-break-inside:avoid;break-inside:avoid
+    }
+    .ex-card:first-child{margin-top:0}
     .closing{
       margin-top:8px;padding:22px 24px;border:1px dashed var(--line);border-radius:16px;
       text-align:center;color:var(--muted)

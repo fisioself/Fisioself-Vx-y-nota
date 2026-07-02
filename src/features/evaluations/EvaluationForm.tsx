@@ -110,6 +110,9 @@ export function EvaluationForm({
   // Impresión diagnóstica médica sugerida con IA.
   const [aiMedDxGenerating, setAiMedDxGenerating] = useState(false);
   const [aiMedDxError, setAiMedDxError] = useState('');
+
+  const [aiHomeExGenerating, setAiHomeExGenerating] = useState(false);
+  const [aiHomeExError, setAiHomeExError] = useState('');
   const { notify } = useToast();
 
   useDraftAutosave(draftKey, values);
@@ -328,6 +331,32 @@ export function EvaluationForm({
     }
   };
 
+  // Rutina de ejercicios para casa en lenguaje del paciente (para el PDF que se
+  // le entrega). Usa los hallazgos + el plan clínico ya escrito como contexto.
+  const generateHomeExercises = async () => {
+    const findings = buildFindingsText();
+    if (!findings.trim()) {
+      setAiHomeExError('Marca algunos hallazgos (zona, pruebas, ROM…) antes de generar la rutina.');
+      return;
+    }
+    const planCtx = values.treatment_plan.trim()
+      ? `\nPlan clínico de referencia: ${values.treatment_plan}`
+      : '';
+    setAiHomeExGenerating(true);
+    setAiHomeExError('');
+    try {
+      await aiService.transform({
+        text: findings + planCtx,
+        type: 'home_exercises',
+        onChunk: (acc) => setField('home_exercises', acc)
+      });
+    } catch (err) {
+      setAiHomeExError(getErrorMessage(err, 'No se pudo generar la rutina con IA.'));
+    } finally {
+      setAiHomeExGenerating(false);
+    }
+  };
+
   const generateObjectives = async () => {
     const findings = buildFindingsText();
     const diagnosisCtx = values.prognosis.trim()
@@ -533,7 +562,8 @@ export function EvaluationForm({
           objectives_short: null,
           objectives_mid: null,
           objectives_long: null,
-          treatment_plan: toNullable(values.treatment_plan)
+          treatment_plan: toNullable(values.treatment_plan),
+          home_exercises: toNullable(values.home_exercises)
         }
       };
 
@@ -1282,6 +1312,32 @@ export function EvaluationForm({
             {aiPlanError && (
               <small className="field-error" role="alert">
                 {aiPlanError}
+              </small>
+            )}
+          </label>
+          <label className="span-2">
+            <span className="dx-label-row">
+              Ejercicios para casa (para el paciente)
+              {isAiConfigured && (
+                <button
+                  type="button"
+                  className="secondary dx-ai-btn"
+                  onClick={generateHomeExercises}
+                  disabled={aiHomeExGenerating}
+                >
+                  {aiHomeExGenerating ? 'Generando…' : '💚 Rutina en lenguaje del paciente'}
+                </button>
+              )}
+            </span>
+            <textarea
+              rows={4}
+              value={values.home_exercises}
+              onChange={(e) => setField('home_exercises', e.target.value)}
+              placeholder="Rutina de ejercicios en lenguaje cercano; aparece en el PDF «Plan del paciente». Revísala y edítala antes de entregarla."
+            />
+            {aiHomeExError && (
+              <small className="field-error" role="alert">
+                {aiHomeExError}
               </small>
             )}
           </label>
