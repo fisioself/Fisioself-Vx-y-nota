@@ -265,6 +265,29 @@ details.form-section[open] > summary {
   gap: 8px;
 }
 
+/* Vital fuera de rango de referencia: el hint del campo pasa a ámbar. */
+.field-hint.vital-warn {
+  color: #8a6200;
+  font-weight: 700;
+}
+
+/* Candado de calidad del oxímetro (bajo el campo de SpO₂). */
+.spo2-quality {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.spo2-toggle {
+  width: auto;
+  align-self: flex-start;
+  white-space: normal;
+}
+.spo2-reasons .pill.active {
+  background: rgba(217, 155, 48, 0.18);
+  border: 1px solid #d99b30;
+  color: #7a5200;
+}
+
 /* Toggle de dolor por fila: predeterminado en "Sin dolor" (neutro); un toque lo
    pone en "Con dolor" (rojo). Reemplaza al antiguo selector ¿Dolor? para que
    sea un solo toque en vez de abrir un desplegable. */

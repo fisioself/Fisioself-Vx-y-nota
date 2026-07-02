@@ -74,6 +74,10 @@ export interface EvaluationFormValues {
   heart_rate: string;
   respiratory_rate: string;
   oxygen_saturation: string;
+  // Calidad de la lectura del oxímetro: 'Sí' (curva estable, default) | 'No'.
+  // Solo aplica (y se guarda) cuando oxygen_saturation tiene valor.
+  spo2_reliable: string;
+  spo2_quality_note: string;
   general_inspection: string;
   posture: string;
   gait: string;

@@ -1,6 +1,13 @@
 import type { Evaluation, EvaluationZone } from '../../types/clinical';
 import { BodyPainMap } from '../../components/BodyPainMap';
-import { isRomRowAltered, isStrengthRowAltered } from '../../shared/clinicalFindings';
+import {
+  isRomRowAltered,
+  isStrengthRowAltered,
+  isSpo2Abnormal,
+  isHeartRateAbnormal,
+  isRespRateAbnormal,
+  isBloodPressureAbnormal
+} from '../../shared/clinicalFindings';
 
 interface JointRow {
   joint?: string;
@@ -120,9 +127,31 @@ export function EvaluationSummary({ evaluation }: EvaluationSummaryProps) {
             general.heart_rate ||
             general.respiratory_rate ||
             general.oxygen_saturation) && (
-            <p>
-              Signos vitales: TA {val(general.blood_pressure)} · FC {val(general.heart_rate)} · FR{' '}
-              {val(general.respiratory_rate)} · SatO₂ {val(general.oxygen_saturation)}
+            <p
+              className={
+                isBloodPressureAbnormal(general.blood_pressure) ||
+                isHeartRateAbnormal(general.heart_rate) ||
+                isRespRateAbnormal(general.respiratory_rate) ||
+                isSpo2Abnormal(general.oxygen_saturation) ||
+                general.spo2_reliable === false
+                  ? 'finding-altered'
+                  : undefined
+              }
+            >
+              Signos vitales: TA {isBloodPressureAbnormal(general.blood_pressure) ? '⚠ ' : ''}
+              {val(general.blood_pressure)} · FC{' '}
+              {isHeartRateAbnormal(general.heart_rate) ? '⚠ ' : ''}
+              {val(general.heart_rate)} · FR{' '}
+              {isRespRateAbnormal(general.respiratory_rate) ? '⚠ ' : ''}
+              {val(general.respiratory_rate)} · SatO₂{' '}
+              {isSpo2Abnormal(general.oxygen_saturation) ? '⚠ ' : ''}
+              {val(general.oxygen_saturation)}
+              {general.spo2_reliable === false && (
+                <span className="pill alert" style={{ marginLeft: 8 }}>
+                  SpO₂ de baja confiabilidad
+                  {general.spo2_quality_note ? ` · ${general.spo2_quality_note}` : ''}
+                </span>
+              )}
             </p>
           )}
           {general.inspection && <p>Inspección: {general.inspection}</p>}
