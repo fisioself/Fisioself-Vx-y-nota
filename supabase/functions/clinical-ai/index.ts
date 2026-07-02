@@ -110,7 +110,9 @@ const prompts: Record<string, string> = {
 };
 
 const WINDOW_MS = 60_000;
-const MAX_REQUESTS_PER_WINDOW = 12;
+// Una sola valoración dispara ~6 acciones de IA (diagnóstico, objetivos,
+// pronóstico, plan, dx médico, ejercicios); 12/min se agotaba y devolvía 429.
+const MAX_REQUESTS_PER_WINDOW = 24;
 const GENERIC_AI_ERROR = 'No se pudo consultar IA. Intenta de nuevo mas tarde.';
 
 const json = (
@@ -220,7 +222,11 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         model,
-        max_tokens: 2600,
+        // gpt-oss "razona" antes de responder y consume tokens; con 2600 los
+        // prompts largos (objetivos, pronóstico, plan) agotaban el presupuesto en
+        // el razonamiento y devolvían content vacío → 502. 4096 deja margen para
+        // la respuesta final sin acercarse al timeout de 30 s del cliente.
+        max_tokens: 4096,
         // Temperatura baja: salida clínica más fiel a los datos y menos
         // propensa a inventar referencias o cifras.
         temperature: 0.3,
