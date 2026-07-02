@@ -429,3 +429,125 @@ export function printEvaluation(evaluation: Evaluation, patientName: string): vo
   win.focus();
   setTimeout(() => win.print(), 400);
 }
+
+// ---------------------------------------------------------------------------
+// "Plan para el paciente": versión CÁLIDA y humana del plan, para entregar al
+// paciente (no es el documento clínico). Reusa lo que el fisio ya escribió
+// (meta funcional, objetivos, plan de tratamiento, pronóstico) bajo encabezados
+// en lenguaje cercano y con estilo editorial. Omite secciones vacías.
+// ---------------------------------------------------------------------------
+
+// Limpia marcadores clínicos que no aportan al paciente (p. ej. "(verificar)"
+// que la IA añade a las referencias). Cosmético, no altera el sentido.
+const humanize = (value: unknown): string =>
+  String(value ?? '')
+    .replace(/\s*\(verificar\)/gi, '')
+    .trim();
+
+// Bloque cálido: encabezado en lenguaje del paciente + texto con saltos de línea.
+const warmBlock = (label: string, value: unknown): string => {
+  const clean = humanize(value);
+  return clean
+    ? `<section class="warm-block"><h2>${label}</h2><div class="warm-body">${multiline(clean)}</div></section>`
+    : '';
+};
+
+export function buildPatientPlanHtml(evaluation: Evaluation, patient: Patient): string {
+  const cl = evaluation.sections?.conclusion || {};
+  const fullName = patient.full_name || 'paciente';
+  const firstName = fullName.trim().split(/\s+/)[0] || fullName;
+  const goal = humanize(patient.functional_goal);
+  const date = new Intl.DateTimeFormat('es-MX', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  }).format(new Date());
+
+  const body = [
+    warmBlock('Tus metas', cl.objectives),
+    warmBlock('Tu plan de trabajo en casa', cl.treatment_plan),
+    warmBlock('Tu camino hacia la recuperación', cl.prognosis)
+  ]
+    .filter(Boolean)
+    .join('');
+
+  const bodyOrFallback =
+    body ||
+    `<section class="warm-block"><div class="warm-body">Tu fisioterapeuta te compartirá aquí los detalles de tu plan en tu próxima visita.</div></section>`;
+
+  return `<!doctype html><html lang="es"><head><meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Plan de ${esc(fullName)}</title>
+  <style>
+    :root{
+      --brand:#12372a; --brand-soft:#e8f0ec; --ink:#334155; --muted:#64748b;
+      --band:#f4f7f5; --line:#e6ece9;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;color:var(--ink);background:#fff;
+      font-family:'Nunito','Segoe UI',system-ui,-apple-system,sans-serif;
+      font-size:14px;line-height:1.6;
+    }
+    .plan-head{
+      background:var(--brand);color:#fff;padding:34px 40px 30px;
+    }
+    .plan-brand{font-size:13px;letter-spacing:.14em;text-transform:uppercase;opacity:.85}
+    .plan-hi{font-family:Georgia,'Times New Roman',serif;font-size:30px;margin:14px 0 4px;font-weight:600}
+    .plan-goal{font-family:Georgia,'Times New Roman',serif;font-size:19px;font-style:italic;opacity:.95;line-height:1.4;max-width:34em}
+    .plan-goal .goal-eyebrow{
+      display:block;font-family:'Nunito',sans-serif;font-style:normal;font-size:11px;
+      letter-spacing:.12em;text-transform:uppercase;opacity:.75;margin-bottom:4px
+    }
+    .wrap{padding:30px 40px 40px;max-width:720px;margin:0 auto}
+    .warm-block{margin:0 0 22px;padding:20px 24px;background:var(--band);border-radius:16px}
+    .warm-block h2{
+      font-family:Georgia,'Times New Roman',serif;font-size:19px;color:var(--brand);
+      margin:0 0 8px;font-weight:600
+    }
+    .warm-body{font-size:14.5px;line-height:1.7;color:var(--ink)}
+    .closing{
+      margin-top:8px;padding:22px 24px;border:1px dashed var(--line);border-radius:16px;
+      text-align:center;color:var(--muted)
+    }
+    .closing strong{color:var(--brand);display:block;font-size:15px;margin-bottom:4px}
+    .foot{text-align:center;color:var(--muted);font-size:11px;margin-top:26px}
+    @media print{
+      @page{margin:0}
+      .plan-head{padding:30px 24mm 26px}
+      .wrap{padding:26px 24mm 30mm}
+    }
+  </style></head>
+  <body>
+    <header class="plan-head">
+      <div class="plan-brand">Fisioself</div>
+      <div class="plan-hi">Hola, ${esc(firstName)} 👋</div>
+      ${
+        goal
+          ? `<div class="plan-goal"><span class="goal-eyebrow">Este es tu plan para</span>${esc(goal)}</div>`
+          : `<div class="plan-goal">Este es tu plan de trabajo hacia tu recuperación.</div>`
+      }
+    </header>
+    <div class="wrap">
+      ${bodyOrFallback}
+      <div class="closing">
+        <strong>Estamos contigo en el proceso 💚</strong>
+        La rehabilitación tiene picos y valles: avanza a tu ritmo. Si tienes dudas con algún
+        ejercicio o cómo te sientes, escríbenos — estamos a un mensaje de distancia.
+      </div>
+      <div class="foot">Fisioself · Preparado para ti el ${date}</div>
+    </div>
+  </body></html>`;
+}
+
+export function printPatientPlan(evaluation: Evaluation, patient: Patient): void {
+  const win = window.open('', '_blank', 'width=900,height=700');
+  if (!win) {
+    alert('El navegador bloqueó la ventana emergente. Permite pop-ups para este sitio.');
+    return;
+  }
+  win.document.write(buildPatientPlanHtml(evaluation, patient));
+  win.document.close();
+  win.focus();
+  setTimeout(() => win.print(), 400);
+}
