@@ -1,6 +1,13 @@
 import type { Patient, Evaluation, EvaluationZone } from '../types/clinical';
 import { computeAge } from './dateUtils';
-import { isRomRowAltered, isStrengthRowAltered } from './clinicalFindings';
+import {
+  isRomRowAltered,
+  isStrengthRowAltered,
+  isSpo2Abnormal,
+  isHeartRateAbnormal,
+  isRespRateAbnormal,
+  isBloodPressureAbnormal
+} from './clinicalFindings';
 
 export const exportToPdf = (patient: Patient | null): void => {
   if (!patient) return;
@@ -182,10 +189,18 @@ function buildEvaluationHtml(evaluation: Evaluation, patientName: string): strin
      ${yfList ? `<p class="flag flag-amber">⚠ Banderas amarillas: ${esc(yfList)}</p>` : ''}`
   );
 
-  // 3. Valoración general
+  // 3. Valoración general — los vitales fuera de referencia van marcados en
+  // ámbar (mismos umbrales que el formulario/expediente); si la lectura de SpO₂
+  // se registró como poco confiable, se anota junto con la causa.
+  const mark = (value: string | null | undefined, abnormal: boolean): string =>
+    abnormal ? `<span class="vital-warn">⚠ ${v(value)}</span>` : v(value);
+  const spo2Note =
+    g.spo2_reliable === false
+      ? ` <span class="vital-warn">(lectura de baja confiabilidad${g.spo2_quality_note ? `: ${esc(g.spo2_quality_note)}` : ''})</span>`
+      : '';
   const vitals =
     g.blood_pressure || g.heart_rate || g.respiratory_rate || g.oxygen_saturation
-      ? `<p class="row"><span class="row-label">Signos vitales</span> TA ${v(g.blood_pressure)} · FC ${v(g.heart_rate)} · FR ${v(g.respiratory_rate)} · SatO₂ ${v(g.oxygen_saturation)}</p>`
+      ? `<p class="row"><span class="row-label">Signos vitales</span> TA ${mark(g.blood_pressure, isBloodPressureAbnormal(g.blood_pressure))} · FC ${mark(g.heart_rate, isHeartRateAbnormal(g.heart_rate))} · FR ${mark(g.respiratory_rate, isRespRateAbnormal(g.respiratory_rate))} · SatO₂ ${mark(g.oxygen_saturation, isSpo2Abnormal(g.oxygen_saturation))}${spo2Note}</p>`
       : '';
   add(
     'Valoración general',
@@ -326,6 +341,8 @@ function buildEvaluationHtml(evaluation: Evaluation, patientName: string): strin
     tbody tr.altered:nth-child(even){background:#fbeccd}
     tbody tr.altered td{font-weight:700;color:#7a5200}
     tbody tr.altered td:first-child{box-shadow:inset 3px 0 0 #d99b30}
+    /* Signos vitales fuera de referencia o SpO₂ de baja confiabilidad. */
+    .vital-warn{color:#7a5200;font-weight:700}
 
     /* Mapa corporal */
     .body-maps{display:flex;gap:28px;justify-content:center;padding:6px 0}

@@ -22,6 +22,13 @@ import {
   PAIN_MECHANISM_OPTIONS,
   PAIN_MECHANISM_DESCRIPTIONS
 } from './evaluationCatalog';
+import {
+  isSpo2Abnormal,
+  isHeartRateAbnormal,
+  isRespRateAbnormal,
+  isBloodPressureAbnormal,
+  SPO2_QUALITY_REASONS
+} from '../../shared/clinicalFindings';
 import { ZoneEditor } from './ZoneEditor';
 import {
   evaluationToFormValues,
@@ -222,7 +229,13 @@ export function EvaluationForm({
     if (values.blood_pressure) gen.push(`TA ${values.blood_pressure}`);
     if (values.heart_rate) gen.push(`FC ${values.heart_rate}`);
     if (values.respiratory_rate) gen.push(`FR ${values.respiratory_rate}`);
-    if (values.oxygen_saturation) gen.push(`SatO₂ ${values.oxygen_saturation}`);
+    if (values.oxygen_saturation)
+      gen.push(
+        `SatO₂ ${values.oxygen_saturation}` +
+          (values.spo2_reliable === 'No'
+            ? ` (lectura de baja confiabilidad${values.spo2_quality_note ? `: ${values.spo2_quality_note}` : ''})`
+            : '')
+      );
     if (values.general_inspection) gen.push(`inspección: ${values.general_inspection}`);
     if (values.posture) gen.push(`postura: ${values.posture}`);
     if (values.gait) gen.push(`marcha: ${values.gait}`);
@@ -484,6 +497,15 @@ export function EvaluationForm({
           heart_rate: toNullable(values.heart_rate),
           respiratory_rate: toNullable(values.respiratory_rate),
           oxygen_saturation: toNullable(values.oxygen_saturation),
+          // El candado de calidad solo aplica cuando hay valor de SpO₂; la causa
+          // solo cuando la lectura se marcó como no confiable.
+          spo2_reliable: toNullable(values.oxygen_saturation)
+            ? values.spo2_reliable !== 'No'
+            : null,
+          spo2_quality_note:
+            toNullable(values.oxygen_saturation) && values.spo2_reliable === 'No'
+              ? toNullable(values.spo2_quality_note)
+              : null,
           inspection: toNullable(values.general_inspection),
           posture: toNullable(values.posture),
           gait: toNullable(values.gait)
@@ -891,7 +913,13 @@ export function EvaluationForm({
               value={values.blood_pressure}
               onChange={(e) => setField('blood_pressure', e.target.value)}
             />
-            <small className="field-hint">Ref. ~120/80 mmHg</small>
+            <small
+              className={`field-hint${isBloodPressureAbnormal(values.blood_pressure) ? ' vital-warn' : ''}`}
+            >
+              {isBloodPressureAbnormal(values.blood_pressure)
+                ? '⚠ Fuera de referencia (~120/80 mmHg)'
+                : 'Ref. ~120/80 mmHg'}
+            </small>
           </label>
           <label>
             Frecuencia cardíaca
@@ -901,7 +929,13 @@ export function EvaluationForm({
               value={values.heart_rate}
               onChange={(e) => setField('heart_rate', e.target.value)}
             />
-            <small className="field-hint">Ref. 60–100 lpm</small>
+            <small
+              className={`field-hint${isHeartRateAbnormal(values.heart_rate) ? ' vital-warn' : ''}`}
+            >
+              {isHeartRateAbnormal(values.heart_rate)
+                ? '⚠ Fuera de referencia (60–100 lpm)'
+                : 'Ref. 60–100 lpm'}
+            </small>
           </label>
           <label>
             Frecuencia respiratoria
@@ -911,7 +945,13 @@ export function EvaluationForm({
               value={values.respiratory_rate}
               onChange={(e) => setField('respiratory_rate', e.target.value)}
             />
-            <small className="field-hint">Ref. 12–20 rpm</small>
+            <small
+              className={`field-hint${isRespRateAbnormal(values.respiratory_rate) ? ' vital-warn' : ''}`}
+            >
+              {isRespRateAbnormal(values.respiratory_rate)
+                ? '⚠ Fuera de referencia (12–20 rpm)'
+                : 'Ref. 12–20 rpm'}
+            </small>
           </label>
           <label>
             Saturación O₂
@@ -921,8 +961,53 @@ export function EvaluationForm({
               value={values.oxygen_saturation}
               onChange={(e) => setField('oxygen_saturation', e.target.value)}
             />
-            <small className="field-hint">Ref. 95–100 %</small>
+            <small
+              className={`field-hint${isSpo2Abnormal(values.oxygen_saturation) ? ' vital-warn' : ''}`}
+            >
+              {isSpo2Abnormal(values.oxygen_saturation)
+                ? '⚠ Fuera de referencia (95–100 %)'
+                : 'Ref. 95–100 %'}
+            </small>
           </label>
+          {/* Candado de calidad del oxímetro: solo aparece cuando hay valor de
+              SpO₂. Un toque alterna confiable ↔ no confiable; si es no confiable,
+              chips rápidos para documentar la causa (sin teclear). */}
+          {values.oxygen_saturation.trim() !== '' && (
+            <div className="span-2 spo2-quality">
+              <button
+                type="button"
+                className={`pain-toggle spo2-toggle ${values.spo2_reliable === 'No' ? 'is-pain' : ''}`}
+                onClick={() =>
+                  setField('spo2_reliable', values.spo2_reliable === 'No' ? 'Sí' : 'No')
+                }
+                aria-pressed={values.spo2_reliable === 'No'}
+                title="Calidad de la lectura del oxímetro (curva pletismográfica)"
+              >
+                {values.spo2_reliable === 'No'
+                  ? '⚠ Lectura no confiable'
+                  : '✓ Curva estable · lectura confiable'}
+              </button>
+              {values.spo2_reliable === 'No' && (
+                <div className="row wrap spo2-reasons">
+                  {SPO2_QUALITY_REASONS.map((reason) => (
+                    <button
+                      key={reason}
+                      type="button"
+                      className={`pill secondary${values.spo2_quality_note === reason ? ' active' : ''}`}
+                      onClick={() =>
+                        setField(
+                          'spo2_quality_note',
+                          values.spo2_quality_note === reason ? '' : reason
+                        )
+                      }
+                    >
+                      {reason}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
           <label className="span-2">
             Inspección general
             <textarea

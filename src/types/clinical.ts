@@ -102,6 +102,11 @@ export interface EvaluationSections {
     heart_rate?: string | null;
     respiratory_rate?: string | null;
     oxygen_saturation?: string | null;
+    // Candado de calidad del oxímetro: ¿curva pletismográfica estable? Solo se
+    // persiste cuando hay valor de SpO₂. `spo2_quality_note` guarda la causa de
+    // una lectura poco confiable (manos frías, esmalte, etc.).
+    spo2_reliable?: boolean | null;
+    spo2_quality_note?: string | null;
     inspection?: string | null;
     posture?: string | null;
     gait?: string | null;
