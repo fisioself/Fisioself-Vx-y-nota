@@ -1,7 +1,9 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { QueryClient } from '@tanstack/react-query';
+import { QueryClient, QueryCache } from '@tanstack/react-query';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
+import { isOfflineError } from './shared/errors';
+import { serverReachability } from './shared/serverReachability';
 import { AppRoot } from './app/AppRoot';
 import { ErrorBoundary } from './app/ErrorBoundary';
 import { registerServiceWorker } from './app/registerServiceWorker';
@@ -31,6 +33,15 @@ const isPermanentError = (err: unknown): boolean => {
 };
 
 const queryClient = new QueryClient({
+  // Detecta si el servidor es alcanzable: cualquier query que falle por red
+  // marca "sin conexión al servidor" (aunque el móvil tenga señal); una que
+  // responda lo restablece. OnlineStatus lo usa para mostrar el aviso.
+  queryCache: new QueryCache({
+    onError: (error) => {
+      if (isOfflineError(error)) serverReachability.set(false);
+    },
+    onSuccess: () => serverReachability.set(true)
+  }),
   defaultOptions: {
     queries: {
       gcTime: 1000 * 60 * 60 * 24, // 24 hours

@@ -3,11 +3,17 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useToast } from './ToastProvider';
 import { offlineNotes } from '../shared/offlineNotes';
 import { offlinePayments } from '../shared/offlinePayments';
+import { serverReachability } from '../shared/serverReachability';
 
 const totalPending = (): number => offlineNotes.count() + offlinePayments.count();
 
 export function OnlineStatus() {
-  const [online, setOnline] = useState<boolean>(() => navigator.onLine);
+  const [browserOnline, setBrowserOnline] = useState<boolean>(() => navigator.onLine);
+  // El servidor puede no responder aunque el navegador esté "online" (señal de
+  // datos pero sin poder llegar a Supabase). Se considera "sin conexión" cualquiera
+  // de los dos casos.
+  const [serverOk, setServerOk] = useState<boolean>(() => serverReachability.isReachable());
+  const online = browserOnline && serverOk;
   // Cambios escritos sin conexión (notas + cobros) que aún no se suben.
   const [pendingCount, setPendingCount] = useState<number>(() => totalPending());
   const queryClient = useQueryClient();
@@ -24,6 +30,12 @@ export function OnlineStatus() {
       unsubPays();
     };
   }, []);
+
+  // Escucha la señal de alcanzabilidad del servidor.
+  useEffect(
+    () => serverReachability.subscribe(() => setServerOk(serverReachability.isReachable())),
+    []
+  );
 
   // Escucha los mensajes que el Service Worker envia al reenviar la cola offline.
   // Antes el SW emitia SYNC_ERROR / SYNC_CONFLICT pero nadie los escuchaba, asi
@@ -60,9 +72,12 @@ export function OnlineStatus() {
   }, [notify, queryClient]);
 
   useEffect(() => {
-    const goOffline = () => setOnline(false);
+    const goOffline = () => setBrowserOnline(false);
     const goOnline = () => {
-      setOnline(true);
+      setBrowserOnline(true);
+      // Damos al servidor el beneficio de la duda al volver la señal: la próxima
+      // query exitosa lo confirma; una fallida lo vuelve a marcar sin conexión.
+      serverReachability.set(true);
       // Al recuperar la conexion, le pedimos al Service Worker que reenvie las
       // escrituras que quedaron en cola mientras estabamos sin internet. Esto es
       // imprescindible en iOS/Safari, donde la Background Sync API no existe y sin
@@ -98,8 +113,9 @@ export function OnlineStatus() {
   return (
     <>
       <div className="offline-banner" role="status">
-        Sin conexión. Puedes seguir trabajando: las notas se guardan localmente y se sincronizan al
-        reconectar.
+        {browserOnline
+          ? 'Sin conexión con el servidor. Puedes seguir trabajando: tus cambios se guardan y se sincronizan al reconectar.'
+          : 'Sin conexión. Puedes seguir trabajando: las notas se guardan localmente y se sincronizan al reconectar.'}
       </div>
       {pendingPill}
     </>

@@ -62,6 +62,16 @@ describe('ClinicDashboard', () => {
     });
   });
 
+  it('muestra un aviso calmado (no error rojo) ante un fallo de red', async () => {
+    vi.mocked(clinicalApi.getClinicStats).mockRejectedValue(new TypeError('Failed to fetch'));
+    renderWithProviders(<ClinicDashboard />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Sin conexión con el servidor/i)).toBeInTheDocument();
+    });
+    expect(screen.queryByText(/Error al cargar datos/)).not.toBeInTheDocument();
+  });
+
   it('shows "not connected" message when Google Calendar is disconnected', async () => {
     renderWithProviders(<ClinicDashboard />);
 
