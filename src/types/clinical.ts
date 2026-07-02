@@ -12,6 +12,9 @@ export interface Patient {
   occupation?: string | null;
   medical_diagnosis?: string | null;
   functional_diagnosis?: string | null;
+  // Meta funcional: objetivo de vida del paciente que enmarca el tratamiento
+  // (p. ej. "Cargar a su nieto sin dolor lumbar"). Se muestra en el hero.
+  functional_goal?: string | null;
   created_at?: string;
   updated_at?: string;
   // Borrado lógico: si tiene valor, el paciente está en la papelera.

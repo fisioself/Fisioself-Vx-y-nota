@@ -26,6 +26,16 @@ const buildPatientWhatsAppUrl = (patient: Patient | Partial<Patient>): string =>
   return `https://wa.me/${number}?text=${encodeURIComponent(msg)}`;
 };
 
+// Iniciales para el avatar del hero (primeras letras de los dos primeros nombres).
+export const patientInitials = (fullName: string | null | undefined): string => {
+  const parts = (fullName ?? '').trim().split(/\s+/).filter(Boolean);
+  if (!parts.length) return '?';
+  return parts
+    .slice(0, 2)
+    .map((p) => p[0].toUpperCase())
+    .join('');
+};
+
 export const getNextSessionNumber = (notes: Pick<SessionNote, 'session_number'>[] = []) => {
   const maxSession = notes.reduce((max, note) => {
     const value = Number(note.session_number);
@@ -110,6 +120,10 @@ export const PatientRecord = memo(function PatientRecord({
   const [showSessionNote, setShowSessionNote] = useState(false);
   const [openEvaluationId, setOpenEvaluationId] = useState<string | null>(null);
   const [editingEvaluation, setEditingEvaluation] = useState<Evaluation | null>(null);
+  // Meta funcional del hero: edición inline (input pequeño en el encabezado).
+  const [goalEditing, setGoalEditing] = useState(false);
+  const [goalDraft, setGoalDraft] = useState('');
+  const [goalSaving, setGoalSaving] = useState(false);
   const sessionNoteRef = useRef<HTMLDivElement>(null);
   const evaluationRef = useRef<HTMLDivElement>(null);
 
@@ -218,8 +232,68 @@ export const PatientRecord = memo(function PatientRecord({
     <section className="record-stack">
       <article className="card record-header">
         <div className="record-header-info">
-          <p className="eyebrow">Expediente clinico</p>
-          <h2>{current.full_name}</h2>
+          {/* Hero centrado en la persona: avatar con iniciales, nombre y la META
+              FUNCIONAL del paciente (su objetivo de vida) antes que cualquier
+              dato clínico. La meta se edita inline con un toque. */}
+          <div className="record-hero">
+            <span className="record-avatar" aria-hidden="true">
+              {patientInitials(current.full_name)}
+            </span>
+            <div className="record-hero-text">
+              <p className="eyebrow">Expediente clinico</p>
+              <h2>{current.full_name}</h2>
+              {goalEditing ? (
+                <div className="functional-goal-edit">
+                  <input
+                    value={goalDraft}
+                    onChange={(e) => setGoalDraft(e.target.value)}
+                    placeholder='Ej. "Cargar a su nieto sin dolor lumbar"'
+                    maxLength={140}
+                    aria-label="Meta funcional del paciente"
+                  />
+                  <button
+                    type="button"
+                    className="btn-sm"
+                    disabled={goalSaving}
+                    onClick={async () => {
+                      setGoalSaving(true);
+                      try {
+                        await clinicalApi.updatePatient(current.id, {
+                          functional_goal: goalDraft.trim() || null
+                        });
+                        setGoalEditing(false);
+                        refreshRecord();
+                      } finally {
+                        setGoalSaving(false);
+                      }
+                    }}
+                  >
+                    {goalSaving ? 'Guardando…' : 'Guardar'}
+                  </button>
+                  <button
+                    type="button"
+                    className="secondary btn-sm"
+                    disabled={goalSaving}
+                    onClick={() => setGoalEditing(false)}
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  className={`functional-goal${current.functional_goal ? '' : ' empty'}`}
+                  onClick={() => {
+                    setGoalDraft(current.functional_goal || '');
+                    setGoalEditing(true);
+                  }}
+                  title="Meta funcional del paciente (toca para editar)"
+                >
+                  🎯 {current.functional_goal || 'Definir meta funcional (su objetivo de vida)'}
+                </button>
+              )}
+            </div>
+          </div>
           {/* Acciones secundarias (menos frecuentes): se quedan dentro de la
               tarjeta y hacen scroll con el contenido, en formato compacto. */}
           <div className="record-secondary-actions">

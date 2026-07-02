@@ -61,7 +61,7 @@ describe('PatientDocuments', () => {
   it('muestra mensaje vacío cuando no hay documentos', async () => {
     render(<PatientDocuments patientId="patient-1" />, { wrapper: makeWrapper() });
     await waitFor(() => {
-      expect(screen.getByText(/sin archivos adjuntos/i)).toBeInTheDocument();
+      expect(screen.getByText(/aún sin estudios ni documentos/i)).toBeInTheDocument();
     });
   });
 
@@ -76,7 +76,9 @@ describe('PatientDocuments', () => {
 
   it('rechaza un archivo de tipo no permitido sin llamar a upload', async () => {
     render(<PatientDocuments patientId="patient-1" />, { wrapper: makeWrapper() });
-    await waitFor(() => expect(screen.getByText(/sin archivos adjuntos/i)).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText(/aún sin estudios ni documentos/i)).toBeInTheDocument()
+    );
     const input = document.querySelector('input[type="file"]') as HTMLInputElement;
     const badFile = new File(['x'], 'malware.exe', { type: 'application/x-msdownload' });
     await userEvent.upload(input, badFile);
@@ -85,7 +87,9 @@ describe('PatientDocuments', () => {
 
   it('sube un archivo válido', async () => {
     render(<PatientDocuments patientId="patient-1" />, { wrapper: makeWrapper() });
-    await waitFor(() => expect(screen.getByText(/sin archivos adjuntos/i)).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText(/aún sin estudios ni documentos/i)).toBeInTheDocument()
+    );
     const input = document.querySelector('input[type="file"]') as HTMLInputElement;
     const okFile = new File(['%PDF-1.4'], 'informe.pdf', { type: 'application/pdf' });
     await userEvent.upload(input, okFile);

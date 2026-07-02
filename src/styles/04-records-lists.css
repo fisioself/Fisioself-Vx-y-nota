@@ -38,6 +38,68 @@
 .record-header-info {
   min-width: 0;
 }
+/* Hero del expediente centrado en la persona: avatar con iniciales + nombre +
+   meta funcional (objetivo de vida del paciente) antes que los datos clínicos. */
+.record-hero {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  min-width: 0;
+}
+.record-avatar {
+  flex: none;
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--secondary);
+  color: var(--primary);
+  font-weight: 800;
+  font-size: 1.25rem;
+  letter-spacing: 0.02em;
+  user-select: none;
+}
+.record-hero-text {
+  min-width: 0;
+}
+.record-hero-text h2 {
+  margin: 0;
+}
+/* Meta funcional: chip suave, clicable para editar inline. */
+.functional-goal {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(var(--primary-rgb), 0.25);
+  background: rgba(var(--primary-rgb), 0.06);
+  color: var(--primary);
+  font-size: 0.86rem;
+  font-weight: 600;
+  font-style: italic;
+  text-align: left;
+  cursor: pointer;
+  max-width: 100%;
+  overflow-wrap: break-word;
+}
+.functional-goal.empty {
+  border-style: dashed;
+  color: var(--muted);
+  background: transparent;
+  font-style: normal;
+}
+.functional-goal-edit {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+  align-items: center;
+}
+.functional-goal-edit input {
+  flex: 1 1 240px;
+  min-width: 0;
+}
 /* Acciones secundarias del expediente: fila compacta que envuelve. */
 .record-secondary-actions {
   display: flex;
@@ -287,6 +349,17 @@ pre {
   white-space: pre-wrap;
   overflow: auto;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+/* Lectura narrativa: el texto clínico (notas de evolución, observaciones) se
+   lee como prosa, no como código. Tipografía normal, interlineado generoso y
+   gris carbón suave — comodidad de leer una nota en papel. Los números
+   tabulares de finanzas/tablas se quedan como están (lectura de datos). */
+.note-details pre,
+.evaluation-summary pre {
+  font-family: inherit;
+  font-size: 0.95rem;
+  line-height: 1.65;
+  color: var(--text-main);
 }
 
 /* Tabular numbers: digits align on the decimal point in financial tables */

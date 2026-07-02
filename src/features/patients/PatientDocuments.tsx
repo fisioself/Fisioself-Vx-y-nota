@@ -130,8 +130,8 @@ export function PatientDocuments({ patientId }: PatientDocumentsProps) {
       ) : docs.length === 0 ? (
         <EmptyState
           icon="📎"
-          title="Sin archivos adjuntos"
-          hint="Sube estudios, radiografías o documentos del paciente para tenerlos a mano."
+          title="Aún sin estudios ni documentos"
+          hint="Cuando subas radiografías, estudios o documentos del paciente, vivirán aquí, siempre a la mano."
         />
       ) : (
         <ul className="list-stack" style={{ listStyle: 'none', padding: 0, marginTop: 12 }}>
