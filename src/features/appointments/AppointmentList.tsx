@@ -182,8 +182,8 @@ export function AppointmentList({ patient, appointments = [], onChanged }: Appoi
         {!appointments.length && (
           <EmptyState
             icon="🗓️"
-            title="Sin citas programadas"
-            hint="Crea una cita con «Nueva cita» para verla aquí y poder enviar recordatorios."
+            title="Agenda despejada"
+            hint="No hay citas programadas por aquí. Un buen momento para revisar expedientes o preparar tu semana. Crea una con «Nueva cita»."
           />
         )}
       </div>

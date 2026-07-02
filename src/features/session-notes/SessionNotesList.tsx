@@ -6,6 +6,7 @@ import type { SessionNote } from '../../types/clinical';
 import { getErrorMessage } from '../../shared/errors';
 import { offlineNotes } from '../../shared/offlineNotes';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
+import { EmptyState } from '../../components/EmptyState';
 
 interface SessionNotesListProps {
   notes?: SessionNote[];
@@ -214,13 +215,16 @@ export function SessionNotesList({ notes = [], patientId, onChanged }: SessionNo
             </article>
           );
         })}
-        {!filtered.length && (
-          <p className="muted">
-            {debouncedQuery.trim()
-              ? `Sin coincidencias para «${debouncedQuery.trim()}».`
-              : 'Aún no hay notas de sesión registradas.'}
-          </p>
-        )}
+        {!filtered.length &&
+          (debouncedQuery.trim() ? (
+            <p className="muted">Sin coincidencias para «{debouncedQuery.trim()}».</p>
+          ) : (
+            <EmptyState
+              icon="🌱"
+              title="El inicio del proceso"
+              hint="Aún no hay notas de evolución. Registra la primera sesión y aquí crecerá la historia del paciente."
+            />
+          ))}
       </div>
 
       {confirmNote && (

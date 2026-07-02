@@ -51,7 +51,7 @@ beforeEach(() => {
 describe('AppointmentList', () => {
   it('muestra mensaje vacío cuando no hay citas', () => {
     render(<AppointmentList patient={PATIENT} appointments={[]} />, { wrapper });
-    expect(screen.getByText(/sin citas programadas/i)).toBeInTheDocument();
+    expect(screen.getByText(/agenda despejada/i)).toBeInTheDocument();
   });
 
   it('renderiza las citas existentes', () => {
