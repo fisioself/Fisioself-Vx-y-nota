@@ -149,6 +149,9 @@ export interface EvaluationSections {
     objectives_mid?: string | null;
     objectives_long?: string | null;
     treatment_plan?: string | null;
+    // Rutina de ejercicios para casa en lenguaje del paciente (la genera la IA a
+    // partir de los hallazgos). Alimenta el PDF "Plan del paciente".
+    home_exercises?: string | null;
   } | null;
 }
 

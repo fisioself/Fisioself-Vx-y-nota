@@ -46,7 +46,8 @@ const AI_TYPES = new Set([
   'treatment_plan_evidence',
   'treatment_objectives',
   'prognosis',
-  'medical_diagnosis_suggestion'
+  'medical_diagnosis_suggestion',
+  'home_exercises'
 ]);
 
 const SYSTEM_PROMPT = `Eres un asistente clinico para fisioterapia.
@@ -103,7 +104,9 @@ const prompts: Record<string, string> = {
   prognosis:
     'Redacta un PRONÓSTICO fisioterapéutico detallado y razonado. Incluye: (1) Expectativa de recuperación y tiempo estimado POR FASES, justificado con razonamiento clínico; (2) Factores pronósticos FAVORABLES y DESFAVORABLES presentes en el caso (irritabilidad, cronicidad, banderas amarillas/rojas, edad, comorbilidades, nivel de actividad, expectativas); (3) Nivel de confianza y qué podría modificar el pronóstico. Apóyate en evidencia RECIENTE y de alta calidad (preferentemente 2022-2025: guías, revisiones sistemáticas y estudios de factores pronósticos) citando las fuentes POR NOMBRE; si no recuerdas la referencia exacta, nómbrala de forma genérica SIN inventar cifras ni DOIs. Sé prudente y realista; no inventes datos ausentes.',
   medical_diagnosis_suggestion:
-    'Sugiere una IMPRESIÓN DIAGNÓSTICA MÉDICA PRESUNTIVA detallada y razonada, basada SOLO en los hallazgos clínicos descritos. Incluye: (1) 1-3 diagnósticos diferenciales probables con terminología médica (CIE-10/11 cuando aplique), ORDENADOS por probabilidad; (2) RAZONAMIENTO: qué hallazgos apoyan y cuáles restan probabilidad a cada hipótesis; (3) Estudios o pruebas confirmatorias recomendadas. Apóyate en criterios diagnósticos y evidencia RECIENTE y de alta calidad (preferentemente 2022-2025) citando la fuente o guía POR NOMBRE; si no recuerdas la referencia exacta, nómbrala de forma genérica SIN inventar cifras ni DOIs. Aclara EXPLÍCITAMENTE que es una sugerencia orientativa que NO sustituye el diagnóstico de un médico y debe confirmarse clínicamente. No inventes datos ausentes; si la información es insuficiente, dilo.'
+    'Sugiere una IMPRESIÓN DIAGNÓSTICA MÉDICA PRESUNTIVA detallada y razonada, basada SOLO en los hallazgos clínicos descritos. Incluye: (1) 1-3 diagnósticos diferenciales probables con terminología médica (CIE-10/11 cuando aplique), ORDENADOS por probabilidad; (2) RAZONAMIENTO: qué hallazgos apoyan y cuáles restan probabilidad a cada hipótesis; (3) Estudios o pruebas confirmatorias recomendadas. Apóyate en criterios diagnósticos y evidencia RECIENTE y de alta calidad (preferentemente 2022-2025) citando la fuente o guía POR NOMBRE; si no recuerdas la referencia exacta, nómbrala de forma genérica SIN inventar cifras ni DOIs. Aclara EXPLÍCITAMENTE que es una sugerencia orientativa que NO sustituye el diagnóstico de un médico y debe confirmarse clínicamente. No inventes datos ausentes; si la información es insuficiente, dilo.',
+  home_exercises:
+    'Redacta una RUTINA DE EJERCICIOS PARA CASA personalizada, basada SOLO en los hallazgos de la valoración, escrita PARA EL PACIENTE (no para el clínico). Reglas de estilo OBLIGATORIAS: lenguaje cálido, claro y en segunda persona; CERO jerga técnica, CERO nombres de músculos en latín, CERO referencias, guías, niveles de evidencia, años ni citas. Propón entre 3 y 6 ejercicios apropiados y seguros para los hallazgos. FORMATO: separa cada ejercicio dejando una línea EN BLANCO entre uno y otro. Cada ejercicio empieza con su nombre sencillo en una línea; luego una línea "Cómo:" con 1-2 frases de cómo hacerlo; luego una línea "Dosis:" con series, repeticiones y descanso (o duración en segundos); luego una línea "¿Por qué?" con el beneficio en palabras del paciente. No numeres los ejercicios. Al final, tras una línea en blanco, agrega una sola línea de precaución cálida: si un ejercicio genera dolor agudo o punzante, que lo detenga y te avise. No inventes hallazgos; si algo no aplica, omítelo.'
 };
 
 const WINDOW_MS = 60_000;

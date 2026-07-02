@@ -31,6 +31,7 @@ export const AI_TYPES: AiType[] = [
   { id: 'informed_consent', label: 'Consentimiento informado', traceable: true },
   { id: 'evaluation_summary', label: 'Diagnóstico de valoración', traceable: false },
   { id: 'treatment_plan_evidence', label: 'Plan de intervención con evidencia', traceable: false },
+  { id: 'home_exercises', label: 'Ejercicios para casa (paciente)', traceable: false },
   { id: 'treatment_objectives', label: 'Objetivos del tratamiento', traceable: false },
   { id: 'prognosis', label: 'Pronóstico fisioterapéutico', traceable: false },
   {

@@ -97,4 +97,6 @@ export interface EvaluationFormValues {
   recovery_prognosis: string;
   objectives: string;
   treatment_plan: string;
+  // Ejercicios para casa en lenguaje del paciente (IA) → PDF "Plan del paciente".
+  home_exercises: string;
 }

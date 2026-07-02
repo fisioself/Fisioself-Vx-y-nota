@@ -115,7 +115,8 @@ export function evaluationToFormValues(ev: Evaluation): EvaluationFormValues {
       ]
         .filter(Boolean)
         .join('\n'),
-    treatment_plan: cl.treatment_plan || ''
+    treatment_plan: cl.treatment_plan || '',
+    home_exercises: cl.home_exercises || ''
   };
 }
 
@@ -244,7 +245,8 @@ export const emptyEvaluation: EvaluationFormValues = {
   prognosis: '',
   recovery_prognosis: '',
   objectives: '',
-  treatment_plan: ''
+  treatment_plan: '',
+  home_exercises: ''
 };
 
 export const sexOptions = ['', 'F', 'M', 'Otro'];
